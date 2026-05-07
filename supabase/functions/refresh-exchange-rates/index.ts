@@ -13,28 +13,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Require a valid Supabase auth token (any authenticated user can trigger a refresh,
-  // but unauthenticated requests are blocked to prevent abuse)
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const anonClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user }, error: authErr } = await anonClient.auth.getUser();
-  if (authErr || !user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  // Public utility: this function fetches *public* exchange-rate data from
+  // open.er-api.com and writes it to a shared cache via service role. There
+  // is no per-user data and nothing user-specific to authorise against. It
+  // is fired on app boot from useExpenses() and from fetchCrossRates(),
+  // both of which can race session restore — gating it on a session JWT
+  // produced spurious 401s on tab return / cold start. config.toml sets
+  // verify_jwt = false for this function.
 
   try {
     const supabase = createClient(

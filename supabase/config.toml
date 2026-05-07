@@ -34,3 +34,17 @@ project_id = "dwtbqomfleihcvkfoopm"
   # Public minimal trip share landing /share/:token.
   [functions.public-trip-share-view]
     verify_jwt = false
+  # Place-details lookup for activity cards. Platform JWT verification is
+  # kept ON (anon key or session both accepted) — the function relies on
+  # that gate plus a service-role client for cache writes, and intentionally
+  # does NOT require a logged-in user because TripResultsView renders on
+  # both authed (AIPlan/TripHome) and public (AnonTripView/TemplateDetail)
+  # routes. See supabase/functions/get-place-details/index.ts.
+  [functions.get-place-details]
+    verify_jwt = true
+  # Public utility — fetches public FX data from open.er-api.com and
+  # upserts the shared exchange_rate_cache via service role. No per-user
+  # data; called on app boot from useExpenses/fetchCrossRates where the
+  # session may not yet be restored.
+  [functions.refresh-exchange-rates]
+    verify_jwt = false
