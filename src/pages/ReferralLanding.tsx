@@ -389,16 +389,11 @@ export default function ReferralLanding() {
         navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
     } else {
-      if (signupBlocked) { setLoading(false); return; }
-      persistAdultConsent();
       const { error: err, data } = await signUp(email, password, displayName);
       setLoading(false);
       if (err) {
         setError(friendlyError(err.message));
       } else {
-        if (data?.user?.id) {
-          await setAdultConfirmedOnProfile(data.user.id);
-        }
         if (referralCode.current && data?.user?.id) {
           const { data: referrerId } = await supabase
             .rpc("resolve_referral_code", { _code: referralCode.current });
