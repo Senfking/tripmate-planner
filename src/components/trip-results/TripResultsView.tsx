@@ -234,7 +234,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
 
   const openDayMap = (dayIndex: number) => {
     setMapActiveDayIndex(dayIndex);
-    setMapState(typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "partial" : "full");
+    setMapStatePersisted(typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "partial" : "full");
   };
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
