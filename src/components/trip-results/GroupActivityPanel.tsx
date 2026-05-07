@@ -95,6 +95,7 @@ type Thread = {
   sectionId: string;
   activityTitle: string | null;
   locationName: string | null;
+  activityDataId: string | null;
   comments: CommentEntry[];
   reactions: ReactionEntry[];
   latestAt: Date;
