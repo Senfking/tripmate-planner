@@ -284,15 +284,42 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     return [...map.values()];
   }, [allUserIds, profileMap]);
 
-  const goToSection = useCallback((sectionId: string) => {
-    if (!sectionId) return;
+  const scrollElementToTop = useCallback((el: HTMLElement) => {
+    const SCROLL_TOP_GAP = 12;
+    const marked = document.querySelector<HTMLElement>("[data-results-scroll-root='true']");
+    const useInner = !!(marked && marked.scrollHeight > marked.clientHeight + 1);
+    const elementRect = el.getBoundingClientRect();
+    if (useInner && marked) {
+      const rootRect = marked.getBoundingClientRect();
+      const targetTop = Math.max(0, marked.scrollTop + (elementRect.top - rootRect.top) - SCROLL_TOP_GAP);
+      marked.scrollTo({ top: targetTop, behavior: "smooth" });
+    } else {
+      const targetTop = Math.max(0, window.scrollY + elementRect.top - SCROLL_TOP_GAP);
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
+    }
+  }, []);
+
+  const goToThread = useCallback((thread: Thread) => {
+    if (!thread.sectionId) return;
     onClose();
     setTimeout(() => {
-      // Tell DaySection to expand if collapsed, then scroll
-      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id: sectionId } }));
-      setTimeout(() => onScrollTo(sectionId), 60);
+      // Expand the day accordion if needed
+      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id: thread.sectionId } }));
+      // Wait for the accordion to open + content to render, then scroll precisely to the activity card
+      setTimeout(() => {
+        if (thread.activityDataId) {
+          const activityEl = document.querySelector<HTMLElement>(
+            `[data-activity-id="${thread.activityDataId}"]`,
+          );
+          if (activityEl) {
+            scrollElementToTop(activityEl);
+            return;
+          }
+        }
+        onScrollTo(thread.sectionId);
+      }, 220);
     }, 200);
-  }, [onClose, onScrollTo]);
+  }, [onClose, onScrollTo, scrollElementToTop]);
 
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
