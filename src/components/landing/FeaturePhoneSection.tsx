@@ -32,7 +32,8 @@ export function FeaturePhoneSection({
           io.unobserve(el);
         }
       },
-      { threshold: 0.15 },
+      // Trigger earlier so the reveal starts well before the section is centered.
+      { threshold: 0, rootMargin: "0px 0px -10% 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -59,9 +60,11 @@ export function FeaturePhoneSection({
             alt={alt}
             width={720}
             height={899}
-            className="w-full max-w-[600px] h-auto"
-            loading="lazy"
+            className="w-full max-w-[600px] h-auto landing-phone-float"
+            loading="eager"
             decoding="async"
+            // @ts-expect-error - fetchpriority is a valid HTML attribute
+            fetchpriority="low"
           />
         </div>
 
