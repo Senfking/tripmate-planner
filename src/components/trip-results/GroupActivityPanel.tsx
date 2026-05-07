@@ -264,28 +264,70 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
   }, [qc, planId]);
 
+  // Unique member avatars across all activity, for header stack
+  const memberAvatars = useMemo(() => {
+    const map = new Map<string, { name: string; url: string | null }>();
+    for (const id of allUserIds) {
+      const p = profileMap.get(id) as any;
+      map.set(id, { name: p?.display_name || "User", url: p?.avatar_url || null });
+    }
+    return [...map.values()];
+  }, [allUserIds, profileMap]);
+
+  const goToSection = useCallback((sectionId: string) => {
+    if (!sectionId) return;
+    onClose();
+    setTimeout(() => {
+      // Tell DaySection to expand if collapsed, then scroll
+      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id: sectionId } }));
+      setTimeout(() => onScrollTo(sectionId), 60);
+    }, 200);
+  }, [onClose, onScrollTo]);
+
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       {/* Panel: full-width on mobile, side panel on >=md */}
-      <div className="relative w-full md:max-w-[420px] bg-muted/30 md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3 shrink-0" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#0D9488]" />
-              <h2 className="text-sm font-semibold text-foreground">Group activity</h2>
+      <div className="relative w-full md:max-w-[440px] bg-gradient-to-b from-muted/40 to-muted/20 md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
+        {/* Header — richer with gradient strip + avatar stack */}
+        <div
+          className="sticky top-0 z-10 shrink-0 border-b border-border bg-card relative overflow-hidden"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px))" }}
+        >
+          {/* Decorative gradient bar */}
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#0D9488] via-[#E07A5F] to-[#F4A261]" />
+          <div className="px-4 pt-3.5 pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-[#0D9488]" />
+                  <h2 className="text-[13px] font-semibold tracking-tight text-foreground">Group activity</h2>
+                </div>
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{comments.length}</span> comments</span>
+                  <span className="text-muted-foreground/30">•</span>
+                  <span><span className="font-semibold text-foreground">{reactions.length}</span> reactions</span>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-full hover:bg-accent transition-colors -mr-1 -mt-0.5 shrink-0">
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-accent transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-          <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span>{reactions.length} reactions</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span>{comments.length} comments</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span>{uniqueMembers} active</span>
+            {/* Member avatar stack */}
+            {memberAvatars.length > 0 && (
+              <div className="mt-2.5 flex items-center gap-2">
+                <div className="flex -space-x-1.5">
+                  {memberAvatars.slice(0, 5).map((m, i) => (
+                    <div key={i} className="ring-2 ring-card rounded-full">
+                      <Avatar name={m.name} url={m.url} size={22} />
+                    </div>
+                  ))}
+                </div>
+                <span className="text-[10.5px] text-muted-foreground">
+                  {uniqueMembers} {uniqueMembers === 1 ? "member" : "members"} active
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
