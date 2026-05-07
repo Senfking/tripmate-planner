@@ -210,12 +210,31 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // toggle is hidden and this state is irrelevant.
   const [itineraryOnly, setItineraryOnly] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
-  const [mapState, setMapState] = useState<MapState>("closed");
+  const [mapState, setMapState] = useState<MapState>(() => {
+    if (typeof window === "undefined") return "closed";
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (!isDesktop) return "closed";
+    // Persist user's "closed" choice across the session; always default to open on a fresh session.
+    try {
+      if (sessionStorage.getItem("tripMap.closed") === "1") return "closed";
+    } catch {}
+    return "partial";
+  });
+  const setMapStatePersisted = useCallback((s: MapState) => {
+    setMapState(s);
+    try {
+      const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+      if (isDesktop) {
+        if (s === "closed") sessionStorage.setItem("tripMap.closed", "1");
+        else sessionStorage.removeItem("tripMap.closed");
+      }
+    } catch {}
+  }, []);
   const [mapActiveDayIndex, setMapActiveDayIndex] = useState(-1);
 
   const openDayMap = (dayIndex: number) => {
     setMapActiveDayIndex(dayIndex);
-    setMapState(typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "partial" : "full");
+    setMapStatePersisted(typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "partial" : "full");
   };
   const [groupActivityOpen, setGroupActivityOpen] = useState(false);
   const [conciergeOpen, setConciergeOpen] = useState(false);
@@ -516,11 +535,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <button
               onClick={() => {
                 if (mapState !== "closed") {
-                  setMapState("closed");
+                  setMapStatePersisted("closed");
                   return;
                 }
                 const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
-                setMapState(isDesktop ? "partial" : "full");
+                setMapStatePersisted(isDesktop ? "partial" : "full");
               }}
               aria-label={mapState === "closed" ? "Show map" : "Hide map"}
               className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
@@ -667,6 +686,17 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               </span>
             )}
           </div>
+          {/* Prominent map CTA on mobile (hidden when map is open or on desktop) */}
+          {mapState === "closed" && (
+            <button
+              type="button"
+              onClick={() => setMapStatePersisted("full")}
+              className="lg:hidden mt-3 w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0D9488] text-white font-semibold text-sm shadow-md active:opacity-90 transition-opacity"
+            >
+              <MapIcon className="h-4 w-4" />
+              View trip on map
+            </button>
+          )}
         </div>
 
         {/* Trip summary — only render once we actually have one. During
@@ -1264,9 +1294,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         <div className="h-24" />
       </div>
 
-      {/* Floating glassmorphic action cluster (CTAs + Group Chat) */}
+      {/* Floating glassmorphic action cluster (CTAs + Group Chat) — hidden when map is fullscreen */}
       <div
-        className={cn("fixed left-0 right-0 z-40 flex justify-center px-4 pointer-events-none", rc)}
+        className={cn("fixed left-0 right-0 z-40 flex justify-center px-4 pointer-events-none", rc, mapState === "full" && "hidden")}
         style={{ ...revealStyle("complete"), bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
       >
         <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-1.5">
@@ -1340,7 +1370,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         totalActivities={totalActivities}
         state={mapState}
         onStateChange={(s) => {
-          setMapState(s);
+          setMapStatePersisted(s);
           if (s === "closed") setMapActiveDayIndex(-1);
         }}
         activeDayIndex={mapActiveDayIndex}
@@ -1350,7 +1380,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
       {/* Overlays (outside flex layout) */}
       {/* Group Chat for non-draft trips is rendered inline in the floating action cluster above */}
 
-      {planId && standalone && (
+      {planId && standalone && mapState !== "full" && (
         <Popover>
           <PopoverTrigger asChild>
             <button

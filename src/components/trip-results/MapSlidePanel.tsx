@@ -103,10 +103,11 @@ export function MapSlidePanel({ result, allDays, refinedCoords, totalActivities,
               </button>
               <button
                 onClick={() => onStateChange("closed")}
-                className="h-8 w-8 rounded-lg border border-border bg-card text-foreground shadow-sm hover:bg-accent transition-colors flex items-center justify-center"
-                title="Close map"
+                className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-border bg-card text-foreground text-xs font-semibold shadow-sm hover:bg-accent transition-colors"
+                title="Hide map"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
+                Hide map
               </button>
             </div>
           </div>
