@@ -210,7 +210,26 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // toggle is hidden and this state is irrelevant.
   const [itineraryOnly, setItineraryOnly] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
-  const [mapState, setMapState] = useState<MapState>("closed");
+  const [mapState, setMapState] = useState<MapState>(() => {
+    if (typeof window === "undefined") return "closed";
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (!isDesktop) return "closed";
+    // Persist user's "closed" choice across the session; always default to open on a fresh session.
+    try {
+      if (sessionStorage.getItem("tripMap.closed") === "1") return "closed";
+    } catch {}
+    return "partial";
+  });
+  const setMapStatePersisted = useCallback((s: MapState) => {
+    setMapState(s);
+    try {
+      const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+      if (isDesktop) {
+        if (s === "closed") sessionStorage.setItem("tripMap.closed", "1");
+        else sessionStorage.removeItem("tripMap.closed");
+      }
+    } catch {}
+  }, []);
   const [mapActiveDayIndex, setMapActiveDayIndex] = useState(-1);
 
   const openDayMap = (dayIndex: number) => {
