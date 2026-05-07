@@ -32,23 +32,25 @@ function parseActivityKey(key: string): { dayIndex: number; activityIndex: numbe
   return { dayIndex: parseInt(match[1]), activityIndex: parseInt(match[2]) };
 }
 
-function getActivityMeta(key: string, allDays: AIDay[]): { label: string; dayLabel: string | null } {
+function getActivityMeta(key: string, allDays: AIDay[]): { label: string; dayLabel: string | null; activityTitle: string | null; locationName: string | null } {
   const parsed = parseActivityKey(key);
   if (!parsed) {
-    if (key === "trip-general") return { label: "Trip discussion", dayLabel: null };
+    if (key === "trip-general") return { label: "Trip discussion", dayLabel: null, activityTitle: null, locationName: null };
     const dayMatch = key.match(/^day-(\d+)$/);
     if (dayMatch) {
       const day = allDays[parseInt(dayMatch[1])];
-      return { label: day ? `Day ${day.day_number} discussion` : key, dayLabel: null };
+      return { label: day ? `Day ${day.day_number} discussion` : key, dayLabel: null, activityTitle: null, locationName: null };
     }
-    return { label: key, dayLabel: null };
+    return { label: key, dayLabel: null, activityTitle: null, locationName: null };
   }
   const day = allDays[parsed.dayIndex];
-  if (!day) return { label: key, dayLabel: null };
+  if (!day) return { label: key, dayLabel: null, activityTitle: null, locationName: null };
   const activity = day.activities[parsed.activityIndex];
   return {
     label: activity?.title ?? `Day ${day.day_number}`,
     dayLabel: `Day ${day.day_number}`,
+    activityTitle: activity?.title ?? null,
+    locationName: activity?.location_name ?? null,
   };
 }
 
