@@ -1,0 +1,48 @@
+name: E2E (Playwright)
+
+# Runs against junto.pro on demand and on pushes to main. PR runs are
+# opt-in via the `e2e` label so we don't burn CI minutes on every commit
+# (the suite hits real Supabase + the AI generation backend).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    types: [labeled, synchronize]
+
+jobs:
+  e2e:
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'e2e') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        env:
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://junto.pro' }}
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
+          MAILTRAP_ACCOUNT_ID: ${{ secrets.MAILTRAP_ACCOUNT_ID }}
+          MAILTRAP_INBOX_ID: ${{ secrets.MAILTRAP_INBOX_ID }}
+          MAILTRAP_DOMAIN: ${{ secrets.MAILTRAP_DOMAIN }}
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
