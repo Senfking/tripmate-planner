@@ -179,6 +179,8 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
           activityLabel: meta.label,
           dayLabel: meta.dayLabel,
           sectionId: getSectionId(key, allDays),
+          activityTitle: meta.activityTitle,
+          locationName: meta.locationName,
           comments: [],
           reactions: [],
           latestAt: new Date(0),
