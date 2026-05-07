@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureFreshSession, forceRefreshSession } from "@/lib/sessionRefresh";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -70,14 +71,20 @@ export function EntryRequirementsPreview({
       lengthDays,
     ],
     queryFn: async (): Promise<EntryRequirementsResult> => {
-      const { data, error } = await supabase.functions.invoke("get-entry-requirements", {
-        body: {
-          nationalities,
-          destination_country: destIso,
-          trip_length_days: lengthDays,
-          purpose: "tourism",
-        },
-      });
+      await ensureFreshSession();
+      const body = {
+        nationalities,
+        destination_country: destIso,
+        trip_length_days: lengthDays,
+        purpose: "tourism",
+      };
+      let { data, error } = await supabase.functions.invoke("get-entry-requirements", { body });
+      const isAuthErr =
+        error && (((error as any).context?.status === 401) || /unauthor/i.test(error.message ?? ""));
+      if (isAuthErr) {
+        await forceRefreshSession();
+        ({ data, error } = await supabase.functions.invoke("get-entry-requirements", { body }));
+      }
       if (error) throw error;
       return (data ?? {}) as EntryRequirementsResult;
     },
