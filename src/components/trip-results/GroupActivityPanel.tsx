@@ -2,7 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2, ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { formatDistanceToNow } from "date-fns";
 import type { AITripResult, AIDay } from "./useResultsState";
 
@@ -32,23 +33,25 @@ function parseActivityKey(key: string): { dayIndex: number; activityIndex: numbe
   return { dayIndex: parseInt(match[1]), activityIndex: parseInt(match[2]) };
 }
 
-function getActivityMeta(key: string, allDays: AIDay[]): { label: string; dayLabel: string | null } {
+function getActivityMeta(key: string, allDays: AIDay[]): { label: string; dayLabel: string | null; activityTitle: string | null; locationName: string | null } {
   const parsed = parseActivityKey(key);
   if (!parsed) {
-    if (key === "trip-general") return { label: "Trip discussion", dayLabel: null };
+    if (key === "trip-general") return { label: "Trip discussion", dayLabel: null, activityTitle: null, locationName: null };
     const dayMatch = key.match(/^day-(\d+)$/);
     if (dayMatch) {
       const day = allDays[parseInt(dayMatch[1])];
-      return { label: day ? `Day ${day.day_number} discussion` : key, dayLabel: null };
+      return { label: day ? `Day ${day.day_number} discussion` : key, dayLabel: null, activityTitle: null, locationName: null };
     }
-    return { label: key, dayLabel: null };
+    return { label: key, dayLabel: null, activityTitle: null, locationName: null };
   }
   const day = allDays[parsed.dayIndex];
-  if (!day) return { label: key, dayLabel: null };
+  if (!day) return { label: key, dayLabel: null, activityTitle: null, locationName: null };
   const activity = day.activities[parsed.activityIndex];
   return {
     label: activity?.title ?? `Day ${day.day_number}`,
     dayLabel: `Day ${day.day_number}`,
+    activityTitle: activity?.title ?? null,
+    locationName: activity?.location_name ?? null,
   };
 }
 
@@ -89,6 +92,8 @@ type Thread = {
   activityLabel: string;
   dayLabel: string | null;
   sectionId: string;
+  activityTitle: string | null;
+  locationName: string | null;
   comments: CommentEntry[];
   reactions: ReactionEntry[];
   latestAt: Date;
@@ -175,6 +180,8 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
           activityLabel: meta.label,
           dayLabel: meta.dayLabel,
           sectionId: getSectionId(key, allDays),
+          activityTitle: meta.activityTitle,
+          locationName: meta.locationName,
           comments: [],
           reactions: [],
           latestAt: new Date(0),
@@ -264,28 +271,70 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
     qc.invalidateQueries({ queryKey: ["all-plan-comments", planId] });
   }, [qc, planId]);
 
+  // Unique member avatars across all activity, for header stack
+  const memberAvatars = useMemo(() => {
+    const map = new Map<string, { name: string; url: string | null }>();
+    for (const id of allUserIds) {
+      const p = profileMap.get(id) as any;
+      map.set(id, { name: p?.display_name || "User", url: p?.avatar_url || null });
+    }
+    return [...map.values()];
+  }, [allUserIds, profileMap]);
+
+  const goToSection = useCallback((sectionId: string) => {
+    if (!sectionId) return;
+    onClose();
+    setTimeout(() => {
+      // Tell DaySection to expand if collapsed, then scroll
+      window.dispatchEvent(new CustomEvent("results:expand", { detail: { id: sectionId } }));
+      setTimeout(() => onScrollTo(sectionId), 60);
+    }, 200);
+  }, [onClose, onScrollTo]);
+
   return (
     <div className="fixed inset-0 z-[10001] flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       {/* Panel: full-width on mobile, side panel on >=md */}
-      <div className="relative w-full md:max-w-[420px] bg-muted/30 md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3 shrink-0" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#0D9488]" />
-              <h2 className="text-sm font-semibold text-foreground">Group activity</h2>
+      <div className="relative w-full md:max-w-[440px] bg-gradient-to-b from-muted/40 to-muted/20 md:border-l border-border h-full overflow-hidden animate-slide-in-right shadow-2xl flex flex-col">
+        {/* Header — richer with gradient strip + avatar stack */}
+        <div
+          className="sticky top-0 z-10 shrink-0 border-b border-border bg-card relative overflow-hidden"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px))" }}
+        >
+          {/* Decorative gradient bar */}
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#0D9488] via-[#E07A5F] to-[#F4A261]" />
+          <div className="px-4 pt-3.5 pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-[#0D9488]" />
+                  <h2 className="text-[13px] font-semibold tracking-tight text-foreground">Group activity</h2>
+                </div>
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{comments.length}</span> comments</span>
+                  <span className="text-muted-foreground/30">•</span>
+                  <span><span className="font-semibold text-foreground">{reactions.length}</span> reactions</span>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-full hover:bg-accent transition-colors -mr-1 -mt-0.5 shrink-0">
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-accent transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-          <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span>{reactions.length} reactions</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span>{comments.length} comments</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span>{uniqueMembers} active</span>
+            {/* Member avatar stack */}
+            {memberAvatars.length > 0 && (
+              <div className="mt-2.5 flex items-center gap-2">
+                <div className="flex -space-x-1.5">
+                  {memberAvatars.slice(0, 5).map((m, i) => (
+                    <div key={i} className="ring-2 ring-card rounded-full">
+                      <Avatar name={m.name} url={m.url} size={22} />
+                    </div>
+                  ))}
+                </div>
+                <span className="text-[10.5px] text-muted-foreground">
+                  {uniqueMembers} {uniqueMembers === 1 ? "member" : "members"} active
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -319,12 +368,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                         <ReactionRow
                           key={t.activityKey}
                           thread={t}
-                          onScrollTo={() => {
-                            if (t.sectionId) {
-                              onClose();
-                              setTimeout(() => onScrollTo(t.sectionId), 200);
-                            }
-                          }}
+                          onScrollTo={() => goToSection(t.sectionId)}
                           onComment={() => setReplyTo(t.activityKey)}
                         />
                       ))}
@@ -349,12 +393,7 @@ export function GroupActivityPanel({ planId, result, allDays, onScrollTo, onClos
                         currentUserId={user?.id}
                         isExpanded={expandedThreads.has(thread.activityKey)}
                         onToggle={() => toggleThread(thread.activityKey)}
-                        onScrollTo={() => {
-                          if (thread.sectionId) {
-                            onClose();
-                            setTimeout(() => onScrollTo(thread.sectionId), 200);
-                          }
-                        }}
+                        onScrollTo={() => goToSection(thread.sectionId)}
                         onReply={() => setReplyTo(thread.activityKey)}
                         onDelete={handleDeleteComment}
                       />
@@ -532,45 +571,82 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
     return Object.entries(counts);
   }, [thread.reactions]);
 
+  // Pull a hero photo for activity threads (skips trip-general / day-discussion)
+  const { photos } = useGooglePlaceDetails(
+    thread.activityTitle || "",
+    thread.locationName || "",
+  );
+  const heroSrc = photos && photos.length > 0 ? photos[0] : null;
+
   return (
-    <div className="rounded-xl bg-card shadow-sm overflow-hidden">
-      {/* Header */}
+    <div className="rounded-2xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-border/40">
+      {/* Place header — image + title */}
       <button
         onClick={onScrollTo}
-        className="w-full flex items-center justify-between px-3 pt-2.5 pb-1.5 text-left hover:bg-muted/30 transition-colors"
+        className="w-full flex items-stretch text-left group/header"
       >
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[12px] font-semibold text-foreground truncate">
-            {thread.activityLabel}
-          </span>
-          {thread.dayLabel && (
-            <span className="text-[10px] text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 shrink-0">
-              {thread.dayLabel}
+        {/* Thumbnail (or accent strip when no image) */}
+        {heroSrc ? (
+          <div className="relative w-16 shrink-0 overflow-hidden bg-muted">
+            <img
+              src={heroSrc}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover group-hover/header:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="w-1 shrink-0 bg-gradient-to-b from-[#0D9488] to-[#0D9488]/40" />
+        )}
+
+        {/* Title block */}
+        <div className="flex-1 min-w-0 px-3 py-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[12.5px] font-semibold text-foreground leading-tight group-hover/header:text-[#0D9488] transition-colors">
+                  {thread.activityLabel}
+                </span>
+                {thread.dayLabel && (
+                  <span className="text-[9.5px] font-medium text-[#0D9488] bg-[#0D9488]/10 rounded px-1.5 py-0.5 shrink-0 leading-none">
+                    {thread.dayLabel}
+                  </span>
+                )}
+              </div>
+              {thread.locationName && (
+                <div className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground/80 truncate">
+                  <MapPin className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate">{thread.locationName}</span>
+                </div>
+              )}
+            </div>
+            <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap shrink-0 mt-0.5">
+              {formatDistanceToNow(thread.latestAt, { addSuffix: true })}
             </span>
+          </div>
+
+          {/* Reaction pills inline */}
+          {reactionCounts.length > 0 && (
+            <div className="mt-1.5 flex items-center gap-1">
+              {reactionCounts.map(([emoji, count]) => {
+                const info = EMOJI_MAP[emoji];
+                return info ? (
+                  <span key={emoji} className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-muted/50 rounded-full px-1.5 py-0.5">
+                    <info.Icon className="h-2.5 w-2.5" />{count > 1 ? count : ""}
+                  </span>
+                ) : null;
+              })}
+            </div>
           )}
         </div>
-        <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap ml-2 shrink-0">
-          {formatDistanceToNow(thread.latestAt, { addSuffix: true })}
-        </span>
       </button>
 
-      {/* Reactions inline (subtle) */}
-      {reactionCounts.length > 0 && (
-        <div className="px-3 pb-1 flex items-center gap-2">
-          {reactionCounts.map(([emoji, count]) => {
-            const info = EMOJI_MAP[emoji];
-            return info ? (
-              <span key={emoji} className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                <info.Icon className="h-3 w-3" /> {count}
-              </span>
-            ) : null;
-          })}
-        </div>
-      )}
+      {/* Divider */}
+      <div className="h-px bg-border/40 mx-3" />
 
       {/* First comment */}
       {firstComment && (
-        <div className="px-3 pb-2.5 pt-1">
+        <div className="px-3 pb-2.5 pt-2">
           <CommentRow
             comment={firstComment}
             isOwn={firstComment.userId === currentUserId}
@@ -592,7 +668,7 @@ function ThreadCard({ thread, currentUserId, isExpanded, onToggle, onScrollTo, o
 
       {/* Threaded replies */}
       {isExpanded && hasReplies && (
-        <div className="bg-muted/20 px-3 py-1.5">
+        <div className="bg-muted/30 px-3 py-2 border-t border-border/40">
           <div className="ml-6 border-l-2 border-[#0D9488]/40 pl-3 space-y-2 py-1">
             {replies.map(reply => (
               <CommentRow
