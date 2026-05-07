@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN confirmed_adult SET DEFAULT true;

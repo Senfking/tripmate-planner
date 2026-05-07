@@ -108,12 +108,8 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
-  // 18+ confirmation. Required before any signup button works. Stored in
-  // localStorage so it survives the OAuth redirect; AuthCallback then writes
-  // profiles.confirmed_adult = true. No effect on the signin path.
-  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const isSignup = mode === "signup";
-  const signupBlocked = isSignup && !adultConfirmed;
+  const signupBlocked = false;
   const copy = COPY[trigger];
 
   useEffect(() => {
@@ -245,18 +241,6 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
         <p className="mb-3 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}>
           {error}
         </p>
-      )}
-
-      {isSignup && (
-        <label className="mb-3 flex items-start gap-2 text-[12.5px] text-white/75 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={adultConfirmed}
-            onChange={(e) => setAdultConfirmed(e.target.checked)}
-            className="mt-[3px] h-3.5 w-3.5 cursor-pointer accent-teal-500"
-          />
-          <span>I confirm I am 18 years or older. Junto is only intended for users aged 18+.</span>
-        </label>
       )}
 
       <div className="space-y-3">
