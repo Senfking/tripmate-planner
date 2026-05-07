@@ -1283,9 +1283,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
         <div className="h-24" />
       </div>
 
-      {/* Floating glassmorphic action cluster (CTAs + Group Chat) */}
+      {/* Floating glassmorphic action cluster (CTAs + Group Chat) — hidden when map is fullscreen */}
       <div
-        className={cn("fixed left-0 right-0 z-40 flex justify-center px-4 pointer-events-none", rc)}
+        className={cn("fixed left-0 right-0 z-40 flex justify-center px-4 pointer-events-none", rc, mapState === "full" && "hidden")}
         style={{ ...revealStyle("complete"), bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
       >
         <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-1.5">
