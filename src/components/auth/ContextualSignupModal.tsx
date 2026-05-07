@@ -108,12 +108,8 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
-  // 18+ confirmation. Required before any signup button works. Stored in
-  // localStorage so it survives the OAuth redirect; AuthCallback then writes
-  // profiles.confirmed_adult = true. No effect on the signin path.
-  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const isSignup = mode === "signup";
-  const signupBlocked = isSignup && !adultConfirmed;
+  const signupBlocked = false;
   const copy = COPY[trigger];
 
   useEffect(() => {
