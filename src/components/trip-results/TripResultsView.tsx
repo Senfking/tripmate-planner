@@ -958,22 +958,20 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                           <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-[#94A3B8]" />
                           <span className="text-xs text-white/80 flex-1 inline-flex items-center gap-1.5 min-w-0">
                             <span className="truncate">Daily living estimate</span>
-                            <TooltipProvider delayDuration={150}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    aria-label="What's in daily living estimate"
-                                    className="shrink-0 inline-flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
-                                  >
-                                    <Info className="h-3 w-3" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-[240px] text-[11px]">
-                                  Estimated breakfasts, local transport, tips, drinks, and snacks not in your itinerary.
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  aria-label="What's in daily living estimate"
+                                  className="shrink-0 inline-flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
+                                >
+                                  <Info className="h-3 w-3" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent side="top" className="max-w-[240px] text-[11px] p-2.5">
+                                Estimated breakfasts, local transport, tips, drinks, and snacks not in your itinerary.
+                              </PopoverContent>
+                            </Popover>
                           </span>
                           <span className="text-[10px] text-white/40 font-mono tabular-nums w-10 text-right">
                             {totalInTripCcy > 0
