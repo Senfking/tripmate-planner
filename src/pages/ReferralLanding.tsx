@@ -354,7 +354,6 @@ export default function ReferralLanding() {
     if (signupBlocked) return;
     setError(null);
     setGoogleLoading(true);
-    if (isSignupMode) persistAdultConsent();
     const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
     const { error: err } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: callbackUrl,
