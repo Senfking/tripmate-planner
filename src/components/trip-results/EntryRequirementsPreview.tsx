@@ -118,19 +118,19 @@ export function EntryRequirementsPreview({
   // Anonymous user — show signup-prompt preview instead of "Set nationality".
   if (!user) {
     return (
-      <Wrapper>
+      {wrap(<>
         <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
           Sign up to see your personalized visa &amp; entry requirements for{" "}
           {destName ?? "this destination"}.
         </div>
-      </Wrapper>
+      </>)}
     );
   }
 
   // Empty state: no nationality on profile
   if (!hasNationality) {
     return (
-      <Wrapper>
+      {wrap(<>
         <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
           Add your nationality to see entry requirements for this trip.{" "}
           <Link
@@ -140,13 +140,13 @@ export function EntryRequirementsPreview({
             Set nationality →
           </Link>
         </div>
-      </Wrapper>
+      </>)}
     );
   }
 
   if (isLoading) {
     return (
-      <Wrapper>
+      {wrap(<>
         <div className="space-y-2">
           <div className="rounded-xl border border-border bg-card px-3 py-2.5">
             <Skeleton className="h-3 w-3/4" />
@@ -157,13 +157,13 @@ export function EntryRequirementsPreview({
             <Skeleton className="mt-2 h-2.5 w-full" />
           </div>
         </div>
-      </Wrapper>
+      </>)}
     );
   }
 
   if (isError || !data) {
     return (
-      <Wrapper>
+      {wrap(<>
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-900 leading-snug dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-200">
           <div className="flex items-start gap-2">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
@@ -180,7 +180,7 @@ export function EntryRequirementsPreview({
             </div>
           </div>
         </div>
-      </Wrapper>
+      </>)}
     );
   }
 
@@ -199,7 +199,7 @@ export function EntryRequirementsPreview({
 
   if (isAllClear) {
     return (
-      <Wrapper>
+      {wrap(<>
         <AllClearPanel
           destName={destName}
           nationality={nationalities[0]}
@@ -209,12 +209,12 @@ export function EntryRequirementsPreview({
           additionalNotes={data.additional_notes}
           disclaimer={disclaimer}
         />
-      </Wrapper>
+      </>)}
     );
   }
 
   return (
-    <Wrapper>
+    {wrap(<>
       <div className="space-y-2">
         {(summary || destName) && (
           <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-[12.5px] leading-snug">
@@ -291,7 +291,7 @@ export function EntryRequirementsPreview({
           You&apos;ll be able to confirm and upload documents after you create the trip.
         </p>
       </div>
-    </Wrapper>
+    </>)}
   );
 }
 
