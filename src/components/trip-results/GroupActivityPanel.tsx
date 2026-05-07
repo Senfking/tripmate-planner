@@ -2,7 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Users, ThumbsUp, ThumbsDown, Flame, HelpCircle, MessageSquare, Send, Trash2, ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { useGooglePlaceDetails } from "@/hooks/useGooglePlaceDetails";
 import { formatDistanceToNow } from "date-fns";
 import type { AITripResult, AIDay } from "./useResultsState";
 
