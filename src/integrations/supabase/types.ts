@@ -154,6 +154,27 @@ export type Database = {
           },
         ]
       }
+      ai_usage_counters: {
+        Row: {
+          count: number
+          endpoint: string
+          user_id: string
+          window_start_utc: string
+        }
+        Insert: {
+          count?: number
+          endpoint: string
+          user_id: string
+          window_start_utc: string
+        }
+        Update: {
+          count?: number
+          endpoint?: string
+          user_id?: string
+          window_start_utc?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null
@@ -1186,6 +1207,7 @@ export type Database = {
         Row: {
           admin_notes: string | null
           avatar_url: string | null
+          confirmed_adult: boolean
           created_at: string
           default_currency: string | null
           display_name: string | null
@@ -1206,6 +1228,7 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           avatar_url?: string | null
+          confirmed_adult?: boolean
           created_at?: string
           default_currency?: string | null
           display_name?: string | null
@@ -1226,6 +1249,7 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           avatar_url?: string | null
+          confirmed_adult?: boolean
           created_at?: string
           default_currency?: string | null
           display_name?: string | null
@@ -1959,6 +1983,10 @@ export type Database = {
       admin_promote_plan_to_template: {
         Args: { _plan_id: string; _slug: string }
         Returns: Json
+      }
+      bump_ai_usage_counter: {
+        Args: { _endpoint: string; _user_id: string; _window: string }
+        Returns: number
       }
       check_error_spike: { Args: never; Returns: undefined }
       cleanup_expired_entry_requirements_cache: {
