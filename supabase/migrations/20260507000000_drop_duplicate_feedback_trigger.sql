@@ -1,0 +1,26 @@
+-- =============================================================================
+-- Drop the duplicate `trigger_notify_new_feedback` trigger on public.feedback
+-- =============================================================================
+-- Two triggers on public.feedback both call public.notify_new_feedback() —
+-- so every feedback INSERT was firing the webhook fan-out twice:
+--
+--   trg_notify_new_feedback       — created 20260403140000 (first)
+--   trigger_notify_new_feedback   — created 20260403201532 (the duplicate)
+--
+-- Migration 20260403210000_fix_feedback_trigger_exception_safe.sql DROPped
+-- both and CREATEd only `trg_notify_new_feedback`, explicitly noting that it
+-- was "consolidating duplicate triggers". Migration 20260403220000 then
+-- DROPped both as part of removing pg_net-driven feedback notifications.
+-- Both states would have been correct — but production currently has BOTH
+-- triggers live (likely because the drop migrations never applied or the
+-- triggers were re-created out of band), so we drop the duplicate again
+-- here, defensively, with IF EXISTS.
+--
+-- Canonical: trg_notify_new_feedback (kept).
+-- Dropped:   trigger_notify_new_feedback.
+--
+-- The function public.notify_new_feedback() is left in place — it is in
+-- active use by the canonical trigger.
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trigger_notify_new_feedback ON public.feedback;

@@ -1,17 +1,24 @@
 -- =============================================================================
--- Drop the orphan notify_new_feedback() function
+-- VOID — superseded by 20260507000000_drop_duplicate_feedback_trigger.sql
 -- =============================================================================
--- Both the trg_notify_new_feedback and trigger_notify_new_feedback triggers
--- were dropped in 20260403220000_drop_feedback_notification_trigger.sql when
--- pg_net signature mismatches kept blocking feedback inserts. The frontend
--- now invokes `check-admin-alerts` directly, and the AFTER INSERT
--- `analyze_new_feedback` trigger (20260426114007) handles AI enrichment with
--- proper EXCEPTION WHEN OTHERS wrapping.
+-- The original intent of this migration was to drop public.notify_new_feedback()
+-- as orphan code, on the assumption that the previous DROP TRIGGER migration
+-- (20260403220000_drop_feedback_notification_trigger.sql) had taken effect and
+-- the function had no dependents.
 --
--- The notify_new_feedback() function itself was never dropped, so it lingers
--- as zombie code with hard-coded JWTs in its body (see migration
--- 20260403210000 — those JWTs are public anon keys, not secrets, but they
--- are still dead artifacts). Drop it.
+-- That assumption was WRONG. In production both `trg_notify_new_feedback` and
+-- `trigger_notify_new_feedback` are live on public.feedback, so:
+--   1. The function is in active use, not orphan.
+--   2. DROP FUNCTION ... fails with a dependency error.
+--   3. The two live triggers were double-firing every feedback INSERT.
+--
+-- Migration 20260507000000_drop_duplicate_feedback_trigger.sql drops the
+-- duplicate (trigger_notify_new_feedback, created in 20260403201532) and keeps
+-- the canonical one (trg_notify_new_feedback, created in 20260403140000 and
+-- explicitly consolidated as the single trigger in 20260403210000).
+--
+-- This file is intentionally a no-op so it can re-run safely on any database
+-- where it had not yet been applied.
 -- =============================================================================
 
-DROP FUNCTION IF EXISTS public.notify_new_feedback();
+SELECT 1;
