@@ -535,11 +535,11 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <button
               onClick={() => {
                 if (mapState !== "closed") {
-                  setMapState("closed");
+                  setMapStatePersisted("closed");
                   return;
                 }
                 const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
-                setMapState(isDesktop ? "partial" : "full");
+                setMapStatePersisted(isDesktop ? "partial" : "full");
               }}
               aria-label={mapState === "closed" ? "Show map" : "Hide map"}
               className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
