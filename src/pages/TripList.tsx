@@ -831,33 +831,24 @@ export default function TripList() {
 
   /* ── Empty state ── */
   if (!trips || trips.length === 0) {
+    const friendlySubtitle = "A blank canvas — let's plan something good.";
     return (
       <div className="relative min-h-dvh flex flex-col bg-background">
-        <TabHeroHeader title={greeting} subtitle="No trips yet — start planning!" pills={tripsPills} />
+        <TabHeroHeader title={`${greeting} 👋`.replace(" 👋", "")} subtitle={friendlySubtitle} pills={tripsPills} />
 
-        <div className="hidden md:block pt-6 pb-4 px-4">
-          <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
-          <p className="text-sm text-muted-foreground mt-1">No trips yet — start planning!</p>
-        </div>
-
-        {/* Inline Hero (app variant) — same component used at /trips/new */}
-        <Hero
-          variant="app"
-          onSubmit={(prompt) => {
+        <EmptyTripsHome
+          displayName={profile?.display_name}
+          onSubmitPrompt={(prompt) => {
             stashPendingPrompt(prompt);
             navigate("/trips/new");
           }}
-          secondaryAction={
-            <button
-              type="button"
-              onClick={() => setJoinOpen(true)}
-              className="w-full text-sm font-medium bg-transparent border-none cursor-pointer"
-              style={{ color: "#0D9488" }}
-            >
-              Join an existing trip with a code
-            </button>
-          }
+          onPlanStepByStep={() => navigate("/trips/new?step=1")}
+          onSkipItinerary={() => navigate("/trips/new?blank=1")}
+          onJoinWithCode={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
         />
+
+        <DesktopFooter />
+
         <JoinDrawer
           open={joinOpen}
           onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(""); setJoinError(""); } }}
