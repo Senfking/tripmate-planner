@@ -457,14 +457,16 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
       if (!res.ok) {
         let msg = `Server returned ${res.status}`;
         let code: string | null = res.status === 429 ? "rate_limited" : null;
+        let step: string | null = null;
         try {
           const json = await res.json();
           if (json?.message) msg = json.message;
           else if (json?.error) msg = json.error;
           const serverCode = typeof json?.code === "string" ? json.code : typeof json?.error === "string" ? json.error : null;
           code = res.status === 429 && (serverCode === "anon_limit" || json?.reason === "signup_required") ? "rate_limited" : serverCode ?? code;
+          if (typeof json?.step === "string") step = json.step;
         } catch {}
-        update({ stage: "error", error: msg, errorCode: code });
+        update({ stage: "error", error: msg, errorCode: code, errorStep: step });
         return;
       }
 
