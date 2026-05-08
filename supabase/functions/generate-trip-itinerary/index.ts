@@ -1204,7 +1204,7 @@ Your output will be used to (1) pick a surprise destination when the user hasn't
 EXTRACTION RULES
 
 destination:
-- If the user provided a destination_hint (non-empty), copy it verbatim into destination.
+- If the user provided a destination_hint (non-empty), copy it VERBATIM into destination. Do NOT translate, paraphrase, "fix" the spelling, or substitute a different city — even one you think is "safer", "more popular", or "a better fit". The user's typed destination is sacred. Saint-Petersburg, Moscow, Tehran, Pyongyang, Damascus, Havana, Caracas, and every other real-world city are all valid Junto destinations. Junto is not a sanctions tool and does not gatekeep destinations on geopolitical grounds. If you swap the user's destination for a neighbor or a "preferred" alternative you are corrupting the user's request — return the user's input exactly as written.
 - If destination_hint is empty or looks like a placeholder (TBD, surprise me, anywhere, etc.), return destination as an empty string. A separate step will pick one.
 - Never invent a destination from thin air.
 
@@ -1527,6 +1527,64 @@ async function parseIntent(
     transit_legs: [],
     adjustment_notice: adjustmentNotice,
   };
+}
+
+// Strip non-alphanumeric chars and lowercase. Used for fuzzy destination
+// equality so "Saint-Petersburg" matches "Saint Petersburg, Russia".
+function normalizeDestinationName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+// Substring-containment fuzzy match. Treats either string as a match when one
+// is contained in the other after normalization. Catches ", Country" suffixes
+// and punctuation differences while still flagging real substitutions.
+//   "Saint-Petersburg" vs "Saint Petersburg, Russia" → match
+//   "Moscow" vs "Moscow, Russia"                     → match
+//   "Saint-Petersburg" vs "Tallinn, Estonia"         → MISMATCH
+//   "Tehran" vs "Dubai, UAE"                         → MISMATCH
+function destinationsMatch(a: string, b: string): boolean {
+  const na = normalizeDestinationName(a);
+  const nb = normalizeDestinationName(b);
+  if (!na || !nb) return false;
+  return na.includes(nb) || nb.includes(na);
+}
+
+// Defensive enforcement against destination substitution by parseIntent's LLM.
+// Junto's hard rule: when the user typed a destination, we use that destination
+// — full stop. The LLM is instructed to copy destination_hint verbatim, but
+// Claude Haiku has been observed silently swapping politically-sensitive cities
+// (Saint-Petersburg → Tallinn, etc.) for "safer" alternatives. That destroys
+// user trust the moment anyone notices, so we re-check the LLM's output here
+// and override on mismatch. Never silently substitute — either honor the user's
+// destination or refuse explicitly upstream.
+function enforceUserDestination(intent: Intent, rawDest: string): void {
+  const trimmed = rawDest.trim();
+  if (!trimmed) return;
+  const llmEmitted = (intent.destination || "").trim();
+  if (!destinationsMatch(llmEmitted, trimmed)) {
+    console.warn(
+      `[parseIntent.destination_substitution] LLM emitted destination="${llmEmitted}" ` +
+      `but user provided "${trimmed}" — overriding with user input. This indicates the ` +
+      `intent parser silently substituted; investigate the prompt or model behavior.`,
+    );
+    intent.destination = trimmed;
+  }
+  // intent.destinations[] is OPTIONAL post-parseIntent — empty for single-leg
+  // requests (buildIntentDestinations materializes it later). When populated,
+  // the first leg should match the user's typed destination; override if not.
+  if (intent.destinations.length > 0) {
+    const firstName = (intent.destinations[0].name || "").trim();
+    if (!destinationsMatch(firstName, trimmed)) {
+      console.warn(
+        `[parseIntent.destination_substitution] LLM emitted destinations[0].name="${firstName}" ` +
+        `but user provided "${trimmed}" — overriding leg 0 with user input.`,
+      );
+      intent.destinations[0] = {
+        ...intent.destinations[0],
+        name: trimmed,
+      };
+    }
+  }
 }
 
 // Materialize intent.destinations[] post-parseIntent. Called from the pipeline
@@ -8908,6 +8966,14 @@ Deno.serve(async (req) => {
             const intent = await parseIntent(anthropicKey, body, surpriseMe ? "" : rawDest, logger, pipelineStartedAt);
             tStage("parse_intent", tParseIntent);
             applyIntentDuration(intent);
+            // Defensive guard: parseIntent's LLM has been observed silently
+            // substituting politically-sensitive destinations (Saint-Petersburg
+            // → Tallinn, etc.) for "safer" neighbors. When the user typed an
+            // explicit destination we re-pin it here so the substitution can't
+            // leak into Places searches or the ranker context.
+            if (!surpriseMe && rawDest) {
+              enforceUserDestination(intent, rawDest);
+            }
             if (intent.destination) loggedDestination = intent.destination;
 
             // Free-text-only flow: parseIntent leaves destination empty (the
@@ -10320,6 +10386,14 @@ Deno.serve(async (req) => {
     );
     tStage("parse_intent", tParseIntent);
     applyIntentDuration(intent);
+    // Defensive guard: parseIntent's LLM has been observed silently
+    // substituting politically-sensitive destinations (Saint-Petersburg →
+    // Tallinn, etc.) for "safer" neighbors. When the user typed an explicit
+    // destination we re-pin it here so the substitution can't leak into
+    // Places searches or the ranker context.
+    if (!surpriseMe && rawDest) {
+      enforceUserDestination(intent, rawDest);
+    }
     if (intent.destination) loggedDestination = intent.destination;
 
     // Free-text-only flow: parseIntent leaves destination empty (the system
