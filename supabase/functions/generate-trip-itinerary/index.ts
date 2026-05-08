@@ -60,6 +60,12 @@ import {
 } from "./must-have-fidelity.ts";
 import { maybeRecoverEmptyDay } from "./empty-day-recovery.ts";
 import { anchorDurationOverride } from "./anchor-duration.ts";
+import {
+  applyIntentOverrides,
+  type IntentOverrides,
+  parseIntentOverrides,
+  type TravelParty,
+} from "./intent-overrides.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -107,6 +113,11 @@ interface TripBuilderRequest {
   duration_days?: number | null;
   group_size?: number;
   budget_level?: BudgetLevel;
+  // travel_party is sent by the trip-builder forms ("solo", "couple",
+  // "friends", "family", "group"). The pipeline doesn't read it directly
+  // but parseIntent's free_text extractor may overwrite it on this body
+  // when free_text contradicts the form-supplied default.
+  travel_party?: TravelParty;
   vibes?: string[];
   interests?: string[];
   dietary?: string[];
@@ -585,6 +596,11 @@ interface Intent {
   // the trip payload as adjustment_notice. Null when the LLM took the user
   // request as-is (and on single-destination trips).
   adjustment_notice: string | null;
+  // Free-text-derived overrides for form-supplied fields. Each property is
+  // null when the user's text didn't make the field explicit; non-null
+  // values are applied to the request body + intent at the parseIntent
+  // calling site (see applyIntentOverrides).
+  extracted_overrides: IntentOverrides;
 }
 
 type SlotType =
@@ -1325,6 +1341,57 @@ adjustment_notice (OPTIONAL — omit when the user's request was honored as-is):
   * "Allocated more time to Koh Phangan (5 days) than Bangkok (4 days) based on your 'end with island chill' note."
 - OMIT this field entirely on single-destination trips and when the days_allocated split matches the most natural reading of the user's text.
 
+extracted_group_size (OPTIONAL — omit when not specified or only weakly implied):
+- Read notes/free_text for an explicit or strongly-implied group size.
+- Examples: "4 friends" => 4. "couple" / "with my husband" / "with my wife" / "with my partner" / "anniversary trip" => 2. "solo" / "by myself" / "just me" => 1. "family of 5" => 5. "5 of us" => 5. "me and 3 buddies" => 4 (you + 3). "bachelor party with 8 guys" => 8.
+- OMIT this property entirely when the text does NOT name or strongly imply a number. Do NOT echo group_size from the form payload — your job is to report what the user TYPED. If the only signal is the form's group_size, omit this field.
+- Do NOT guess from vibes ("nightlife" alone implies nothing about group size).
+
+extracted_travel_party (OPTIONAL — omit when ambiguous):
+- One of: solo, couple, friends, family, group.
+- "solo trip", "by myself", "just me" => "solo".
+- "with my wife/husband/partner", "anniversary", "honeymoon", "romantic getaway", "couples trip" => "couple".
+- "4 friends", "with my buddies", "with the girls", "bachelor party", "bachelorette party", "group of friends" => "friends".
+- "family of N", "with the kids", "with my parents", "multi-gen trip" => "family".
+- "8 of us", "group trip" without other context, "team retreat" => "group".
+- OMIT when the text doesn't specify the kind of party. Do NOT echo the form's travel_party.
+
+extracted_budget_level (OPTIONAL — omit when ambiguous):
+- One of: budget, mid-range, premium, luxury.
+- Explicit signals (high confidence — extract):
+  * luxury: "luxury", "high-end", "5-star", "splurge", "fine dining", "yacht", "private jet", "Michelin tasting", "world-class", "top-tier", "the best", "no expense spared", "$$$$".
+  * premium: "premium", "$$$", "upscale", "boutique hotel", "high-quality", "nice hotels".
+  * mid-range: "$$", "mid-range", "mid", "comfortable but not flashy".
+  * budget: "budget", "cheap", "backpacking", "shoestring", "$", "hostels", "as cheap as possible", "save money".
+- Strongly-implied venue signals (extract when the user's named venue category is inherently a tier):
+  * "beach clubs and serious nightlife" => premium (beach club + nightclub minimums are inherently premium).
+  * "Michelin tasting" / "fine dining" / "Nikki Beach" / "Atlantis the Royal" => luxury.
+  * "rooftop bars and cocktails" alone is mid-range; pair with "premium scene" / "high-end" to push to premium.
+- Edge case (explicit budget word wins over premium venue mention): "Budget trip but I want to check out Nikki Beach" => extract "budget" — the explicit budget word beats the premium venue. Same for "shoestring … Atlantis" => budget. Document the user's explicit budget intent, not the venue.
+- OMIT when free_text expresses no clear budget signal. Do NOT echo the form's budget_level.
+
+EXAMPLES (extracted fields only — destination/vibes/must_haves omitted for brevity):
+1. "4 friends, 9 days in Dubai, beach clubs and serious nightlife"
+   → extracted_group_size: 4, extracted_travel_party: "friends", extracted_budget_level: "premium"
+2. "Romantic anniversary in Paris, 5 days at a Michelin restaurant"
+   → extracted_group_size: 2, extracted_travel_party: "couple", extracted_budget_level: "luxury"
+3. "Backpacking solo through Vietnam for 2 weeks"
+   → extracted_group_size: 1, extracted_travel_party: "solo", extracted_budget_level: "budget"
+4. "5 days in Tokyo"
+   → ALL THREE fields OMITTED (no signals)
+5. "Family of 5 in Disney World"
+   → extracted_group_size: 5, extracted_travel_party: "family" (extracted_budget_level OMITTED)
+6. "Bachelor party in Vegas, 8 of us, splurge weekend"
+   → extracted_group_size: 8, extracted_travel_party: "friends", extracted_budget_level: "luxury"
+7. "With my wife in Kyoto, traditional ryokan stay"
+   → extracted_group_size: 2, extracted_travel_party: "couple" (extracted_budget_level OMITTED — ryokan spans tiers)
+8. "Couple beach holiday in Mykonos, want to do beach clubs"
+   → extracted_group_size: 2, extracted_travel_party: "couple", extracted_budget_level: "premium"
+9. "Family with 2 kids, 7 days in Orlando, budget-friendly"
+   → extracted_group_size: 4, extracted_travel_party: "family", extracted_budget_level: "budget"
+10. "Shoestring backpacking trip but I want one night at Atlantis"
+   → extracted_group_size OMITTED (no count given), extracted_travel_party OMITTED (could be solo or otherwise; not stated), extracted_budget_level: "budget" (explicit budget word wins over Atlantis).
+
 Return exactly one tool_use call. Do not add commentary.`;
 
 const INTENT_TOOL: ClaudeTool = {
@@ -1414,6 +1481,25 @@ const INTENT_TOOL: ClaudeTool = {
         type: "string",
         description:
           "One sentence describing any adjustment you made (dropped destinations, rebalanced day allocation, etc.). OMIT this field when the user's request was honored as-is.",
+      },
+      extracted_group_size: {
+        type: "integer",
+        minimum: 1,
+        maximum: 50,
+        description:
+          "Group size extracted from notes/free_text when explicitly stated or strongly implied ('4 friends' => 4, 'with my husband' => 2, 'solo' => 1, 'family of 5' => 5). OMIT this field entirely when the user did not state or imply a count — do not echo the form payload's group_size.",
+      },
+      extracted_travel_party: {
+        type: "string",
+        enum: ["solo", "couple", "friends", "family", "group"],
+        description:
+          "Travel party type extracted from notes/free_text when explicitly stated or strongly implied. OMIT this field when the user did not specify — do not echo the form payload's travel_party.",
+      },
+      extracted_budget_level: {
+        type: "string",
+        enum: ["budget", "mid-range", "premium", "luxury"],
+        description:
+          "Budget tier extracted from notes/free_text. Explicit signals ('$$$$', 'luxury', 'splurge', 'Michelin' => luxury; 'premium', 'upscale' => premium; 'budget', 'shoestring', 'backpacking' => budget) and strongly-implied venue signals (beach club + serious nightlife => premium). When an explicit budget word conflicts with a premium venue mention, the explicit word wins. OMIT this field when the text expresses no clear signal — do not echo the form's budget_level.",
       },
     },
     required: [
@@ -1559,6 +1645,14 @@ async function parseIntent(
       ? data.adjustment_notice.trim()
       : null;
 
+  // Free-text-derived overrides for the form-supplied group_size /
+  // travel_party / budget_level. The applyIntentOverrides helper (called
+  // from the parseIntent caller) writes these onto the body + intent when
+  // non-null. Each field is null when the LLM omitted it (i.e. the user's
+  // text didn't make the value explicit) — existing form defaults flow
+  // through unchanged in that case.
+  const extractedOverrides = parseIntentOverrides(data);
+
   return {
     destination: typeof data.destination === "string" ? data.destination : "",
     vibes: stringArray(data.vibes),
@@ -1574,6 +1668,7 @@ async function parseIntent(
     destinations: parsedDestinations,
     transit_legs: [],
     adjustment_notice: adjustmentNotice,
+    extracted_overrides: extractedOverrides,
   };
 }
 
@@ -9298,6 +9393,11 @@ Deno.serve(async (req) => {
             checkPipelineTimeout(pipelineStartedAt, stepLabel);
             const intent = await parseIntent(anthropicKey, body, surpriseMe ? "" : rawDest, logger, pipelineStartedAt);
             tStage("parse_intent", tParseIntent);
+            // Apply free-text-derived overrides BEFORE applyIntentDuration /
+            // cache-key construction so body.group_size, body.budget_level,
+            // and intent.budget_tier reflect the user's typed signals — not
+            // the form's hardcoded defaults — for every downstream stage.
+            applyIntentOverrides(body, intent, intent.extracted_overrides);
             applyIntentDuration(intent);
             // Defensive guard: parseIntent's LLM has been observed silently
             // substituting politically-sensitive destinations (Saint-Petersburg
@@ -10775,6 +10875,11 @@ Deno.serve(async (req) => {
       pipelineStartedAt,
     );
     tStage("parse_intent", tParseIntent);
+    // Apply free-text-derived overrides BEFORE applyIntentDuration /
+    // cache-key construction so body.group_size, body.budget_level, and
+    // intent.budget_tier reflect the user's typed signals — not the form's
+    // hardcoded defaults — for every downstream stage.
+    applyIntentOverrides(body, intent, intent.extracted_overrides);
     applyIntentDuration(intent);
     // Defensive guard: parseIntent's LLM has been observed silently
     // substituting politically-sensitive destinations (Saint-Petersburg →
