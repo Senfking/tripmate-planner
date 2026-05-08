@@ -246,11 +246,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
         </ul>
       )}
 
-      {error && (
-        <p className="mb-3 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}>
-          {error}
-        </p>
-      )}
+      <AuthErrorBanner message={error} variant="dark" className="mb-3" />
 
       <div className="space-y-3">
         <button
