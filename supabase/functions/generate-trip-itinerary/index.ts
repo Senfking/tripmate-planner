@@ -9973,10 +9973,18 @@ Deno.serve(async (req) => {
             // so the empty payload never reaches ai_response_cache.
             const totalBefore = ranked_days.reduce((n, d) => n + d.activities.length, 0) + totalDropped;
             if (totalBefore === 0) {
-              throw new Error("Ranker returned 0 activities for the whole trip — refusing to cache empty result");
+              throw new PipelineError(
+                "thin_pool",
+                "We couldn't find enough places to build a trip here. Try a more specific city, or pick a different destination.",
+                "Ranker returned 0 activities for the whole trip — refusing to cache empty result",
+              );
             }
             if (totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
-              throw new Error(`Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`);
+              throw new PipelineError(
+                "thin_pool",
+                "We couldn't find enough places to build a trip here. Try a more specific city, or pick a different destination.",
+                `Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`,
+              );
             }
             if (fallbackDays > 0) {
               console.warn(`[stream.rank] ${fallbackDays}/${numDays} days fell back to skeleton-only`);
