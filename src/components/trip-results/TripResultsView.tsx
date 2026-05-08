@@ -678,7 +678,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             </div>
             {/* Day ladder breaks out of the centered column so chips can
                 scroll edge-to-edge across the full viewport width. */}
-            <div className="-mx-[max(env(safe-area-inset-left,0px),0px)]">
+            {/* Break out of the 700px centered column so the day chips can
+                scroll edge-to-edge across the full viewport width. */}
+            <div className="relative left-1/2 -translate-x-1/2 w-screen">
               <StreamingProgressLadder
                 totalDays={allDays.length}
                 completedDays={streamingCompletedDays ?? []}
