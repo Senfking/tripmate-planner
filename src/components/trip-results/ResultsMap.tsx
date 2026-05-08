@@ -246,7 +246,34 @@ function MapController({
 
 /* ── Main component ── */
 export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick, interactive = true }: Props) {
-  const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
+  // Reject the streaming default (0,0 — Gulf of Guinea) so the map doesn't
+  // briefly show West Africa before the real destination resolves. Fall back
+  // to the first geocoded destination/activity if available.
+  const firstGeoPoint = useMemo(() => {
+    for (const d of allDays) {
+      for (const a of d.activities) {
+        if (a.latitude != null && a.longitude != null && (a.latitude !== 0 || a.longitude !== 0)) {
+          return { lat: a.latitude, lng: a.longitude };
+        }
+      }
+    }
+    const dest = (result?.destinations ?? []).find(
+      (x: any) => x?.latitude != null && x?.longitude != null && (x.latitude !== 0 || x.longitude !== 0)
+    ) as any;
+    return dest ? { lat: dest.latitude, lng: dest.longitude } : null;
+  }, [allDays, result]);
+
+  const centerIsRealistic =
+    !!result?.map_center &&
+    typeof result.map_center.lat === "number" &&
+    typeof result.map_center.lng === "number" &&
+    !(result.map_center.lat === 0 && result.map_center.lng === 0);
+
+  const effectiveCenter = centerIsRealistic
+    ? { lat: result.map_center.lat, lng: result.map_center.lng }
+    : firstGeoPoint;
+
+  const hasValidCenter = !!effectiveCenter;
 
   const getCoords = useCallback((dayDate: string, idx: number, a: AIActivity) => {
     const key = `${dayDate}-${idx}`;
