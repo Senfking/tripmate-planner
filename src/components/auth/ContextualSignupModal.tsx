@@ -7,7 +7,8 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { lovable } from "@/integrations/lovable/index";
-import { friendlyError } from "@/lib/friendlyError";
+import { mapAuthError, captureAuthError } from "@/lib/authErrors";
+import { AuthErrorBanner } from "@/components/auth/AuthErrorBanner";
 import { peekAnonSessionId, clearAnonSessionId } from "@/lib/anonSession";
 import { trackEvent } from "@/lib/analytics";
 
