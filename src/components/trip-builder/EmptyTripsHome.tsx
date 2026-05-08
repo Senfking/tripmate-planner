@@ -276,7 +276,6 @@ export function EmptyTripsHome({
           </div>
           <TripCarousels showHeader={false} />
         </div>
-        </div>
 
         <style>{`
           @keyframes eth-shake {
