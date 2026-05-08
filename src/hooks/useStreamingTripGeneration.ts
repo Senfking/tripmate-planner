@@ -275,6 +275,7 @@ const INITIAL: StreamingState = {
   result: null,
   error: null,
   errorCode: null,
+  errorStep: null,
   anonTripId: null,
   isCacheHit: false,
   statusMessages: [],
