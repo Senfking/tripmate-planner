@@ -140,32 +140,31 @@ export function AuthTripGenerator({ prompt, payload: payloadProp, onCancel }: Pr
     })();
   }, [streaming.state.stage, streaming.state.result, user, navigate, payload]);
 
-  // Stream error
-  if (streaming.state.stage === "error") {
+  // Stream error or degenerate (0-activity) result
+  const isDegenerate =
+    streaming.state.stage === "complete" &&
+    !!streaming.state.result &&
+    (streaming.state.result.total_activities ?? 0) === 0;
+
+  if (streaming.state.stage === "error" || isDegenerate) {
+    const kind = isDegenerate
+      ? "thin_pool"
+      : classifyTripGenError({
+          step: streaming.state.errorStep,
+          code: streaming.state.errorCode,
+          message: streaming.state.error,
+        });
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-background p-6">
-        <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card shadow-2xl p-6 text-center space-y-3">
-          <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
-          <p className="text-sm font-semibold text-foreground">Couldn't finish your trip</p>
-          <p className="text-xs text-muted-foreground">
-            {streaming.state.error ?? "Unknown error"}
-          </p>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onCancel} className="flex-1">
-              Back
-            </Button>
-            <Button
-              onClick={() => {
-                startedRef.current = false;
-                streaming.reset();
-              }}
-              className="flex-1"
-            >
-              Try again
-            </Button>
-          </div>
-        </div>
-      </div>
+      <TripGenerationErrorState
+        kind={kind}
+        destinationInput={prompt ?? (typeof (payload as any)?.destination === "string" ? (payload as any).destination : null)}
+        onTryAgain={() => {
+          startedRef.current = false;
+          persistedRef.current = false;
+          streaming.reset();
+        }}
+        onChangeDestination={onCancel}
+      />
     );
   }
 
