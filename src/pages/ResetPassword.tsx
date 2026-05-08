@@ -60,7 +60,9 @@ export default function ResetPassword() {
     setLoading(false);
 
     if (err) {
-      setError(friendlyError(err.message));
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "password_update", normalized });
       return;
     }
     setDone(true);
