@@ -3,6 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { peekAnonSessionId, clearAnonSessionId } from "@/lib/anonSession";
+import {
+  attributeReferralInBackground,
+  getStoredReferralCode,
+} from "@/lib/referralAttribution";
 import { Loader2 } from "lucide-react";
 
 function safeRedirect(path: string | null): string {
@@ -28,16 +32,11 @@ export default function AuthCallback() {
     handled.current = true;
 
     const setupAndNavigate = async () => {
-      const referral = localStorage.getItem("junto_referral_code");
+      // Referral attribution is nice-to-have. Dispatch it in the background
+      // so a slow RPC or 504 from Supabase never blocks the signup redirect.
+      const referral = getStoredReferralCode();
       if (referral) {
-        try {
-          const { data: referrerId } = await supabase.rpc("resolve_referral_code", { _code: referral });
-          if (referrerId) {
-            await supabase.from("profiles").update({ referred_by: referrerId }).eq("id", user.id);
-          }
-        } finally {
-          localStorage.removeItem("junto_referral_code");
-        }
+        attributeReferralInBackground(user.id, referral);
       }
       // 18+ confirmation flag set by the signup modal before OAuth redirect.
       // Persist it to the profile and clear the local flag. Existing accounts
