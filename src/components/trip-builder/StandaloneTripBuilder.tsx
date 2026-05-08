@@ -151,6 +151,7 @@ interface Props {
 
 export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData, templateContext, forceInputFirst }: Props) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const [phase, setPhase] = useState<Phase>(
