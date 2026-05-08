@@ -835,7 +835,7 @@ export default function TripList() {
     const friendlySubtitle = "A blank canvas — let's plan something good.";
     return (
       <div className="relative min-h-dvh flex flex-col bg-background">
-        <TabHeroHeader title={`${greeting} 👋`.replace(" 👋", "")} subtitle={friendlySubtitle} pills={tripsPills} />
+        <TabHeroHeader title={greeting} subtitle={friendlySubtitle} pills={tripsPills} />
 
         <EmptyTripsHome
           displayName={profile?.display_name}
