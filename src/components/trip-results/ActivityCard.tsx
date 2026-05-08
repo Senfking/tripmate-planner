@@ -347,7 +347,7 @@ export function ActivityCard({
 
               {(() => {
                 const gygEligible = isGetYourGuideEligible(activity);
-                const partner = (activity as any).booking_partner as string | null | undefined;
+                const partner = activity.booking_partner;
                 const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
                 if (gygEligible) {
                   return (
@@ -523,7 +523,7 @@ export function ActivityCard({
               )}
               {(() => {
                 const gygEligible = isGetYourGuideEligible(activity);
-                const partner = (activity as any).booking_partner as string | null | undefined;
+                const partner = activity.booking_partner;
                 const showRealBooking = !!activity.booking_url && partner && partner !== "google_maps" && !gygEligible;
                 if (gygEligible) {
                   return (

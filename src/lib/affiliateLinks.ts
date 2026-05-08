@@ -7,31 +7,26 @@
  */
 
 /**
- * Categories where a GetYourGuide CTA makes sense — paid attractions, tours,
- * and outdoor experiences GYG actually sells inventory for.
+ * Categories where a GetYourGuide CTA makes sense — paid attractions and
+ * museums GYG actually sells inventory for.
  *
- * The spec lists `culture | experience | nature_outdoor`, but the live
- * category enum (see categoryColors.ts) uses more granular values. Map the
- * spec's intent onto the real values: cultural sites, attractions, nature/
- * outdoor activities, and adventure sports.
+ * Used only as a legacy fallback for stored trips that pre-date the
+ * backend's `booking_partner` field. New trips defer entirely to the
+ * backend's place_types-based decision (see
+ * supabase/functions/generate-trip-itinerary/affiliate-partner.ts).
  *
- * Explicitly excluded: food / restaurant / cafe / bar / nightlife / shopping
- * / transport / accommodation / wellness / spa — GYG isn't the right channel
- * for those.
+ * Explicitly excluded categories for legacy trips: food / restaurant / cafe
+ * / bar / nightlife / shopping / transport / accommodation / wellness / spa,
+ * plus the loose buckets `activity`, `sport`, `experience`, `nature`,
+ * `nature_outdoor`, `park`, `adventure` — GYG sells almost nothing in those
+ * buckets and they were the cause of beach/pool/lounge venues showing a
+ * wrong "Book on GetYourGuide" CTA in production.
  */
 const GYG_ELIGIBLE_CATEGORIES = new Set([
   "culture",
   "museum",
   "history",
   "attraction",
-  "nature",
-  "park",
-  "adventure",
-  "sport",
-  "activity",
-  // Spec values — kept in case the category enum evolves to include these.
-  "experience",
-  "nature_outdoor",
 ]);
 
 interface GygEligibilityInput {
@@ -43,9 +38,21 @@ interface GygEligibilityInput {
   google_maps_url?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  // Backend-assigned partner from generate-trip-itinerary's partnerForPlace().
+  // When present, it is the source of truth — the category fallback is only
+  // consulted for legacy trips generated before the field existed.
+  booking_partner?: string | null;
 }
 
 export function isGetYourGuideEligible(activity: GygEligibilityInput): boolean {
+  // Trust the backend when it has spoken. partnerForPlace() applies the
+  // strict place_types rules (museum/aquarium/etc. AND no food/drink/lodging
+  // overlap); overriding it here is what caused beach clubs and pool clubs
+  // to show a GYG CTA despite the backend correctly assigning google_maps.
+  const partner = (activity.booking_partner ?? "").toLowerCase();
+  if (partner) return partner === "getyourguide";
+
+  // Legacy fallback for trips stored before booking_partner was emitted.
   const category = (activity.category || "").toLowerCase();
   if (!GYG_ELIGIBLE_CATEGORIES.has(category)) return false;
 

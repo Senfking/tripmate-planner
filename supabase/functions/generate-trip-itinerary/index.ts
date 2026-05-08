@@ -76,6 +76,7 @@ import {
   realisticCostBand,
 } from "./cost-bands.ts";
 import { extractDestinationFromTextRegex } from "./destination-recovery.ts";
+import { LODGING_TYPES, partnerForPlace } from "./affiliate-partner.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -528,21 +529,10 @@ function wrapAwinBookingUrl(
   return `https://www.awin1.com/cread.php?${params.toString()}`;
 }
 
-// Google Places type buckets for affiliate routing
-const LODGING_TYPES = new Set([
-  "lodging", "hotel", "resort_hotel", "motel", "guest_house",
-  "bed_and_breakfast", "hostel", "extended_stay_hotel",
-]);
-const FOOD_TYPES = new Set([
-  "restaurant", "cafe", "bar", "food", "meal_takeaway", "meal_delivery",
-  "bakery", "ice_cream_shop", "coffee_shop", "wine_bar", "pub",
-]);
-const TOURS_TYPES = new Set([
-  "tourist_attraction", "museum", "amusement_park", "aquarium", "zoo", "park",
-  "national_park", "art_gallery", "historical_landmark", "monument",
-  "observation_deck", "beach", "hindu_temple", "buddhist_temple", "church",
-  "mosque", "synagogue", "place_of_worship",
-]);
+// LODGING_TYPES, GYG_INCLUDE_TYPES, GYG_EXCLUDE_TYPES, and partnerForPlace
+// live in ./affiliate-partner.ts so they can be unit-tested without booting
+// this file's Deno.serve handler. LODGING_TYPES is imported above for the
+// isLodging gate used during ranker hydration.
 
 // Country (ISO-3166-1 alpha-2, lowercased) -> meal-time pattern. Default =
 // americas/asia. geocodeDestination supplies the country code so we don't
@@ -8249,33 +8239,18 @@ function logPricingAnomalies(result: PipelineResult): void {
 
 // ---- buildAffiliateUrl ----
 //
-// Maps a venue to one of the four affiliate partners (or google_maps fallback,
-// or event_direct for events). Partner is decided by place.types:
-//   LODGING_TYPES       → Booking.com (aid)
-//   TOURS_TYPES         → Viator (mcid)
-//   travel_agency/class → GetYourGuide (partner_id)
-//   FOOD_TYPES (or any other food) → google_maps fallback
-//   null place (event)  → event_direct with optional event URL
-// Every activity gets a URL — never null for non-event slots.
-
-const GYG_SIGNAL_TYPES = new Set([
-  "travel_agency", "tour_agency", "cooking_class", "workshop",
-  "language_school", "school", "sports_club",
-]);
+// Maps a venue to a partner (see ./affiliate-partner.ts for the rule table)
+// and emits the deep-link. Partner choice is conservative for GetYourGuide:
+// only paid attractions (museums, aquariums, theme/water/amusement parks,
+// observation decks, art galleries, zoos, historical landmarks, explicit
+// "tourist_attraction") with no overlapping food/drink/lodging/wellness type.
+// Restaurants, beach clubs, pool clubs, nightclubs, bars, lounges, spas, and
+// gyms fall through to google_maps so the CTA points at the venue's real
+// Google Maps URI instead of a misleading GYG search page. Lodging always
+// goes to Booking. Events (no place) go to event_direct.
 
 function urlencode(s: string): string {
   return encodeURIComponent(s);
-}
-
-function partnerForPlace(place: BatchPlaceResult): AffiliatePartner {
-  const types = place.types ?? [];
-  for (const t of types) if (LODGING_TYPES.has(t)) return "booking";
-  for (const t of types) if (GYG_SIGNAL_TYPES.has(t)) return "getyourguide";
-  for (const t of types) if (TOURS_TYPES.has(t)) return "viator";
-  for (const t of types) if (FOOD_TYPES.has(t)) return "google_maps";
-  // Unknown type — if there's a Google Maps URI, keep it; otherwise fall back
-  // to viator (tour-ish) since that's the most common catch-all.
-  return place.googleMapsUri ? "google_maps" : "viator";
 }
 
 interface AffiliateEnv {
