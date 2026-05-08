@@ -74,6 +74,9 @@ export function AuthTripGenerator({ prompt, payload: payloadProp, onCancel }: Pr
     if (streaming.state.stage !== "complete") return;
     const result = streaming.state.result;
     if (!result) return;
+    // Degenerate-but-complete guard: never persist a 0-activity trip — let
+    // the error UI catch it instead.
+    if ((result.total_activities ?? 0) === 0) return;
     if (!user) {
       toast.error("You need to be signed in to save a trip.");
       return;
