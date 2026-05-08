@@ -294,9 +294,17 @@ const Itinerary = () => {
             </h2>
             <p className="mt-2 max-w-[260px] text-[15px] leading-relaxed text-muted-foreground">
               {filter === "all"
-                ? "Confirm your trip route to start building your itinerary."
+                ? "Create a trip to start building your itinerary."
                 : "Mark yourself as attending activities in your trips."}
             </p>
+            {filter === "all" && (
+              <Link
+                to="/app/trips"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[#0D9488] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:brightness-110 transition"
+              >
+                Create your first trip
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-0">
