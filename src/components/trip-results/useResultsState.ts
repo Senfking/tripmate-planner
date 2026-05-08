@@ -24,6 +24,15 @@ export interface AIActivity {
   travel_time_from_previous?: string | null;
   travel_mode_from_previous?: string | null;
   is_junto_pick?: boolean;
+  // Backend-mirrored Place photo URLs (Supabase Storage, NOT Google with
+  // the API key). Written by hydrateActivity at trip generation time. The
+  // first entry is the hero photo; cards prefer it over a runtime
+  // `useGooglePlaceDetails` re-search because (a) it's place_id-correct,
+  // (b) it avoids the `get-place-details` round-trip + Google quota cost,
+  // and (c) descriptive activity titles ("BLING — Exclusive Night Club at
+  // FIVE Palm Jumeirah") often miss the runtime title-based search.
+  photos?: string[];
+  place_id?: string;
   // Google Places ground truth — preferred over LLM estimated_cost_per_person
   // when present. Populated by the backend in hydrateActivity.
   price_level?:

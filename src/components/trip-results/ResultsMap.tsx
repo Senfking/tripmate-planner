@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, Clock, ExternalLink, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { AITripResult, AIDay, AIActivity } from "./useResultsState";
+import { backendActivityPhoto, hasBackendActivityPhoto } from "@/lib/activityPhoto";
 
 interface Props {
   result: AITripResult;
@@ -46,13 +47,19 @@ function createPinIcon(label: string, color: string) {
 
 /* ── React popup with real Google images ── */
 function PopupContent({ activity, dayLabel }: { activity: AIActivity; dayLabel?: string }) {
+  // Prefer the backend-mirrored Storage URL (see lib/activityPhoto.ts).
+  // Disabling the runtime hook when we already have a hero saves a
+  // get-place-details edge function call per popup open.
+  const backendHero = backendActivityPhoto(activity);
+  const hasBackendHero = hasBackendActivityPhoto(activity);
   const { photos, rating, isLoading } = useGooglePlaceDetails(
     activity.title || "",
-    activity.location_name || ""
+    activity.location_name || "",
+    { enabled: !hasBackendHero },
   );
   const color = getCategoryColor(activity.category);
   const IconComponent = getCategoryIcon(activity.category);
-  const heroSrc = photos.length > 0 ? photos[0] : null;
+  const heroSrc = backendHero ?? (photos.length > 0 ? photos[0] : null);
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
 
   const durationHrs = activity.duration_minutes ? Math.floor(activity.duration_minutes / 60) : 0;

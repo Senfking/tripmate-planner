@@ -58,6 +58,8 @@ import {
   VIBE_NATURE_REGEX,
   venueMatchesAnyMustHave,
 } from "./must-have-fidelity.ts";
+import { maybeRecoverEmptyDay } from "./empty-day-recovery.ts";
+import { anchorDurationOverride } from "./anchor-duration.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -5335,7 +5337,14 @@ function digestHoursSummary(periods: OpeningHoursPeriod[] | null): string | null
 //   2. Slot type (used for meal slots and downtime where no place_type
 //      gives extra signal).
 //   3. null (caller skips floor/ceiling adjustment).
+// FIX 4-C: beach_club / swimming_pool added at the top of the table.
+// Cove Beach Dubai (and similar destination beach clubs) types as
+// `swimming_pool` in Google's data; without a dedicated band the venue
+// cascaded to the generic restaurant band [22,55] and produced under-
+// quoted clamps. The 80-220 EUR band matches real beach-club brunch +
+// dayclub spend across Dubai, Ibiza, Mykonos.
 const EXPERIENCE_COST_BAND_EUR_PLACE: Array<{ match: RegExp; range: [number, number] }> = [
+  { match: /beach_club|swimming_pool/i,                    range: [80, 220] },
   { match: /night_club/i,                                  range: [35, 90] },
   { match: /wine_bar|cocktail/i,                           range: [30, 60] },
   { match: /bar(?!ber)/i,                                  range: [18, 40] },
@@ -5453,11 +5462,15 @@ function realisticCostBand(
   const fx = eurToLocalMultiplier(currency);
   const plMul = priceLevelMultiplier(priceLevel);
   const tierMul = tierMultiplier(budgetTier);
-  // priceLevel modifier dominates (it's per-venue), tier modifier nudges
-  // (trip-level lean). Keep the band relatively wide (floor untouched by
-  // multipliers) so we don't over-clamp legitimate budget surprises.
+  // FIX 4-B: tierMultiplier applies to the floor on premium tier so the
+  // realistic-floor adjustment lifts to a tier-shaped target instead of
+  // staying pinned to neighborhood values. Other tiers keep the legacy
+  // wider band (floor unmultiplied) — the failure mode there is
+  // over-clamping legitimate budget surprises, which is worse than
+  // ratcheting up an already-correct premium quote.
+  const floorTierMul = budgetTier === "premium" ? tierMul : 1;
   return {
-    floor: Math.round(eurFloor * fx * tierMul),
+    floor: Math.round(eurFloor * fx * floorTierMul),
     ceiling: Math.round(eurCeiling * fx * plMul * tierMul),
   };
 }
@@ -5538,7 +5551,12 @@ function clampCostPerPerson(
   // to catch over-quotes.
   const skipFloor = idx < 0 && /park|natural_feature|tourist_attraction|landmark|church|mosque|temple|historical_landmark/i.test((placeTypes ?? []).join(" "));
   if (realistic && realistic.ceiling > 0) {
-    const tolerated = realistic.floor * 0.85;
+    // FIX 4-A: drop the 15% slack on premium tier. LLMs systematically
+    // under-quote premium-tier venues to "menu minimum" (€18 for a Dubai
+    // beach-club brunch, €33 for a nightclub min spend); the slack let
+    // those slip through. Use the floor verbatim on premium, keep the
+    // legacy 0.85 slack for other tiers.
+    const tolerated = budgetTier === "premium" ? realistic.floor : realistic.floor * 0.85;
     if (!skipFloor && llmCost < tolerated) {
       const target = Math.round((realistic.floor + realistic.ceiling) / 2);
       console.warn(
@@ -6440,7 +6458,17 @@ function hydrateActivity(
     }
   }
 
-  const duration_minutes = slot.duration_minutes;
+  // Anchor-venue duration override (Fix 3). Slot durations are
+  // deterministic per-slot defaults (90 min dinner, 120 min nightlife) and
+  // undersell anchor experiences — beach clubs, premium nightclubs, full
+  // spa retreats. anchorDurationOverride raises the floor for matching
+  // place_types; non-anchor venues keep the slot default. Hard-capped by
+  // MAX_ACTIVITY_DURATION (480) defensively, though the rule values
+  // already sit below it.
+  const duration_minutes = Math.min(
+    anchorDurationOverride(slot.duration_minutes, slot.type, place?.types ?? null),
+    MAX_ACTIVITY_DURATION,
+  );
   const duration_hours = minutesToHours1dp(duration_minutes);
 
   const clampedCost = place
@@ -7291,7 +7319,26 @@ async function rankInParallel(
       const avoidIds = Array.from(getSeenForLeg(day.destination_index));
       const unfulfilled = intent.must_haves.filter((mh) => !satisfiedMustHaves.has(mh));
       const isLastDay = dayIdx === skeleton.length - 1;
-      const settled = await rankOneDay(day, avoidIds, unfulfilled, isLastDay);
+      const initial = await rankOneDay(day, avoidIds, unfulfilled, isLastDay);
+      // Empty-day safety net (Fix 1): when sequential-mode pool exhaustion
+      // would leave this day with zero kept activities, retry once with
+      // avoid_place_ids=[]. Allows the day to reuse a venue from earlier
+      // rather than ship blank. Skipped when avoidIds is already empty
+      // (retry would be identical) or for transit days (skeleton-only by
+      // design). See ./empty-day-recovery.ts for the projection logic.
+      const recovery = await maybeRecoverEmptyDay({
+        initial,
+        day,
+        avoidIds,
+        unfulfilledMustHaves: unfulfilled,
+        isLastDay,
+        legSeen: getSeenForLeg(day.destination_index),
+        legPool: placeByIdByLeg.get(day.destination_index) ?? new Map(),
+        legAccomId: accomByLeg.get(day.destination_index) ?? null,
+        mustHaves: intent.must_haves,
+        rankOneDay,
+      });
+      const settled = recovery.settled;
       if (settled.source === "fallback") fallbackDays++;
       recordSatisfaction(settled.raw, day.destination_index);
       hydrateDay(day, settled.raw, settled.source);
@@ -10263,7 +10310,24 @@ Deno.serve(async (req) => {
                 const avoidIds = Array.from(getSeenForLeg(day.destination_index));
                 const unfulfilled = intent.must_haves.filter((mh) => !satisfiedMustHavesStream.has(mh));
                 const isLastDay = dayIdx === skeleton.length - 1;
-                const settled = await rankOneDayStream(day, avoidIds, unfulfilled, isLastDay);
+                const initial = await rankOneDayStream(day, avoidIds, unfulfilled, isLastDay);
+                // Empty-day safety net (Fix 1) — see rankInParallel's
+                // sequential branch for the rationale. Stream variant runs
+                // before hydrateAndEmit, so the recovered day is what gets
+                // sent to the client; no "day_replaced" event is needed.
+                const recovery = await maybeRecoverEmptyDay({
+                  initial,
+                  day,
+                  avoidIds,
+                  unfulfilledMustHaves: unfulfilled,
+                  isLastDay,
+                  legSeen: getSeenForLeg(day.destination_index),
+                  legPool: placeByIdByLeg.get(day.destination_index) ?? new Map(),
+                  legAccomId: accomByLeg.get(day.destination_index) ?? null,
+                  mustHaves: intent.must_haves,
+                  rankOneDay: rankOneDayStream,
+                });
+                const settled = recovery.settled;
                 if (settled.source === "fallback") fallbackDays++;
                 recordSatisfactionStream(settled.raw, day.destination_index);
                 hydrateAndEmit(settled.raw, day, settled.source, baselinesByLeg);
