@@ -290,7 +290,9 @@ export default function ReferralLanding() {
     });
     setResetLoading(false);
     if (err) {
-      setError(friendlyError(err.message));
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "password_reset", normalized });
     } else {
       setInfo(`We sent a reset link to ${email}. Check your inbox.`);
     }
