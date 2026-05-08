@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import {
   useStreamingTripGeneration,
@@ -10,6 +9,7 @@ import {
 } from "@/hooks/useStreamingTripGeneration";
 import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
 import { getAnonSessionId } from "@/lib/anonSession";
+import { TripGenerationErrorState, classifyTripGenError } from "./TripGenerationErrorState";
 
 interface Props {
   prompt: string;
