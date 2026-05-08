@@ -5,6 +5,21 @@ name: E2E (Playwright)
 # (the suite hits real Supabase + the AI generation backend).
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target environment to test against'
+        required: true
+        type: choice
+        default: production
+        options:
+          - production
+          - preview
+          - local
+      base_url:
+        description: 'Custom base URL (required when target=preview, e.g. https://preview-xyz.lovable.app). Ignored for production/local.'
+        required: false
+        type: string
+        default: ''
   push:
     branches: [main]
   pull_request:
@@ -28,9 +43,62 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Resolve E2E base URL
+        id: resolve
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ inputs.target }}" in
+              production)
+                echo "base_url=https://junto.pro" >> "$GITHUB_OUTPUT"
+                echo "needs_local_server=false" >> "$GITHUB_OUTPUT"
+                ;;
+              preview)
+                url="${{ inputs.base_url }}"
+                if [ -z "$url" ]; then
+                  echo "::error::base_url input is required when target=preview"
+                  exit 1
+                fi
+                echo "base_url=$url" >> "$GITHUB_OUTPUT"
+                echo "needs_local_server=false" >> "$GITHUB_OUTPUT"
+                ;;
+              local)
+                echo "base_url=http://127.0.0.1:4173" >> "$GITHUB_OUTPUT"
+                echo "needs_local_server=true" >> "$GITHUB_OUTPUT"
+                ;;
+            esac
+          else
+            fallback="${{ vars.E2E_BASE_URL }}"
+            if [ -z "$fallback" ]; then
+              fallback="https://junto.pro"
+            fi
+            echo "base_url=$fallback" >> "$GITHUB_OUTPUT"
+            echo "needs_local_server=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Resolved base URL: $(grep '^base_url=' "$GITHUB_OUTPUT" | tail -1)"
+
+      - name: Build app (local target only)
+        if: steps.resolve.outputs.needs_local_server == 'true'
+        run: npm run build
+
+      - name: Start preview server (local target only)
+        if: steps.resolve.outputs.needs_local_server == 'true'
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 &
+          echo "PREVIEW_PID=$!" >> "$GITHUB_ENV"
+          for i in {1..60}; do
+            if curl -fsS -o /dev/null http://127.0.0.1:4173; then
+              echo "Preview server ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Preview server did not start within 60s"
+          exit 1
+
       - name: Run Playwright tests
         env:
-          E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://junto.pro' }}
+          E2E_BASE_URL: ${{ steps.resolve.outputs.base_url }}
           E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
           E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
@@ -38,6 +106,10 @@ jobs:
           MAILTRAP_INBOX_ID: ${{ secrets.MAILTRAP_INBOX_ID }}
           MAILTRAP_DOMAIN: ${{ secrets.MAILTRAP_DOMAIN }}
         run: npm run test:e2e
+
+      - name: Stop preview server
+        if: always() && steps.resolve.outputs.needs_local_server == 'true' && env.PREVIEW_PID != ''
+        run: kill "$PREVIEW_PID" || true
 
       - name: Upload Playwright report
         if: always()
