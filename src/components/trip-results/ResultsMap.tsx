@@ -212,11 +212,12 @@ function MapController({
       } else if (points.length === 1) {
         map.setView(points[0], 12, { animate: true });
       } else {
-        map.setView(
-          [result.map_center.lat, result.map_center.lng],
-          result.map_zoom || 6,
-          { animate: true }
-        );
+        const c = result?.map_center;
+        if (c && typeof c.lat === "number" && typeof c.lng === "number" && !(c.lat === 0 && c.lng === 0)) {
+          map.setView([c.lat, c.lng], result.map_zoom || 6, { animate: true });
+        }
+        // Otherwise: leave the map at its initial center (effectiveCenter
+        // computed at mount); no jolt to (0,0) while streaming.
       }
       return;
     }
@@ -246,7 +247,34 @@ function MapController({
 
 /* ── Main component ── */
 export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoords, onPinClick, interactive = true }: Props) {
-  const hasValidCenter = result?.map_center && typeof result.map_center.lat === "number";
+  // Reject the streaming default (0,0 — Gulf of Guinea) so the map doesn't
+  // briefly show West Africa before the real destination resolves. Fall back
+  // to the first geocoded destination/activity if available.
+  const firstGeoPoint = useMemo(() => {
+    for (const d of allDays) {
+      for (const a of d.activities) {
+        if (a.latitude != null && a.longitude != null && (a.latitude !== 0 || a.longitude !== 0)) {
+          return { lat: a.latitude, lng: a.longitude };
+        }
+      }
+    }
+    const dest = (result?.destinations ?? []).find(
+      (x: any) => x?.latitude != null && x?.longitude != null && (x.latitude !== 0 || x.longitude !== 0)
+    ) as any;
+    return dest ? { lat: dest.latitude, lng: dest.longitude } : null;
+  }, [allDays, result]);
+
+  const centerIsRealistic =
+    !!result?.map_center &&
+    typeof result.map_center.lat === "number" &&
+    typeof result.map_center.lng === "number" &&
+    !(result.map_center.lat === 0 && result.map_center.lng === 0);
+
+  const effectiveCenter = centerIsRealistic
+    ? { lat: result.map_center.lat, lng: result.map_center.lng }
+    : firstGeoPoint;
+
+  const hasValidCenter = !!effectiveCenter;
 
   const getCoords = useCallback((dayDate: string, idx: number, a: AIActivity) => {
     const key = `${dayDate}-${idx}`;
@@ -299,7 +327,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
 
   return (
     <MapContainer
-      center={[result.map_center.lat, result.map_center.lng]}
+      center={[effectiveCenter!.lat, effectiveCenter!.lng]}
       zoom={result.map_zoom || 6}
       className={`trip-results-map-root h-full w-full ${interactive ? "" : "pointer-events-none"}`}
       zoomControl={false}
