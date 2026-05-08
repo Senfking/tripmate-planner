@@ -676,11 +676,10 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 fallback={streamingMessage || "Crafting your trip"}
               />
             </div>
-            {/* Day ladder breaks out of the centered column so chips can
-                scroll edge-to-edge across the full viewport width. */}
-            {/* Break out of the 700px centered column so the day chips can
-                scroll edge-to-edge across the full viewport width. */}
-            <div className="relative left-1/2 -translate-x-1/2 w-screen">
+            {/* Day ladder spans the full width of the itinerary column
+                (not the viewport) so it never overflows the left pane when
+                the map is open in partial/full mode. */}
+            <div className="w-full overflow-x-hidden">
               <StreamingProgressLadder
                 totalDays={allDays.length}
                 completedDays={streamingCompletedDays ?? []}
