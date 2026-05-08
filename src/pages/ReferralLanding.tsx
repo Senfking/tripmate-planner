@@ -362,20 +362,28 @@ export default function ReferralLanding() {
       redirect_uri: callbackUrl,
     });
     setGoogleLoading(false);
-    if (err) setError(friendlyError(String(err)));
+    if (err) {
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "oauth_google", normalized });
+    }
   };
 
   const handleAppleSignIn = async () => {
     if (signupBlocked) return;
     setError(null);
     setAppleLoading(true);
-    
+
     const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
     const { error: err } = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: callbackUrl,
     });
     setAppleLoading(false);
-    if (err) setError(friendlyError(String(err)));
+    if (err) {
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "oauth_apple", normalized });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -387,7 +395,9 @@ export default function ReferralLanding() {
       const { error: err } = await signIn(email, password);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signin", normalized });
       } else {
         navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
@@ -395,7 +405,9 @@ export default function ReferralLanding() {
       const { error: err, data } = await signUp(email, password, displayName);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signup", normalized });
       } else {
         if (referralCode.current && data?.user?.id) {
           const { data: referrerId } = await supabase
