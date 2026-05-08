@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
 import { stripEmoji } from "@/lib/stripEmoji";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 // ConfirmationCard removed — flow now submits straight from PremiumTripInput.
@@ -150,6 +151,7 @@ interface Props {
 
 export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId, draftResult, initialFreeTextPrompt, initialInputData, templateContext, forceInputFirst }: Props) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const [phase, setPhase] = useState<Phase>(
@@ -319,12 +321,36 @@ export function StandaloneTripBuilder({ onClose, initialDestination, draftPlanId
         }
       }
 
+      // Pre-seed React Query caches that TripHome reads on mount, so the
+      // navigation is invisible: TripHome renders the same `result` object
+      // immediately instead of flashing its top-level loader → draftPlan
+      // loader → finally the trip. This keeps the streaming surface and the
+      // final draft surface visually continuous.
+      const seededTrip = {
+        id: trip.id,
+        name: title,
+        trip_name: title,
+        itinerary_title: title,
+        status: "draft",
+        destination,
+        tentative_start_date: firstDest?.start_date || null,
+        tentative_end_date: lastDest?.end_date || null,
+        destination_image_url: normalized.destination_image_url ?? null,
+        destination_country_iso: normalized.destination_country_iso ?? null,
+      };
+      queryClient.setQueryData(["trip", trip.id], seededTrip);
+      queryClient.setQueryData(["trip-draft-plan", trip.id], {
+        id: planRow?.id,
+        result: normalized,
+        prompt: payload,
+      });
+
       navigate(`/app/trips/${trip.id}`, { replace: true });
     } catch (saveErr) {
       console.error("[StandaloneBuilder] Failed to persist draft trip:", saveErr);
       setPhase("open-error");
     }
-  }, [user, inputData, navigate, templateContext]);
+  }, [user, inputData, navigate, templateContext, queryClient]);
 
   const handleStreamComplete = useCallback(async (normalized: AITripResult) => {
     if (!pendingPayload) return;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2, Loader2, Lock as LockIcon, TrainFront, Car, Ship, Info } from "lucide-react";
+import { ArrowLeft, RefreshCw, Package, MapPin, CalendarDays, CreditCard, ChevronDown, Share2, Hotel, Sparkles, Plane, Bell, Bed, Wallet, PenLine, Users, LayoutDashboard, Map as MapIcon, Building2, Lock as LockIcon, TrainFront, Car, Ship, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -618,30 +618,31 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           className={cn("px-4 pt-4 pb-2", rc)}
           style={revealStyle("hero")}
         >
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1 inline-flex items-center gap-1.5">
-            {streaming && <Loader2 className="h-3 w-3 animate-spin" />}
-            {streaming ? "Building your trip…" : "Your trip"}
-          </p>
-          {streaming ? (
-            <div className="space-y-2">
-              <div className="h-7 lg:h-8 w-3/4 max-w-[420px] rounded bg-muted animate-pulse" />
-              <div className="h-4 w-1/2 max-w-[280px] rounded bg-muted/70 animate-pulse" />
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-                {result.trip_title}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5 min-w-0">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">
-                    {realDestinations.map((d) => d.name).join(" • ")}
-                  </span>
+          {/* During streaming we suppress the eyebrow ("Your trip") and the
+              skeleton title — the sticky status pill below already
+              communicates progress, and `result.trip_title` is populated from
+              the moment trip_meta arrives, so we can show the real headline
+              immediately and avoid two competing "we're working" indicators. */}
+          {!streaming && (
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+              Your trip
+            </p>
+          )}
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+            {result.trip_title}
+          </h1>
+          {realDestinations.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 min-w-0">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {realDestinations.map((d) => d.name).join(" • ")}
                 </span>
-                {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
-              </div>
-            </>
+              </span>
+              {dateMode !== "generic" && dateRange && (
+                <span className="font-mono text-xs">{dateRange}</span>
+              )}
+            </div>
           )}
         </div>
       </div>
