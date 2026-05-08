@@ -25,6 +25,7 @@ import { stashPendingPrompt } from "@/components/hero/usePendingPrompt";
 import { toTitleCase } from "@/lib/titleCase";
 
 import { RotatingPlaceholder } from "@/components/landing/RotatingPlaceholder";
+import { EmptyTripsHome } from "@/components/trip-builder/EmptyTripsHome";
 
 /* ─── Status logic ─── */
 type TripStatus = "live" | "countdown" | "upcoming" | "ended" | "no-dates";
