@@ -117,8 +117,11 @@ export interface StreamingState {
   trip: TripCompleteEvent | null;
   result: AITripResult | null;
   error: string | null;
-  /** Set when the server returned 429 (anon rate limit hit). */
+  /** Set when the server returned 429 (anon rate limit hit) or other coded errors. */
   errorCode: string | null;
+  /** Pipeline step name from the server `error` event (e.g. "geocodeDestination",
+   *  "thin_pool", "timeout", "parseIntent"). Drives the user-facing copy. */
+  errorStep: string | null;
   /** Anonymous-mode only: the row id in `anonymous_trips` once the
    *  trip_complete event lands. Used to navigate to /trips/anon/[id]. */
   anonTripId: string | null;
@@ -272,6 +275,7 @@ const INITIAL: StreamingState = {
   result: null,
   error: null,
   errorCode: null,
+  errorStep: null,
   anonTripId: null,
   isCacheHit: false,
   statusMessages: [],
@@ -453,14 +457,16 @@ export function useStreamingTripGeneration(): UseStreamingTripGenerationReturn {
       if (!res.ok) {
         let msg = `Server returned ${res.status}`;
         let code: string | null = res.status === 429 ? "rate_limited" : null;
+        let step: string | null = null;
         try {
           const json = await res.json();
           if (json?.message) msg = json.message;
           else if (json?.error) msg = json.error;
           const serverCode = typeof json?.code === "string" ? json.code : typeof json?.error === "string" ? json.error : null;
           code = res.status === 429 && (serverCode === "anon_limit" || json?.reason === "signup_required") ? "rate_limited" : serverCode ?? code;
+          if (typeof json?.step === "string") step = json.step;
         } catch {}
-        update({ stage: "error", error: msg, errorCode: code });
+        update({ stage: "error", error: msg, errorCode: code, errorStep: step });
         return;
       }
 
@@ -636,10 +642,12 @@ function handleFrame(
     case "error": {
       const rawCode = typeof data?.code === "string" ? data.code : typeof data?.error === "string" ? data.error : null;
       const errorCode = rawCode === "anon_limit" || rawCode === "rate_limited" || data?.reason === "signup_required" ? "rate_limited" : rawCode;
+      const errorStep = typeof data?.step === "string" ? data.step : null;
       update({
         stage: "error",
         error: data?.message ?? data?.error ?? "Trip generation failed",
         errorCode,
+        errorStep,
       });
       break;
     }

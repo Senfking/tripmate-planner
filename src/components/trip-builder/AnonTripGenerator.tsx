@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import {
   useStreamingTripGeneration,
@@ -10,6 +9,7 @@ import {
 } from "@/hooks/useStreamingTripGeneration";
 import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
 import { getAnonSessionId } from "@/lib/anonSession";
+import { TripGenerationErrorState, classifyTripGenError } from "./TripGenerationErrorState";
 
 interface Props {
   prompt: string;
@@ -86,11 +86,20 @@ export function AnonTripGenerator({ prompt, onCancel, onRateLimited }: Props) {
     const id = streaming.state.anonTripId;
     const result = streaming.state.result;
     if (!id || !result) return;
+    // Degenerate-but-complete guard: if generation finished but produced
+    // zero activities, don't navigate to the dud — surface the friendly
+    // error state with a "Try again" CTA instead.
+    if ((result.total_activities ?? 0) === 0) return;
     navigatedRef.current = true;
     navigate(`/trips/anon/${id}`, { replace: true, state: { result } });
   }, [streaming.state, navigate]);
 
-  if (streaming.state.stage === "error") {
+  const isDegenerate =
+    streaming.state.stage === "complete" &&
+    !!streaming.state.result &&
+    (streaming.state.result.total_activities ?? 0) === 0;
+
+  if (streaming.state.stage === "error" || isDegenerate) {
     const isRateLimit =
       streaming.state.errorCode === "rate_limited" ||
       streaming.state.errorCode === "anon_limit" ||
@@ -133,24 +142,24 @@ export function AnonTripGenerator({ prompt, onCancel, onRateLimited }: Props) {
       );
     }
 
+    const kind = isDegenerate
+      ? "thin_pool"
+      : classifyTripGenError({
+          step: streaming.state.errorStep,
+          code: streaming.state.errorCode,
+          message: streaming.state.error,
+        });
+
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-background p-6">
-        <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card shadow-2xl p-6 text-center space-y-3">
-          <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
-          <p className="text-sm font-semibold text-foreground">Couldn't finish your trip</p>
-          <p className="text-xs text-muted-foreground">
-            {streaming.state.error ?? "Unknown error"}
-          </p>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onCancel} className="flex-1">
-              Back
-            </Button>
-            <Button onClick={() => { startedRef.current = false; streaming.reset(); }} className="flex-1">
-              Try again
-            </Button>
-          </div>
-        </div>
-      </div>
+      <TripGenerationErrorState
+        kind={kind}
+        destinationInput={prompt}
+        onTryAgain={() => {
+          startedRef.current = false;
+          streaming.reset();
+        }}
+        onChangeDestination={onCancel}
+      />
     );
   }
 

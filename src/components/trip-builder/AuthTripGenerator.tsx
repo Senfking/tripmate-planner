@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TripGenerationErrorState, classifyTripGenError } from "./TripGenerationErrorState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
@@ -73,6 +74,9 @@ export function AuthTripGenerator({ prompt, payload: payloadProp, onCancel }: Pr
     if (streaming.state.stage !== "complete") return;
     const result = streaming.state.result;
     if (!result) return;
+    // Degenerate-but-complete guard: never persist a 0-activity trip — let
+    // the error UI catch it instead.
+    if ((result.total_activities ?? 0) === 0) return;
     if (!user) {
       toast.error("You need to be signed in to save a trip.");
       return;
@@ -136,32 +140,31 @@ export function AuthTripGenerator({ prompt, payload: payloadProp, onCancel }: Pr
     })();
   }, [streaming.state.stage, streaming.state.result, user, navigate, payload]);
 
-  // Stream error
-  if (streaming.state.stage === "error") {
+  // Stream error or degenerate (0-activity) result
+  const isDegenerate =
+    streaming.state.stage === "complete" &&
+    !!streaming.state.result &&
+    (streaming.state.result.total_activities ?? 0) === 0;
+
+  if (streaming.state.stage === "error" || isDegenerate) {
+    const kind = isDegenerate
+      ? "thin_pool"
+      : classifyTripGenError({
+          step: streaming.state.errorStep,
+          code: streaming.state.errorCode,
+          message: streaming.state.error,
+        });
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-background p-6">
-        <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card shadow-2xl p-6 text-center space-y-3">
-          <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
-          <p className="text-sm font-semibold text-foreground">Couldn't finish your trip</p>
-          <p className="text-xs text-muted-foreground">
-            {streaming.state.error ?? "Unknown error"}
-          </p>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onCancel} className="flex-1">
-              Back
-            </Button>
-            <Button
-              onClick={() => {
-                startedRef.current = false;
-                streaming.reset();
-              }}
-              className="flex-1"
-            >
-              Try again
-            </Button>
-          </div>
-        </div>
-      </div>
+      <TripGenerationErrorState
+        kind={kind}
+        destinationInput={prompt ?? (typeof (payload as any)?.destination === "string" ? (payload as any).destination : null)}
+        onTryAgain={() => {
+          startedRef.current = false;
+          persistedRef.current = false;
+          streaming.reset();
+        }}
+        onChangeDestination={onCancel}
+      />
     );
   }
 

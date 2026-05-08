@@ -3993,7 +3993,7 @@ async function geocodeDestination(
   if (!normalized) {
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       "empty destination after normalization",
     );
   }
@@ -4062,7 +4062,7 @@ async function geocodeDestination(
           // same empty answer.
           throw new PipelineError(
             "geocodeDestination",
-            "Could not resolve destination",
+            "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
             `Geocoding API returned ZERO_RESULTS for "${destination}"`,
           );
         } else {
@@ -4100,7 +4100,7 @@ async function geocodeDestination(
     );
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       `places:searchText returned ${res.status}`,
     );
   }
@@ -4129,7 +4129,7 @@ async function geocodeDestination(
     );
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       "places:searchText returned 0 matches",
     );
   }
@@ -4178,7 +4178,7 @@ async function geocodeIntentDestinations(
   if (destinations.length === 0) {
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       "intent.destinations is empty",
     );
   }
@@ -9973,10 +9973,18 @@ Deno.serve(async (req) => {
             // so the empty payload never reaches ai_response_cache.
             const totalBefore = ranked_days.reduce((n, d) => n + d.activities.length, 0) + totalDropped;
             if (totalBefore === 0) {
-              throw new Error("Ranker returned 0 activities for the whole trip — refusing to cache empty result");
+              throw new PipelineError(
+                "thin_pool",
+                "We couldn't find enough places to build a trip here. Try a more specific city, or pick a different destination.",
+                "Ranker returned 0 activities for the whole trip — refusing to cache empty result",
+              );
             }
             if (totalDropped / totalBefore > VALIDATION_DROP_THRESHOLD) {
-              throw new Error(`Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`);
+              throw new PipelineError(
+                "thin_pool",
+                "We couldn't find enough places to build a trip here. Try a more specific city, or pick a different destination.",
+                `Validation dropped ${totalDropped}/${totalBefore} activities (>${(VALIDATION_DROP_THRESHOLD * 100).toFixed(0)}%) — pool too thin`,
+              );
             }
             if (fallbackDays > 0) {
               console.warn(`[stream.rank] ${fallbackDays}/${numDays} days fell back to skeleton-only`);

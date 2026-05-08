@@ -618,21 +618,31 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
           className={cn("px-4 pt-4 pb-2", rc)}
           style={revealStyle("hero")}
         >
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
-            Your trip
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1 inline-flex items-center gap-1.5">
+            {streaming && <Loader2 className="h-3 w-3 animate-spin" />}
+            {streaming ? "Building your trip…" : "Your trip"}
           </p>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-            {result.trip_title}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5 min-w-0">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">
-                {realDestinations.map((d) => d.name).join(" • ")}
-              </span>
-            </span>
-            {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
-          </div>
+          {streaming ? (
+            <div className="space-y-2">
+              <div className="h-7 lg:h-8 w-3/4 max-w-[420px] rounded bg-muted animate-pulse" />
+              <div className="h-4 w-1/2 max-w-[280px] rounded bg-muted/70 animate-pulse" />
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+                {result.trip_title}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    {realDestinations.map((d) => d.name).join(" • ")}
+                  </span>
+                </span>
+                {dateMode !== "generic" && <span className="font-mono text-xs">{dateRange}</span>}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
