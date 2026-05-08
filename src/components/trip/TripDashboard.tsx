@@ -759,6 +759,7 @@ export function TripDashboard({ tripId, routeLocked, settlementCurrency, myRole,
         return (
           <button
             onClick={() => navigate(`/app/trips/${tripId}/expenses`)}
+            aria-label="Open expenses"
             className="w-full text-left rounded-2xl overflow-hidden transition-all active:opacity-80 hover:shadow-lg relative"
             style={{
               background: "linear-gradient(150deg, #0f766e 0%, #0D9488 45%, #0891b2 100%)",

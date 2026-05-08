@@ -681,6 +681,7 @@ export default function TripHome() {
             <LiveIndicator status={connectionStatus} />
             <button
               onClick={() => setShareInviteOpen(true)}
+              aria-label="Share & invite"
               className="relative z-[5] flex h-9 w-9 items-center justify-center rounded-full"
               style={{
                 background: "rgba(0,0,0,0.3)",

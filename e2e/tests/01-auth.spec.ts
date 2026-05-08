@@ -68,14 +68,17 @@ test.describe("Auth — OAuth providers", () => {
     // Block the actual redirect so we don't end up on Google's domain
     // and stall the test.
     let oauthUrl: string | null = null;
-    await context.route(/google\.com|supabase\.co\/auth\/v1\/authorize|\/auth\/v1\/authorize/, (route) => {
+    // Loosened to also catch the Lovable auth-wrapper indirection: the
+    // Google CTA now calls `lovable.auth.signInWithOAuth` instead of the
+    // bare Supabase auth endpoint, so accept any hop in the redirect chain.
+    await context.route(/google\.com|supabase\.co|authorize|lovable/, (route) => {
       oauthUrl = route.request().url();
       return route.abort();
     });
     await page.getByRole("button", { name: /continue with google/i }).click();
     await page.waitForTimeout(2000);
     expect(oauthUrl, "expected Google OAuth redirect to be initiated").toBeTruthy();
-    expect(oauthUrl ?? "").toMatch(/google|supabase|authorize/i);
+    expect(oauthUrl ?? "").toMatch(/google|supabase|authorize|lovable/i);
   });
 
   // Apple OAuth deliberately resists automation — the consent screen blocks
