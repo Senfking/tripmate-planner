@@ -263,42 +263,19 @@ export function EmptyTripsHome({
             </div>
           </div>
 
-          {/* Inspiration grid */}
-          <div className="mt-8">
-            <div className="flex items-baseline justify-between mb-3 px-1">
-              <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Need inspiration
-              </h3>
-              <span className="text-[11px] text-muted-foreground/70">Tap to pre-fill</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-              {INSPIRATION.map((it) => (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => pickInspiration(it.prompt)}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm text-left transition-all hover:shadow-md hover:-translate-y-0.5 active:opacity-90"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden">
-                    <img
-                      src={it.image}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-2.5">
-                    <p className="text-[12.5px] font-semibold text-white leading-tight line-clamp-2 drop-shadow">
-                      {it.title}
-                    </p>
-                    <p className="text-[10.5px] text-white/85 mt-0.5">{it.meta}</p>
-                  </div>
-                </button>
-              ))}
+        </div>
+
+        {/* Trip library — same carousels as the landing page */}
+        <div className="w-full pb-12">
+          <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
+            <div className="border-t border-gray-200/70 pt-6 mb-6">
+              <p className="text-sm text-muted-foreground text-center">
+                Or browse a sample trip
+              </p>
             </div>
           </div>
+          <TripCarousels showHeader={false} />
+        </div>
         </div>
 
         <style>{`
