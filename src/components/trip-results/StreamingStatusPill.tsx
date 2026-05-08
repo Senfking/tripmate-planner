@@ -56,10 +56,16 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
             "0 10px 28px rgba(13,148,136,0.22), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.85)",
         }}
       >
-        <Loader2
-          className="h-4 w-4 sm:h-5 sm:w-5 text-[#0D9488] animate-spin"
-          style={{ animation: "spin 1s linear infinite, statusPillPulse 2s ease-in-out infinite" }}
-        />
+        {/* Outer wrapper handles the pulse (scale); inner Loader2 owns the
+            rotation. Combining both animations on a single element made them
+            target `transform` simultaneously and the pulse silently won —
+            so the spinner never appeared to rotate. */}
+        <span
+          className="inline-flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center"
+          style={{ animation: "statusPillPulse 2s ease-in-out infinite" }}
+        >
+          <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 text-[#0D9488] animate-spin" />
+        </span>
         <span
           className="text-sm sm:text-base font-semibold text-[#134E4A] transition-opacity duration-250"
           style={{ opacity: visible ? 1 : 0 }}
