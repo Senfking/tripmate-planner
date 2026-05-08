@@ -94,6 +94,12 @@ const Expenses = () => {
           <p className="mt-2 max-w-[260px] text-[15px] leading-relaxed text-muted-foreground">
             Add expenses inside your trips to track who owes what.
           </p>
+          <a
+            href="/app/trips"
+            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[#0D9488] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:brightness-110 transition"
+          >
+            Create your first trip
+          </a>
         </div>
       ) : (
         <div className="space-y-3 px-4 mt-4 pb-24 md:max-w-[900px] md:mx-auto md:px-6 w-full">
