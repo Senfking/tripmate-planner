@@ -66,7 +66,10 @@ import {
   parseIntentOverrides,
   type TravelParty,
 } from "./intent-overrides.ts";
-import { clampNonLodgingExperienceCost as clampNonLodgingExperienceCostShared } from "./cost-bands.ts";
+import {
+  clampNonLodgingExperienceCost as clampNonLodgingExperienceCostShared,
+  realisticCostBand,
+} from "./cost-bands.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -5513,11 +5516,41 @@ function clampCostPerPerson(
       baselines, slotType, placeTypes, priceLevel, currency,
     );
     if (baselineTarget !== null) {
-      console.log(
-        `[activity_clamp] place="${venueTitle}" slot=${slotType} price_level=${priceLevel ?? "null"} ` +
-        `raw=${llmCost} clamped=${baselineTarget} source=baselines`,
-      );
-      return baselineTarget;
+      // Phase A.5 floor guard: even when destination baselines provide the
+      // primary signal, the venue-name floor (Bohemia "Beach Club" → €100
+      // post-city-mul) and the premium-tier multiplier still bind. Without
+      // this, premium Dubai beach clubs ship at the Haiku-emitted activity
+      // median (~€44) instead of the €238 floor that
+      // realisticCostBand+venueNameLift+premiumTierMul produce. Skipping the
+      // lift entirely when the realistic band has no entry for this
+      // (slot, types) combo preserves baseline behavior for free-coded
+      // landmarks and other categories the band table doesn't cover.
+      const realistic = realisticCostBand({
+        slotType,
+        placeTypes: placeTypes ?? null,
+        priceLevel,
+        budgetTier,
+        fxToLocal: eurToLocalMultiplier(currency),
+        cityName,
+        venueTitle,
+      });
+      const liftedTarget = realistic && realistic.floor > baselineTarget
+        ? realistic.floor
+        : baselineTarget;
+      if (liftedTarget !== baselineTarget) {
+        console.log(
+          `[activity_clamp] place="${venueTitle}" slot=${slotType} price_level=${priceLevel ?? "null"} ` +
+          `raw=${llmCost} clamped=${liftedTarget} source=baselines+venue_floor_lift ` +
+          `(baseline=${baselineTarget} → realistic_floor=${realistic!.floor}, ` +
+          `tier=${budgetTier}, city=${cityName ?? "null"})`,
+        );
+      } else {
+        console.log(
+          `[activity_clamp] place="${venueTitle}" slot=${slotType} price_level=${priceLevel ?? "null"} ` +
+          `raw=${llmCost} clamped=${liftedTarget} source=baselines`,
+        );
+      }
+      return liftedTarget;
     }
   }
   const idx = priceLevelIndex(priceLevel);
