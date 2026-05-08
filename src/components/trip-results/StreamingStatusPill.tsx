@@ -159,7 +159,7 @@ export function StreamingProgressLadder({ totalDays, completedDays }: LadderProp
     <div className="relative w-full">
       <div
         ref={scrollRef}
-        className="flex items-center gap-1.5 overflow-x-auto px-4 py-1 scrollbar-none justify-start sm:justify-center"
+        className="flex items-center gap-1.5 overflow-x-auto overflow-y-visible px-4 py-3 scrollbar-none justify-start sm:justify-center"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {Array.from({ length: totalDays }, (_, i) => i + 1).map((n) => {
