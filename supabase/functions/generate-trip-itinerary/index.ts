@@ -66,6 +66,7 @@ import {
   parseIntentOverrides,
   type TravelParty,
 } from "./intent-overrides.ts";
+import { clampNonLodgingExperienceCost as clampNonLodgingExperienceCostShared } from "./cost-bands.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -5419,66 +5420,11 @@ function digestHoursSummary(periods: OpeningHoursPeriod[] | null): string | null
 // the realistic floor (new).
 // ---------------------------------------------------------------------------
 
-// EUR experience cost ranges per category. Lower bound = "you'd feel
-// shortchanged below this for that experience"; upper bound = "the upper
-// end of a normal venue of this category". priceLevel + budget_tier
-// modifiers below shift inside this band; the band itself stays category-
-// shaped.
-//
-// Resolution order:
-//   1. Place type (more specific — e.g. wine_bar in a nightlife slot
-//      should use the wine_bar band [30,60], not the generic nightlife
-//      [25,70]).
-//   2. Slot type (used for meal slots and downtime where no place_type
-//      gives extra signal).
-//   3. null (caller skips floor/ceiling adjustment).
-// FIX 4-C: beach_club / swimming_pool added at the top of the table.
-// Cove Beach Dubai (and similar destination beach clubs) types as
-// `swimming_pool` in Google's data; without a dedicated band the venue
-// cascaded to the generic restaurant band [22,55] and produced under-
-// quoted clamps. The 80-220 EUR band matches real beach-club brunch +
-// dayclub spend across Dubai, Ibiza, Mykonos.
-const EXPERIENCE_COST_BAND_EUR_PLACE: Array<{ match: RegExp; range: [number, number] }> = [
-  { match: /beach_club|swimming_pool/i,                    range: [80, 220] },
-  { match: /night_club/i,                                  range: [35, 90] },
-  { match: /wine_bar|cocktail/i,                           range: [30, 60] },
-  { match: /bar(?!ber)/i,                                  range: [18, 40] },
-  { match: /spa|hair_care|beauty_salon/i,                  range: [50, 200] },
-  { match: /museum|art_gallery/i,                          range: [12, 35] },
-  { match: /amusement_park|aquarium|zoo/i,                 range: [25, 60] },
-  { match: /tourist_attraction|landmark|church|mosque|temple|historical_landmark/i,
-                                                            range: [8, 30] },
-  { match: /park|natural_feature/i,                        range: [0, 10] },
-  { match: /cafe|bakery|coffee/i,                          range: [4, 12] },
-  { match: /restaurant/i,                                  range: [22, 55] },
-  // NOTE: lodging intentionally NOT in this list. Hotels are clamped via
-  // clampLodgingCostPerNight (tier-aware EUR bands, distinct from the
-  // food-scaled PRICE_BANDS used for activities). A single per-night band
-  // here would either underbid premium hotels or overbid hostels.
-];
-const EXPERIENCE_COST_BAND_EUR_SLOT: Partial<Record<SlotType, [number, number]>> = {
-  breakfast: [6, 18],
-  lunch: [18, 45],
-  dinner: [30, 80],
-  rest: [0, 0],
-  arrival: [0, 15],
-  departure: [0, 15],
-  transit_buffer: [0, 10],
-  // Note: nightlife / morning_major / afternoon_major intentionally omitted —
-  // those rely on place_type for disambiguation. A nightlife slot at a
-  // wine_bar should price as a wine_bar (30-60), not a generic nightlife
-  // band (25-70). Same for a morning_major at a museum vs a viewpoint.
-};
-
-function lookupExperienceBandEur(slotType: SlotType, placeTypes: string[] | null | undefined): [number, number] | null {
-  if (placeTypes && placeTypes.length > 0) {
-    const joined = placeTypes.join(" ");
-    for (const e of EXPERIENCE_COST_BAND_EUR_PLACE) {
-      if (e.match.test(joined)) return e.range;
-    }
-  }
-  return EXPERIENCE_COST_BAND_EUR_SLOT[slotType] ?? null;
-}
+// EUR cost bands, city/venue/duration multipliers, and the realistic-band
+// clamp now live in ./cost-bands.ts so the math is unit-testable. index.ts
+// hits them via clampNonLodgingExperienceCostShared inside clampCostPerPerson
+// below; the only multipliers index.ts still applies directly are FX
+// (eurToLocalMultiplier) and the lodging-specific ones further down.
 
 // PRICE_BANDS[currency][1] is the "moderate" band upper for the local
 // currency. EUR moderate is 35. Ratio = local / EUR gives a stable FX
@@ -5487,23 +5433,6 @@ function eurToLocalMultiplier(currency: string): number {
   const local = (PRICE_BANDS[currency] ?? PRICE_BANDS.USD)[1];
   const eur = PRICE_BANDS.EUR[1];
   return local / eur;
-}
-
-function priceLevelMultiplier(priceLevel: string | null): number {
-  switch (priceLevel) {
-    case "PRICE_LEVEL_FREE":           return 0;
-    case "PRICE_LEVEL_INEXPENSIVE":    return 0.7;
-    case "PRICE_LEVEL_MODERATE":       return 1.0;
-    case "PRICE_LEVEL_EXPENSIVE":      return 1.5;
-    case "PRICE_LEVEL_VERY_EXPENSIVE": return 2.5;
-    default:                           return 1.0;
-  }
-}
-
-function tierMultiplier(tier: Intent["budget_tier"]): number {
-  if (tier === "budget") return 0.75;
-  if (tier === "premium") return 1.4;
-  return 1.0;
 }
 
 // Apply destination-level price baselines (if available) for a non-lodging
@@ -5540,42 +5469,17 @@ function applyBaselinesForActivity(
   return Math.max(0, Math.round(eurTarget * fx));
 }
 
-// Compute realistic floor + ceiling in trip currency. Returns null if the
-// slot/types combo has no band entry — caller skips the floor/ceiling
-// adjustment and falls back to the LLM value as-is.
-function realisticCostBand(
-  slotType: SlotType,
-  placeTypes: string[] | null | undefined,
-  priceLevel: string | null,
-  budgetTier: Intent["budget_tier"],
-  currency: string,
-): { floor: number; ceiling: number } | null {
-  const eurBand = lookupExperienceBandEur(slotType, placeTypes);
-  if (!eurBand) return null;
-  const [eurFloor, eurCeiling] = eurBand;
-  if (eurCeiling === 0) return { floor: 0, ceiling: 0 };
-  const fx = eurToLocalMultiplier(currency);
-  const plMul = priceLevelMultiplier(priceLevel);
-  const tierMul = tierMultiplier(budgetTier);
-  // FIX 4-B: tierMultiplier applies to the floor on premium tier so the
-  // realistic-floor adjustment lifts to a tier-shaped target instead of
-  // staying pinned to neighborhood values. Other tiers keep the legacy
-  // wider band (floor unmultiplied) — the failure mode there is
-  // over-clamping legitimate budget surprises, which is worse than
-  // ratcheting up an already-correct premium quote.
-  const floorTierMul = budgetTier === "premium" ? tierMul : 1;
-  return {
-    floor: Math.round(eurFloor * fx * floorTierMul),
-    ceiling: Math.round(eurCeiling * fx * plMul * tierMul),
-  };
-}
-
 // Clamp LLM-quoted cost against Google's priceLevel band AND the category
 // realistic-experience floor in the trip's local currency. LLM may
 // exceed the band by ≤ 20 % before we clamp upward — avoids noise on
 // values that are plausibly right but unlucky. Below-floor values get
 // raised so a "neighbourhood wine aperitif" priced at €18 becomes €30.
 // Free venues always return 0. Warn (not throw) so the trip still ships.
+//
+// Phase-1.2 ("city engine") inputs:
+//   cityName: leg name (e.g. "Dubai") used for ADD-1 city multiplier.
+//   durationMinutes: activity duration used for ADD-3 duration scaling
+//                    (4-hour beach club brunch costs more than 90-min).
 function clampCostPerPerson(
   llmCost: number,
   priceLevel: string | null,
@@ -5586,6 +5490,8 @@ function clampCostPerPerson(
   budgetTier: Intent["budget_tier"],
   baselines: DestinationPriceBaselines | null = null,
   hotelEstimate: AccommodationEstimate | null = null,
+  cityName: string | null = null,
+  durationMinutes: number | null = null,
 ): number {
   if (!Number.isFinite(llmCost) || llmCost < 0) llmCost = 0;
   // Hotels are per-room-per-night; the food-scaled PRICE_BANDS used below
@@ -5617,9 +5523,10 @@ function clampCostPerPerson(
   const idx = priceLevelIndex(priceLevel);
   if (idx === 0) return 0;
 
-  const realistic = realisticCostBand(slotType, placeTypes, priceLevel, budgetTier, currency);
-
   // Step 1: existing priceLevel band ceiling clamp (only when priceLevel known).
+  // The priceLevel ceiling band stays anchored to the trip currency (no city
+  // multiplier) — it's a coarse "this venue's Google price tier" check that
+  // must still bite for venues outside the city map.
   if (idx > 0) {
     const band = PRICE_BANDS[currency] ?? PRICE_BANDS.USD;
     const upper = band[idx - 1];
@@ -5633,44 +5540,33 @@ function clampCostPerPerson(
     }
   }
 
-  // Step 2: realistic-floor adjustment. Skip when no band entry. When the
-  // LLM is below the floor by ≥ 15 %, raise to mid-band. The 15% slack is
-  // tighter than the priceLevel-clamp's 20%-down tolerance because the
-  // failure mode here is more conservative: LLMs systematically lowball
-  // (menu minimums) more than they over-quote.
-  //
-  // SAFETY (floor only): skip the floor adjustment when priceLevel is
-  // unknown AND the place type is ambiguous about whether the venue charges
-  // (parks, churches, public landmarks). Without this, "Jemaa el-Fnaa"
-  // (free) gets bumped from MAD 50 to MAD 196. The ceiling guard still runs
-  // to catch over-quotes.
-  const skipFloor = idx < 0 && /park|natural_feature|tourist_attraction|landmark|church|mosque|temple|historical_landmark/i.test((placeTypes ?? []).join(" "));
-  if (realistic && realistic.ceiling > 0) {
-    // FIX 4-A: drop the 15% slack on premium tier. LLMs systematically
-    // under-quote premium-tier venues to "menu minimum" (€18 for a Dubai
-    // beach-club brunch, €33 for a nightclub min spend); the slack let
-    // those slip through. Use the floor verbatim on premium, keep the
-    // legacy 0.85 slack for other tiers.
-    const tolerated = budgetTier === "premium" ? realistic.floor : realistic.floor * 0.85;
-    if (!skipFloor && llmCost < tolerated) {
-      const target = Math.round((realistic.floor + realistic.ceiling) / 2);
-      console.warn(
-        `[rankAndEnrich] clamped-up "${venueTitle}" from ${llmCost} ${currency} → ${target} ${currency} ` +
-          `(slot=${slotType}, realistic floor=${realistic.floor}, ceiling=${realistic.ceiling})`,
-      );
-      llmCost = target;
-    } else if (llmCost > realistic.ceiling * 1.5) {
-      // Realistic-ceiling guard catches over-quotes the priceLevel band
-      // missed (e.g. a museum priced at €120 because it has expensive
-      // priceLevel — but a realistic museum visit is €12-35 even premium).
-      console.warn(
-        `[rankAndEnrich] clamped-down(category) "${venueTitle}" from ${llmCost} ${currency} → ${realistic.ceiling} ${currency} ` +
-          `(slot=${slotType}, realistic ceiling=${realistic.ceiling})`,
-      );
-      llmCost = realistic.ceiling;
-    }
+  // Step 2: realistic-band clamp delegated to ./cost-bands.ts. Applies city
+  // multiplier (ADD-1), venue-name floor lift (ADD-2), tier+priceLevel
+  // multipliers, and duration scaling (ADD-3) of the LLM cost. Returns the
+  // clamped cost plus an action label for logging.
+  const out = clampNonLodgingExperienceCostShared({
+    llmCost,
+    slotType,
+    placeTypes: placeTypes ?? null,
+    priceLevel,
+    budgetTier,
+    fxToLocal: eurToLocalMultiplier(currency),
+    cityName,
+    venueTitle,
+    durationMinutes,
+  });
+  if (out.action === "floor_bumped") {
+    console.warn(
+      `[rankAndEnrich] clamped-up "${venueTitle}" from ${llmCost} ${currency} → ${out.cost} ${currency} ` +
+      `(slot=${slotType}, city=${cityName ?? "null"}, duration_min=${durationMinutes ?? "null"})`,
+    );
+  } else if (out.action === "ceiling_capped") {
+    console.warn(
+      `[rankAndEnrich] clamped-down(category) "${venueTitle}" from ${llmCost} ${currency} → ${out.cost} ${currency} ` +
+      `(slot=${slotType}, city=${cityName ?? "null"})`,
+    );
   }
-  return Math.max(0, Math.round(llmCost));
+  return out.cost;
 }
 
 // Tier-aware lodging EUR bands (per room per night). Distinct from the
@@ -6534,6 +6430,10 @@ function hydrateActivity(
   events: EventCandidate[] = [],
   baselines: DestinationPriceBaselines | null = null,
   hotelEstimate: AccommodationEstimate | null = null,
+  // Leg name (e.g. "Dubai", "Tokyo, Japan") used by the city-multiplier
+  // path inside clampCostPerPerson. Optional — null preserves legacy
+  // (cityMul=1.0) for callers that don't have a leg in scope.
+  cityName: string | null = null,
 ): EnrichedActivity | null {
   // Non-event activities without a pool match get dropped here.
   if (!raw.is_event && !place) return null;
@@ -6577,6 +6477,8 @@ function hydrateActivity(
         budgetTier,
         baselines,
         hotelEstimate,
+        cityName,
+        duration_minutes,
       )
     : Math.max(0, Math.round(raw.estimated_cost_per_person ?? 0));
 
@@ -7311,6 +7213,8 @@ async function rankInParallel(
       const activity = hydrateActivity(
         rawAct, slot, place, place ? (photoUrlByPlaceId.get(place.id) ?? []) : [],
         currency, intent.budget_tier, events, legBaselines,
+        null,
+        legs[legIdx]?.name ?? intent.destination ?? null,
       );
       if (!activity) {
         dropReasons.push("hydrate_failed");
@@ -7541,6 +7445,7 @@ async function rankInParallel(
       },
       fakeAccomSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
       currency, intent.budget_tier, [], legBaselines, hotelEstimate,
+      legs[legIdx]?.name ?? intent.destination ?? null,
     );
     if (!hydrated) return undefined;
     // Build alternatives from the same leg's lodging pool (excluding the
@@ -7565,7 +7470,8 @@ async function rankInParallel(
           dietary_notes: null,
         },
         fakeAccomSlot, altPlace, photoUrlByPlaceId.get(altPlace.id) ?? [],
-        currency, intent.budget_tier, [], legBaselines,
+        currency, intent.budget_tier, [], legBaselines, null,
+        legs[legIdx]?.name ?? intent.destination ?? null,
       );
       if (altHydrated) alternatives.push(altHydrated);
     }
@@ -10080,6 +9986,8 @@ Deno.serve(async (req) => {
                 const activity = hydrateActivity(
                   rawAct, slot, place, place ? (photoUrlByPlaceId.get(place.id) ?? []) : [],
                   currency, intent.budget_tier, events, legBaselines,
+                  null,
+                  legs[legIdx]?.name ?? intent.destination ?? null,
                 );
                 if (!activity) {
                   dropReasons.push("hydrate_failed");
@@ -10245,6 +10153,8 @@ Deno.serve(async (req) => {
                 fakeSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
                 currency, intent.budget_tier,
                 [], baselinesByLeg.get(legIdx) ?? null,
+                null,
+                legs[legIdx]?.name ?? intent.destination ?? null,
               );
               if (!hydrated) return undefined;
               const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
@@ -10295,6 +10205,7 @@ Deno.serve(async (req) => {
                 currency, intent.budget_tier,
                 [], baselinesByLeg.get(legIdx) ?? null,
                 hotelEstimatesByPlaceId.get(place.id) ?? null,
+                legs[legIdx]?.name ?? intent.destination ?? null,
               );
               if (!hydrated) return undefined;
               const legAffEnv: AffiliateEnv = { ...affEnv, cityHint: legs[legIdx]?.name ?? intent.destination };
@@ -10543,6 +10454,7 @@ Deno.serve(async (req) => {
                 fakeAccomSlot, place, photoUrlByPlaceId.get(place.id) ?? [],
                 currency, intent.budget_tier,
                 [], legBaselines, hotelEstimate,
+                legs[legIdx]?.name ?? intent.destination ?? null,
               );
               if (!hydrated) return undefined;
               // Per-leg cityHint for the booking URL.
