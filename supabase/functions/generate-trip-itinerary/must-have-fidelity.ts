@@ -105,13 +105,36 @@ export function inferExtraPoolsFromTypes(
 
 // Synonym table used by both Fix B (per-day "did this day satisfy a
 // must-have?" check) and Fix F (post-pipeline coverage validator).
+//
+// PATCH D — false-positive hardening:
+//   - Removed "drift" and "azure" from the beach-club list — both are
+//     editorial-copy false positives ("evening drifts", "azure waters").
+//     Their absence does not cost real coverage: actual venues called
+//     "Drift Beach Club" and "Azure Beach Dubai" still match via
+//     "beach club" and "beach resort" synonyms, or surface as
+//     branded-name singletons like "drift beach" / "azure beach".
+//   - Common-word synonyms ("rooftop", "spa", "wellness") replaced with
+//     multi-word forms ("rooftop bar", "wellness spa") so matches
+//     require category context, not bare keywords.
+//   - Branded singletons retained when distinctive enough (twiggy,
+//     skybar, hammam) — the word-boundary matcher still gates them.
 export const MUST_HAVE_SYNONYMS: Record<string, string[]> = {
   "beach club": [
-    "beach club", "nikki beach", "cove beach", "drift", "five palm",
-    "bla bla", "soul beach", "twiggy", "azure", "beach resort",
+    "beach club", "beach clubs",
+    "nikki beach", "cove beach", "five palm",
+    "bla bla", "soul beach", "twiggy",
+    "drift beach", "azure beach",
+    "beach resort",
   ],
-  "rooftop": ["rooftop", "sky lounge", "skybar", "high-rise"],
-  "wellness": ["wellness", "spa", "thermal", "hammam", "retreat"],
+  "rooftop": [
+    "rooftop bar", "rooftop lounge", "rooftop terrace",
+    "sky lounge", "skybar",
+  ],
+  "wellness": [
+    "wellness spa", "wellness center", "wellness retreat",
+    "thermal spa", "thermal bath", "spa retreat",
+    "hammam",
+  ],
 };
 
 // Pick the synonym list for a must-have token. Match is by simple includes
@@ -127,14 +150,69 @@ export function mustHaveSynonymsFor(mh: string): string[] {
   return [k];
 }
 
-// Case-insensitive substring scan. Haystack is expected to already be a
-// concatenation of activity title/description/category/place_types.
+// Escape regex metacharacters so a synonym like "high-rise" is treated as
+// literal text, not as a character class etc. Used by the word-boundary
+// matcher below.
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Word-boundary match against a haystack. Replaces the prior `includes()`
+// scan (PATCH D): bare-substring matching mis-fired on "evening drifts"
+// satisfying a "beach club" must-have via the `drift` synonym, and on
+// any text containing "rooftop" satisfying the `rooftop` must-have even
+// when no rooftop venue was actually picked.
+//
+// The synonym list itself is curated (multi-word for common terms,
+// branded singletons for distinctive ones) so the boundary regex is
+// the second line of defense, not the only one.
 export function mustHaveMatches(mh: string, haystack: string): boolean {
   if (!mh || !haystack) return false;
-  const lower = haystack.toLowerCase();
   for (const syn of mustHaveSynonymsFor(mh)) {
-    const s = syn.toLowerCase();
-    if (s && lower.includes(s)) return true;
+    if (!syn) continue;
+    // \b at both ends, case-insensitive. Hyphenated synonyms like
+    // "high-rise" still match "high-rise" and "high-rises" via \b's
+    // alphanumeric boundary semantics.
+    const re = new RegExp(`\\b${escapeRegex(syn)}\\b`, "i");
+    if (re.test(haystack)) return true;
+  }
+  return false;
+}
+
+// Nature-vibe routing regex. Used by VIBE_PLACES_MAP in index.ts to decide
+// whether a parsed vibe token should fire the "parks gardens viewpoints
+// natural sights" Places query.
+//
+// PATCH A.3 — the prior pattern matched bare `beach`, so a parsed vibe of
+// "beach club" (which the model could leak when a user says "cool beach
+// clubs") fired the parks query. Negative lookahead now skips
+// "beach club", "beach bar", "beach lounge", "beach resort", "beach
+// house" — those are venue-category must_haves, not nature vibes. The
+// rest of the pattern (park, forest, lake, viewpoint, waterfall, garden)
+// is unchanged.
+//
+// Exported so the unit-test mirror stays in lockstep with the production
+// regex without importing index.ts (which would trigger Deno.serve).
+export const VIBE_NATURE_REGEX =
+  /^nature$|natural|park\b|forest|lake|\bbeach\b(?!\s*(?:club|bar|lounge|resort|house))|viewpoint|waterfall|garden/i;
+
+// True when the venue's display name + Place types match any entry in the
+// caller's must_haves list. Used by Patch B (digest pool reservation) to
+// promote must-have-matching venues into the top-of-pool slice the day
+// ranker actually sees. Same matcher as the post-pipeline coverage
+// validator so a venue that satisfies the validator also gets reserved.
+export function venueMatchesAnyMustHave(
+  v: { displayName?: string | null; types?: readonly string[] | null },
+  mustHaves: readonly string[],
+): boolean {
+  if (mustHaves.length === 0) return false;
+  const haystack = [
+    v.displayName ?? "",
+    (v.types ?? []).join(" "),
+  ].join(" ");
+  if (!haystack.trim()) return false;
+  for (const mh of mustHaves) {
+    if (mustHaveMatches(mh, haystack)) return true;
   }
   return false;
 }
