@@ -18,6 +18,10 @@ export interface AIActivity {
   longitude: number | null;
   google_maps_url: string | null;
   booking_url: string | null;
+  // Backend-assigned partner. "google_maps" | "getyourguide" | "viator" |
+  // "booking" | "event_direct". Source of truth for which booking CTA the
+  // ActivityCard renders.
+  booking_partner?: string | null;
   photo_query: string | null;
   tips: string | null;
   dietary_notes: string | null;
