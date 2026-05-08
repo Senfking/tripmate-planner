@@ -46,5 +46,5 @@ test("generated trip persists into trip list and can be re-opened", async ({ pag
   // Re-open and verify the trip data renders again.
   await page.locator(`a[href*="/app/trips/${tripId}"]`).first().click();
   await page.waitForURL(new RegExp(`/app/trips/${tripId}`));
-  await expect(page.getByText(/^day\s*1\b/i).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/^day\s*0?1\b/i).first()).toBeVisible({ timeout: 30_000 });
 });

@@ -56,11 +56,18 @@ test.describe("Group + expenses", () => {
       await page.waitForURL(/\/app\/trips\/[a-f0-9-]+/);
     }
 
-    // Navigate to the expenses tab.
-    await page.getByRole("link", { name: /expenses/i }).first().click().catch(async () => {
-      // Fallback: bottom-nav button doesn't always render as a link.
-      await page.getByRole("button", { name: /expenses/i }).first().click();
-    });
+    // Navigate to the expenses tab. The TripDashboard expense card label
+    // varies with balance state ("You owe …", "You're owed …"), so target
+    // its aria-label, which is stable. Falls back to a generic /expenses/i
+    // match for older builds where the aria-label hasn't shipped yet.
+    const expensesEntry = page.getByRole("button", { name: /open expenses/i }).first();
+    if (await expensesEntry.isVisible().catch(() => false)) {
+      await expensesEntry.click();
+    } else {
+      await page.getByRole("link", { name: /expenses/i }).first().click().catch(async () => {
+        await page.getByRole("button", { name: /expenses/i }).first().click();
+      });
+    }
     await page.waitForURL(/expenses|\/app\/trips\/[a-f0-9-]+/, { timeout: 15_000 });
 
     // Open the add-expense form.

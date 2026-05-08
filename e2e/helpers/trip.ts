@@ -24,8 +24,9 @@ export async function submitTripPrompt(page: Page, prompt: string): Promise<void
 export async function waitForGenerationComplete(page: Page, opts: { timeoutMs?: number } = {}): Promise<void> {
   const timeout = opts.timeoutMs ?? 150_000;
   // The streaming UI eventually renders the day-by-day preview with at
-  // least one "Day 1" heading.
-  await expect(page.getByText(/^day\s*1\b/i).first()).toBeVisible({ timeout });
+  // least one "Day 1" heading. DaySection renders the numeral zero-padded
+  // in a sibling span ("Day" + "01"), so allow an optional leading zero.
+  await expect(page.getByText(/^day\s*0?1\b/i).first()).toBeVisible({ timeout });
 }
 
 export interface TripPreviewSnapshot {
