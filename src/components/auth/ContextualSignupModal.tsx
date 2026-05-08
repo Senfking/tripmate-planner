@@ -154,7 +154,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
     setGoogleLoading(false);
     if (result.error) {
-      setError(friendlyError(String(result.error)));
+      const normalized = mapAuthError(result.error);
+      setError(normalized.message);
+      captureAuthError(result.error, { flow: "oauth_google", normalized });
       return;
     }
     if (!result.redirected) await handleAfterAuth();
@@ -169,7 +171,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
     const result = await lovable.auth.signInWithOAuth("apple", { redirect_uri: callback });
     setAppleLoading(false);
     if (result.error) {
-      setError(friendlyError(String(result.error)));
+      const normalized = mapAuthError(result.error);
+      setError(normalized.message);
+      captureAuthError(result.error, { flow: "oauth_apple", normalized });
       return;
     }
     if (!result.redirected) await handleAfterAuth();
@@ -185,7 +189,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       const { error: err } = await signUp(email, password, displayName || email.split("@")[0]);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signup", normalized });
         return;
       }
       await handleAfterAuth();
@@ -193,7 +199,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       const { error: err } = await signIn(email, password);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signin", normalized });
         return;
       }
       await handleAfterAuth();
