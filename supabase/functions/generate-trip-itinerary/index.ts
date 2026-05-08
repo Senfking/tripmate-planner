@@ -55,6 +55,8 @@ import {
   inferExtraPoolsFromTypes,
   MUST_HAVE_QUERY_EXPANSIONS,
   mustHaveMatches,
+  VIBE_NATURE_REGEX,
+  venueMatchesAnyMustHave,
 } from "./must-have-fidelity.ts";
 
 // ---------------------------------------------------------------------------
@@ -419,6 +421,18 @@ function computeMaxFinalists(numDays: number): number {
 // being told what's claimed; cost is ~20-30s extra wall time on 2-3 day trips,
 // well within PIPELINE_WALL_CLOCK_MS. 1-day trips are unaffected (single call).
 const SEQUENTIAL_RANKING_MIN_DAYS = 2;
+
+// Per-pool digest size shown to the day ranker. Was an inline 15 in
+// buildSharedContextText; lifted to a named constant so PATCH B can express
+// the must-have-reserved-slots split clearly. POOL_DIGEST_SIZE stays at 15
+// to keep input-token cost flat.
+const POOL_DIGEST_SIZE = 15;
+// Up to this many slots at the top of each pool digest are reserved for
+// venues whose name/types match an entry in intent.must_haves. The
+// remainder is filled by rating-sorted residue. Empirically 5 covers the
+// "must include category X" use case (Dubai beach clubs, Tokyo
+// speakeasies) without crowding out genuinely top-rated generic venues.
+const MUST_HAVE_RESERVED_SLOTS = 5;
 
 // Rate limit + circuit breaker defaults. Override via env if needed.
 const DEFAULT_RATE_LIMIT_PER_HOUR = 5;                 // generations per user per rolling hour
@@ -1240,10 +1254,14 @@ vibes:
 - PRESERVE EVERY explicit vibe from the user's vibes[] array — never drop one. These are mandatory inclusion criteria for the trip, not soft hints.
 - Normalize each preserved vibe to a short lowercase tag (e.g. "Nightlife" => "nightlife", "Hidden gems" => "hidden gems"). Keep multi-word tags intact; do not split "hidden gems" into two entries.
 - THEN add vibes that are clearly implied by free_text (e.g. "we want to eat our way through" => add "foodie"; "chill beach days" => add "beach", "slow"). De-duplicate against the preserved set.
+- DO NOT add a generic vibe when the user named a venue category. "cool beach clubs" => "beach club" goes in must_haves, NOT "beach" in vibes. "rooftop bars" => "rooftop bar" goes in must_haves, NOT "rooftop" in vibes. The vibe "beach" should only fire for clear beach-relaxation intent ("chill beach days", "beach lounging", "barefoot on the sand"), not when the user is naming a beach venue type. Same rule for "rooftop", "spa", "club" — when paired with a venue category they are must_haves, not vibes.
 - Output is short lowercase tags, 1-3 words each. The downstream pipeline matches these tags against a Places-retrieval map — preserving the user's exact form selections (lowercased) is critical.
 
 must_haves:
-- Specific experiences the user explicitly asked for. Examples: "cooking class", "see the Northern Lights", "visit the Miffy Museum", "sunrise hike".
+- Specific experiences OR venue categories the user explicitly asked for. Two flavors are valid:
+  • Active experiences: "cooking class", "see the Northern Lights", "visit the Miffy Museum", "sunrise hike", "Michelin tasting menu", "live jazz", "speakeasies", "wellness spa".
+  • Venue-category requests: "beach clubs", "rooftop bars", "natural wine bars", "izakayas", "underground techno clubs". When the user names a venue category they want to visit, that IS a must-have — even when the category overlaps a known vibe word. "cool beach clubs" => must_haves: ["beach club"] (not vibes: ["beach"]). "fancy rooftop bars" => must_haves: ["rooftop bar"] (not vibes: ["rooftop"]).
+- Normalize venue-category must-haves to a short lowercase noun phrase, dropping qualifiers like "cool", "fancy", "amazing": "cool beach clubs" => "beach club"; "amazing speakeasies" => "speakeasy".
 - Only from explicit statements in notes or free_text. Empty array if none.
 
 must_avoids (CRITICAL — extract aggressively from text):
@@ -3729,8 +3747,10 @@ const VIBE_PLACES_MAP: VibeRetrievalSpec[] = [
     includedType: "bar", textBias: "bars cocktail nightlife",
     poolKey: "nightlife", dedupKey: "vibe:nightlife" },
   // Nature: park is the canonical type; viewpoint/waterfall/beach venues
-  // come through the keyword bias.
-  { matches: /^nature$|natural|park\b|forest|lake|beach|viewpoint|waterfall|garden/i,
+  // come through the keyword bias. Regex literal lives in
+  // must-have-fidelity.ts so the unit-test mirror stays in lockstep
+  // with production (PATCH A.3).
+  { matches: VIBE_NATURE_REGEX,
     includedType: "park", textBias: "parks gardens viewpoints natural sights",
     poolKey: "attractions", dedupKey: "vibe:nature" },
   // Hidden gems: no type filter (Google has no such category). Pure keyword
@@ -6112,13 +6132,30 @@ function buildSharedContextText(
     const legPool = byLeg.get(leg.index) ?? new Map<PoolKey, BatchPlaceResult[]>();
     const merged = mergeLegRestaurantPool(legPool);
     const pool: Record<string, VenueDigestEntry[]> = {};
+    // PATCH B — partition each pool into must-have-matching venues and
+    // the residue, reserve up to MUST_HAVE_RESERVED_SLOTS at the top of
+    // the digest for matches, and fill the rest by rating descending.
+    // Without this, retagged beach clubs (added LAST to a secondary pool
+    // via extraPoolKeys with rating=null) get pushed past the 15-slot
+    // truncation by primary-pool venues whose ratings are populated.
+    const sortByRating = (a: BatchPlaceResult, b: BatchPlaceResult): number => {
+      const ra = a.rating ?? 0, rb = b.rating ?? 0;
+      if (rb !== ra) return rb - ra;
+      return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
+    };
     for (const [key, venues] of merged.entries()) {
-      const sorted = [...venues].sort((a, b) => {
-        const ra = a.rating ?? 0, rb = b.rating ?? 0;
-        if (rb !== ra) return rb - ra;
-        return (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0);
-      });
-      pool[key] = sorted.slice(0, 15).map(digestVenue);
+      const matches: BatchPlaceResult[] = [];
+      const rest: BatchPlaceResult[] = [];
+      for (const v of venues) {
+        if (venueMatchesAnyMustHave(v, intent.must_haves)) matches.push(v);
+        else rest.push(v);
+      }
+      matches.sort(sortByRating);
+      rest.sort(sortByRating);
+      const reserved = matches.slice(0, MUST_HAVE_RESERVED_SLOTS);
+      const remaining = POOL_DIGEST_SIZE - reserved.length;
+      const filled = [...reserved, ...rest.slice(0, Math.max(0, remaining))];
+      pool[key] = filled.map(digestVenue);
     }
     return {
       index: leg.index,
