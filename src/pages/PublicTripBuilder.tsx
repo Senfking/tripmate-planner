@@ -34,8 +34,14 @@ export default function PublicTripBuilder() {
     return consumePendingPrompt() ?? undefined;
   });
   
-  const [blankOpen, setBlankOpen] = useState(false);
-  const [stepExpanded, setStepExpanded] = useState(false);
+  const [blankOpen, setBlankOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("blank") === "1";
+  });
+  const [stepExpanded, setStepExpanded] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("step") === "1";
+  });
   const [authPrompt, setAuthPrompt] = useState<string | null>(null);
   const [authPayload, setAuthPayload] = useState<Record<string, unknown> | null>(null);
   const [anonPrompt, setAnonPrompt] = useState<string | null>(null);
