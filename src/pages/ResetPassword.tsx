@@ -101,11 +101,7 @@ export default function ResetPassword() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && (
-              <p className="rounded-xl px-3 py-2 text-sm bg-destructive/10 text-destructive">
-                {error}
-              </p>
-            )}
+            <AuthErrorBanner message={error} />
             <input
               type="password"
               required
