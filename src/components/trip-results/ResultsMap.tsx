@@ -212,11 +212,12 @@ function MapController({
       } else if (points.length === 1) {
         map.setView(points[0], 12, { animate: true });
       } else {
-        map.setView(
-          [result.map_center.lat, result.map_center.lng],
-          result.map_zoom || 6,
-          { animate: true }
-        );
+        const c = result?.map_center;
+        if (c && typeof c.lat === "number" && typeof c.lng === "number" && !(c.lat === 0 && c.lng === 0)) {
+          map.setView([c.lat, c.lng], result.map_zoom || 6, { animate: true });
+        }
+        // Otherwise: leave the map at its initial center (effectiveCenter
+        // computed at mount); no jolt to (0,0) while streaming.
       }
       return;
     }
