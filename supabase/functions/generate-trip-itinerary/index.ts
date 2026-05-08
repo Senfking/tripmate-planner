@@ -3993,7 +3993,7 @@ async function geocodeDestination(
   if (!normalized) {
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       "empty destination after normalization",
     );
   }
@@ -4062,7 +4062,7 @@ async function geocodeDestination(
           // same empty answer.
           throw new PipelineError(
             "geocodeDestination",
-            "Could not resolve destination",
+            "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
             `Geocoding API returned ZERO_RESULTS for "${destination}"`,
           );
         } else {
@@ -4100,7 +4100,7 @@ async function geocodeDestination(
     );
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       `places:searchText returned ${res.status}`,
     );
   }
@@ -4129,7 +4129,7 @@ async function geocodeDestination(
     );
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       "places:searchText returned 0 matches",
     );
   }
@@ -4178,7 +4178,7 @@ async function geocodeIntentDestinations(
   if (destinations.length === 0) {
     throw new PipelineError(
       "geocodeDestination",
-      "Could not resolve destination",
+      "We couldn't find that destination. Try being more specific — e.g., \"Tokyo, Japan\" or \"Paris, France\".",
       "intent.destinations is empty",
     );
   }
