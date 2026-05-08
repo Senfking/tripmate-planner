@@ -117,8 +117,11 @@ export interface StreamingState {
   trip: TripCompleteEvent | null;
   result: AITripResult | null;
   error: string | null;
-  /** Set when the server returned 429 (anon rate limit hit). */
+  /** Set when the server returned 429 (anon rate limit hit) or other coded errors. */
   errorCode: string | null;
+  /** Pipeline step name from the server `error` event (e.g. "geocodeDestination",
+   *  "thin_pool", "timeout", "parseIntent"). Drives the user-facing copy. */
+  errorStep: string | null;
   /** Anonymous-mode only: the row id in `anonymous_trips` once the
    *  trip_complete event lands. Used to navigate to /trips/anon/[id]. */
   anonTripId: string | null;
