@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { attributeReferralInBackground } from "@/lib/referralAttribution";
 import { mapAuthError, captureAuthError } from "@/lib/authErrors";
 import { AuthErrorBanner } from "@/components/auth/AuthErrorBanner";
 import { lovable } from "@/integrations/lovable/index";
@@ -409,15 +410,11 @@ export default function ReferralLanding() {
         setError(normalized.message);
         captureAuthError(err, { flow: "signup", normalized });
       } else {
+        // Referral attribution is nice-to-have. Dispatch in the background
+        // so a slow RPC or 504 from Supabase never blocks the post-signup
+        // redirect.
         if (referralCode.current && data?.user?.id) {
-          const { data: referrerId } = await supabase
-            .rpc("resolve_referral_code", { _code: referralCode.current });
-          if (referrerId) {
-            await supabase
-              .from("profiles")
-              .update({ referred_by: referrerId })
-              .eq("id", data.user.id);
-          }
+          attributeReferralInBackground(data.user.id, referralCode.current);
         }
         navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
