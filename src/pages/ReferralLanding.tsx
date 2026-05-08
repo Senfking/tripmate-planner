@@ -584,6 +584,7 @@ export default function ReferralLanding() {
                 {error && (
                   <div
                     role="alert"
+                    aria-live="polite"
                     className="flex items-start gap-3 rounded-2xl px-4 py-3 text-left text-sm backdrop-blur-md border animate-in fade-in slide-in-from-top-1 duration-200"
                     style={{
                       background: "rgba(20,10,10,0.55)",
@@ -593,7 +594,7 @@ export default function ReferralLanding() {
                     }}
                   >
                     <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#fca5a5" }} />
-                    <span className="leading-snug">{error}</span>
+                    <span className="leading-snug min-w-0 break-words">{error}</span>
                   </div>
                 )}
                 {info && (
