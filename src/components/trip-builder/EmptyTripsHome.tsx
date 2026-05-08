@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, FileText, Hash, ListChecks, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, FileText, Hash, ListChecks, Sparkles } from "lucide-react";
+import { TripCarousels } from "@/components/landing/TripCarousel";
 
 /**
  * EmptyTripsHome — the redesigned zero-trips state for /app/trips.
