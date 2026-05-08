@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { friendlyError } from "@/lib/friendlyError";
+import { mapAuthError, captureAuthError } from "@/lib/authErrors";
+import { AuthErrorBanner } from "@/components/auth/AuthErrorBanner";
 import { Loader2 } from "lucide-react";
 
 export default function ResetPassword() {
@@ -59,7 +60,9 @@ export default function ResetPassword() {
     setLoading(false);
 
     if (err) {
-      setError(friendlyError(err.message));
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "password_update", normalized });
       return;
     }
     setDone(true);
@@ -98,11 +101,7 @@ export default function ResetPassword() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && (
-              <p className="rounded-xl px-3 py-2 text-sm bg-destructive/10 text-destructive">
-                {error}
-              </p>
-            )}
+            <AuthErrorBanner message={error} />
             <input
               type="password"
               required

@@ -7,7 +7,8 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { lovable } from "@/integrations/lovable/index";
-import { friendlyError } from "@/lib/friendlyError";
+import { mapAuthError, captureAuthError } from "@/lib/authErrors";
+import { AuthErrorBanner } from "@/components/auth/AuthErrorBanner";
 import { peekAnonSessionId, clearAnonSessionId } from "@/lib/anonSession";
 import { trackEvent } from "@/lib/analytics";
 
@@ -153,7 +154,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
     setGoogleLoading(false);
     if (result.error) {
-      setError(friendlyError(String(result.error)));
+      const normalized = mapAuthError(result.error);
+      setError(normalized.message);
+      captureAuthError(result.error, { flow: "oauth_google", normalized });
       return;
     }
     if (!result.redirected) await handleAfterAuth();
@@ -168,7 +171,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
     const result = await lovable.auth.signInWithOAuth("apple", { redirect_uri: callback });
     setAppleLoading(false);
     if (result.error) {
-      setError(friendlyError(String(result.error)));
+      const normalized = mapAuthError(result.error);
+      setError(normalized.message);
+      captureAuthError(result.error, { flow: "oauth_apple", normalized });
       return;
     }
     if (!result.redirected) await handleAfterAuth();
@@ -184,7 +189,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       const { error: err } = await signUp(email, password, displayName || email.split("@")[0]);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signup", normalized });
         return;
       }
       await handleAfterAuth();
@@ -192,7 +199,9 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
       const { error: err } = await signIn(email, password);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signin", normalized });
         return;
       }
       await handleAfterAuth();
@@ -237,11 +246,7 @@ function SignupBody({ trigger, onClose, fallbackRedirect }: { trigger: SignupTri
         </ul>
       )}
 
-      {error && (
-        <p className="mb-3 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5" }}>
-          {error}
-        </p>
-      )}
+      <AuthErrorBanner message={error} variant="dark" className="mb-3" />
 
       <div className="space-y-3">
         <button

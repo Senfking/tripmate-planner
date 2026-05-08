@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { friendlyError } from "@/lib/friendlyError";
+import { mapAuthError, captureAuthError } from "@/lib/authErrors";
+import { AuthErrorBanner } from "@/components/auth/AuthErrorBanner";
 import { lovable } from "@/integrations/lovable/index";
 import { trackEvent } from "@/lib/analytics";
 import { Loader2, AlertCircle, MailCheck } from "lucide-react";
@@ -289,7 +290,9 @@ export default function ReferralLanding() {
     });
     setResetLoading(false);
     if (err) {
-      setError(friendlyError(err.message));
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "password_reset", normalized });
     } else {
       setInfo(`We sent a reset link to ${email}. Check your inbox.`);
     }
@@ -359,20 +362,28 @@ export default function ReferralLanding() {
       redirect_uri: callbackUrl,
     });
     setGoogleLoading(false);
-    if (err) setError(friendlyError(String(err)));
+    if (err) {
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "oauth_google", normalized });
+    }
   };
 
   const handleAppleSignIn = async () => {
     if (signupBlocked) return;
     setError(null);
     setAppleLoading(true);
-    
+
     const callbackUrl = `${window.location.origin}/auth/callback${redirectAfterAuth ? `?redirect=${encodeURIComponent(redirectAfterAuth)}` : ""}`;
     const { error: err } = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: callbackUrl,
     });
     setAppleLoading(false);
-    if (err) setError(friendlyError(String(err)));
+    if (err) {
+      const normalized = mapAuthError(err);
+      setError(normalized.message);
+      captureAuthError(err, { flow: "oauth_apple", normalized });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -384,7 +395,9 @@ export default function ReferralLanding() {
       const { error: err } = await signIn(email, password);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signin", normalized });
       } else {
         navigate(redirectAfterAuth || "/app/trips", { replace: true });
       }
@@ -392,7 +405,9 @@ export default function ReferralLanding() {
       const { error: err, data } = await signUp(email, password, displayName);
       setLoading(false);
       if (err) {
-        setError(friendlyError(err.message));
+        const normalized = mapAuthError(err);
+        setError(normalized.message);
+        captureAuthError(err, { flow: "signup", normalized });
       } else {
         if (referralCode.current && data?.user?.id) {
           const { data: referrerId } = await supabase
@@ -569,6 +584,7 @@ export default function ReferralLanding() {
                 {error && (
                   <div
                     role="alert"
+                    aria-live="polite"
                     className="flex items-start gap-3 rounded-2xl px-4 py-3 text-left text-sm backdrop-blur-md border animate-in fade-in slide-in-from-top-1 duration-200"
                     style={{
                       background: "rgba(20,10,10,0.55)",
@@ -578,7 +594,7 @@ export default function ReferralLanding() {
                     }}
                   >
                     <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#fca5a5" }} />
-                    <span className="leading-snug">{error}</span>
+                    <span className="leading-snug min-w-0 break-words">{error}</span>
                   </div>
                 )}
                 {info && (
