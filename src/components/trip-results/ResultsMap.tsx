@@ -326,7 +326,7 @@ export function ResultsMap({ result, activeDayIndex, allDays, mode, refinedCoord
 
   return (
     <MapContainer
-      center={[result.map_center.lat, result.map_center.lng]}
+      center={[effectiveCenter!.lat, effectiveCenter!.lng]}
       zoom={result.map_zoom || 6}
       className={`trip-results-map-root h-full w-full ${interactive ? "" : "pointer-events-none"}`}
       zoomControl={false}
