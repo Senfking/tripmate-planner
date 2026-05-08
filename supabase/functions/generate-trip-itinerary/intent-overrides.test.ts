@@ -17,6 +17,10 @@ import {
   type OverridableIntent,
   parseIntentOverrides,
 } from "./intent-overrides.ts";
+import {
+  clampNonLodgingExperienceCost,
+  realisticCostBand,
+} from "./cost-bands.ts";
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error("Assertion failed: " + msg);
@@ -379,6 +383,155 @@ Deno.test("applyIntentOverrides: budget edge case — explicit budget word wins 
   );
   assertEqual(body.budget_level, "budget", "explicit budget word forces body to budget");
   assertEqual(intent.budget_tier, "budget", "explicit budget word forces intent to budget");
+});
+
+// ---------------------------------------------------------------------------
+// End-to-end propagation: free_text override → cost engine
+// ---------------------------------------------------------------------------
+//
+// Production bug observed: a request with body { budget_level: "mid-range",
+// group_size: 2, travel_party: "couple", free_text: "4 friends, 6 days in
+// Dubai, beach clubs and serious nightlife" } streamed activity copy that
+// referenced "Premium budget tier + 4-person group" — confirming the LLM
+// ranker received the overridden intent — yet activity costs came out at
+// the mid-range band (€44 / AED 173 for premium beach clubs).
+//
+// The override path must thread the extracted budget_level all the way to
+// the cost engine's tier-aware band logic; otherwise the venue-name floor
+// (/beach club/i → €100) and the premium tier multiplier (1.4x on floor)
+// silently no-op. These tests lock in the contract so a future regression
+// in either applyIntentOverrides OR the cost-engine call chain trips here
+// before it ships.
+
+Deno.test("E2E: mid-range form + 'beach clubs' free_text → cost engine sees premium for a beach_club", () => {
+  // 1. Form submits the hardcoded mid-range default.
+  const body: OverridableBody = { group_size: 2, budget_level: "mid-range", travel_party: "couple" };
+  const intent: OverridableIntent = { budget_tier: "mid-range", group_composition: "couple" };
+
+  // 2. parseIntent's LLM extracts premium from "beach clubs and serious
+  //    nightlife" — the prompt's strongly-implied venue rule. Simulate the
+  //    raw tool output and run it through parseIntentOverrides exactly the
+  //    way the production handler does.
+  const overrides = parseIntentOverrides({
+    extracted_group_size: 4,
+    extracted_travel_party: "friends",
+    extracted_budget_level: "premium",
+  });
+  assertEqual(overrides.extracted_budget_level, "premium", "parser preserves premium signal");
+
+  // 3. applyIntentOverrides mutates body + intent. After this, intent is
+  //    the object every cost-engine call site reads (every hydrateActivity
+  //    call passes intent.budget_tier through to clampCostPerPerson).
+  applyIntentOverrides(body, intent, overrides);
+  assertEqual(intent.budget_tier, "premium", "intent.budget_tier reflects free_text");
+  assertEqual(body.budget_level, "premium", "body.budget_level reflects free_text");
+  assertEqual(body.group_size, 4, "body.group_size reflects free_text");
+
+  // 4. The cost engine MUST see premium for a beach_club venue. Reproduce
+  //    the call shape clampCostPerPerson uses internally — same arguments
+  //    that hydrateActivity threads through (slot type, place_types,
+  //    venueTitle, cityName, the trip's intent.budget_tier).
+  const out = clampNonLodgingExperienceCost({
+    llmCost: 18, // The LLM under-quote that triggered the production bug.
+    slotType: "lunch",
+    placeTypes: ["beach_club", "restaurant"],
+    priceLevel: null,
+    budgetTier: intent.budget_tier, // ← the merged intent, not body's form default
+    fxToLocal: 1, // EUR-quoted trip for readable assertions
+    cityName: "Dubai",
+    venueTitle: "Bohemia Beach Club at FIVE Palm",
+  });
+
+  // 5. Premium tier + Dubai city multiplier (1.7) + venue-name floor (€100)
+  //    + premium tier floor multiplier (1.4) compose to:
+  //      floor   = round(100 * 1.7 * 1.4)         = 238 EUR
+  //      ceiling = round(220 * 1.7 * 1.0 * 1.4)   = 524 EUR
+  //      bumped  = round((238 + 524) / 2)         = 381 EUR
+  //    The clamp must bump the LLM's €18 to 381 — if the result lands at
+  //    the mid-range band (272), the override didn't reach the cost engine.
+  const premiumBumped = Math.round((Math.round(100 * 1.7 * 1.4) + Math.round(220 * 1.7 * 1.4)) / 2);
+  assertEqual(out.action, "floor_bumped", "premium beach-club must bump (not pass through)");
+  assertEqual(
+    out.cost,
+    premiumBumped,
+    `expected premium mid-band ${premiumBumped} EUR (Dubai cityMul × beach-club venue floor × ` +
+    `premium tier mul); got ${out.cost} — override may not have reached cost engine`,
+  );
+});
+
+Deno.test("E2E: same flow without the free_text override stays at mid-range band", () => {
+  // Counter-positive: if the LLM omits extracted_budget_level (no premium
+  // signal in free_text), the form's mid-range default must flow through
+  // and the same beach-club call returns the mid-range band's floor —
+  // venue-name floor still lifts (it's tier-independent), but the premium
+  // 1.4x floor multiplier does not. This proves the test above is
+  // measuring tier propagation, not just venue-name behavior.
+  const body: OverridableBody = { group_size: 2, budget_level: "mid-range", travel_party: "couple" };
+  const intent: OverridableIntent = { budget_tier: "mid-range", group_composition: "couple" };
+
+  applyIntentOverrides(
+    body,
+    intent,
+    parseIntentOverrides({}), // No extraction — all three fields null.
+  );
+  assertEqual(intent.budget_tier, "mid-range", "no override → mid-range preserved");
+
+  const out = clampNonLodgingExperienceCost({
+    llmCost: 18,
+    slotType: "lunch",
+    placeTypes: ["beach_club", "restaurant"],
+    priceLevel: null,
+    budgetTier: intent.budget_tier,
+    fxToLocal: 1,
+    cityName: "Dubai",
+    venueTitle: "Bohemia Beach Club at FIVE Palm",
+  });
+
+  // Mid-range Dubai beach_club: floor = max(80, 100) * 1.7 * 1 (no tier
+  // mul on mid-range floor) = 170 EUR; ceiling = 220 * 1.7 * 1 = 374 EUR;
+  // mid-band = round((170 + 374) / 2) = 272 EUR.
+  const midRangeBumped = Math.round((170 + 374) / 2);
+  const premiumBumped = Math.round((Math.round(100 * 1.7 * 1.4) + Math.round(220 * 1.7 * 1.4)) / 2);
+  assertEqual(out.action, "floor_bumped", "venue-name floor still lifts mid-range");
+  assertEqual(out.cost, midRangeBumped, "mid-range mid-band of beach-club venue floor");
+  // Sanity: distinctly below the premium mid-band — proves tier
+  // propagation, not just venue lookup, is being measured.
+  assert(
+    out.cost < premiumBumped,
+    `mid-range result (${out.cost}) must be below premium mid-band (${premiumBumped}) — proves tier matters`,
+  );
+});
+
+Deno.test("E2E: realisticCostBand floor reflects premium tier multiplier", () => {
+  // Direct check of the band math the cost engine consults. The floor on
+  // premium tier MUST include the 1.4x multiplier; mid-range MUST NOT.
+  // This is the tier-aware behavior that disappears if intent.budget_tier
+  // ever goes back to mid-range silently.
+  const premium = realisticCostBand({
+    slotType: "lunch",
+    placeTypes: ["beach_club"],
+    priceLevel: null,
+    budgetTier: "premium",
+    fxToLocal: 1,
+    cityName: "Dubai",
+    venueTitle: "Bohemia Beach Club",
+  });
+  const midRange = realisticCostBand({
+    slotType: "lunch",
+    placeTypes: ["beach_club"],
+    priceLevel: null,
+    budgetTier: "mid-range",
+    fxToLocal: 1,
+    cityName: "Dubai",
+    venueTitle: "Bohemia Beach Club",
+  });
+  assert(premium !== null, "premium band returned");
+  assert(midRange !== null, "mid-range band returned");
+  // Premium floor = 100 (venue) * 1.7 (Dubai) * 1.4 (premium tier) = 238.
+  // Mid-range floor = 100 * 1.7 * 1 = 170.
+  assertEqual(premium!.floor, Math.round(100 * 1.7 * 1.4), "premium floor includes tier mul");
+  assertEqual(midRange!.floor, Math.round(100 * 1.7), "mid-range floor without tier mul");
+  assert(premium!.floor > midRange!.floor, "premium floor strictly higher (tier propagation works)");
 });
 
 Deno.test("applied[] return value matches the emitted log lines exactly", () => {
