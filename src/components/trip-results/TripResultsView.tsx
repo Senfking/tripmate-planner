@@ -666,19 +666,29 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             just one element disappearing — no other layout change. */}
         {streaming && (
           <div
-            className="sticky z-30 px-4 py-3 space-y-3 animate-fade-in"
+            className="sticky z-30 py-3 space-y-3 animate-fade-in"
             style={{ top: "env(safe-area-inset-top, 0px)" }}
           >
-            <StreamingStatusPill
-              stage={streamingStage ?? null}
-              statusMessages={streamingStatusMessages ?? []}
-              fallback={streamingMessage || "Crafting your trip"}
-            />
-            <StreamingProgressLadder
-              totalDays={allDays.length}
-              completedDays={streamingCompletedDays ?? []}
-            />
-            <StreamingProgressBar percent={streamingStage?.percent_complete ?? null} />
+            <div className="px-4">
+              <StreamingStatusPill
+                stage={streamingStage ?? null}
+                statusMessages={streamingStatusMessages ?? []}
+                fallback={streamingMessage || "Crafting your trip"}
+              />
+            </div>
+            {/* Day ladder breaks out of the centered column so chips can
+                scroll edge-to-edge across the full viewport width. */}
+            {/* Break out of the 700px centered column so the day chips can
+                scroll edge-to-edge across the full viewport width. */}
+            <div className="relative left-1/2 -translate-x-1/2 w-screen">
+              <StreamingProgressLadder
+                totalDays={allDays.length}
+                completedDays={streamingCompletedDays ?? []}
+              />
+            </div>
+            <div className="px-4">
+              <StreamingProgressBar percent={streamingStage?.percent_complete ?? null} />
+            </div>
           </div>
         )}
 
