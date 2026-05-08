@@ -64,6 +64,7 @@ import {
 } from "./must-have-fidelity.ts";
 import { maybeRecoverEmptyDay } from "./empty-day-recovery.ts";
 import { anchorDurationOverride } from "./anchor-duration.ts";
+import { type AnchorCategory, reserveAnchorSlot } from "./anchor-cooldown.ts";
 import {
   applyIntentOverrides,
   type IntentOverrides,
@@ -6616,7 +6617,12 @@ function hydrateActivity(
   // MAX_ACTIVITY_DURATION (480) defensively, though the rule values
   // already sit below it.
   const duration_minutes = Math.min(
-    anchorDurationOverride(slot.duration_minutes, slot.type, place?.types ?? null),
+    anchorDurationOverride(
+      slot.duration_minutes,
+      slot.type,
+      place?.types ?? null,
+      place?.displayName ?? null,
+    ),
     MAX_ACTIVITY_DURATION,
   );
   const duration_hours = minutesToHours1dp(duration_minutes);
@@ -7370,6 +7376,11 @@ async function rankInParallel(
     const activities: EnrichedActivity[] = [];
     const rawActs = Array.isArray(rawDay?.activities) ? rawDay!.activities : [];
     const dropReasons: string[] = [];
+    // Per-day anchor-category cooldown — at most one beach_club, one
+    // swimming_pool, and one night_club per day. Reset per call so each day
+    // gets its own budget. Restaurants/bars are NOT anchored; lunch + dinner
+    // and drinks + nightcap are normal patterns.
+    const placedAnchorCategories = new Set<AnchorCategory>();
     for (let i = 0; i < day.slots.length; i++) {
       const slot = day.slots[i];
       const rawAct = rawActs.find((a) => a?.slot_index === i);
@@ -7403,6 +7414,21 @@ async function rankInParallel(
             `closed at ${day.date} ${slot.start_time} (slot=${slot.type})`,
           );
           dropReasons.push("closed_at_slot");
+          continue;
+        }
+      }
+      // Anchor-category cooldown — reject a second beach_club / swimming_pool /
+      // night_club on the same day. Leave the slot empty rather than
+      // double-stack; the unused candidate stays available for the next day.
+      if (place) {
+        const reservation = reserveAnchorSlot(placedAnchorCategories, place.types);
+        if (reservation.violatesCooldown) {
+          console.warn(
+            `[anchor_cooldown] drop: place_id=${place.id} "${place.displayName}" ` +
+            `category=${reservation.category} day_number=${day.day_number} leg=${legIdx} ` +
+            `(another ${reservation.category} already placed in this day)`,
+          );
+          dropReasons.push(`anchor_cooldown_${reservation.category}`);
           continue;
         }
       }
