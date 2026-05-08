@@ -74,6 +74,7 @@ import {
   clampNonLodgingExperienceCost as clampNonLodgingExperienceCostShared,
   realisticCostBand,
 } from "./cost-bands.ts";
+import { extractDestinationFromTextRegex } from "./destination-recovery.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -1271,9 +1272,11 @@ Your output will be used to (1) pick a surprise destination when the user hasn't
 
 EXTRACTION RULES
 
-destination:
+destination (MANDATORY — this field is the most important output you produce):
 - If the user provided a destination_hint (non-empty), copy it VERBATIM into destination. Do NOT translate, paraphrase, "fix" the spelling, or substitute a different city — even one you think is "safer", "more popular", or "a better fit". The user's typed destination is sacred. Saint-Petersburg, Moscow, Tehran, Pyongyang, Damascus, Havana, Caracas, and every other real-world city are all valid Junto destinations. Junto is not a sanctions tool and does not gatekeep destinations on geopolitical grounds. If you swap the user's destination for a neighbor or a "preferred" alternative you are corrupting the user's request — return the user's input exactly as written.
-- If destination_hint is empty or looks like a placeholder (TBD, surprise me, anywhere, etc.), return destination as an empty string. A separate step will pick one.
+- If destination_hint is EMPTY but free_text or notes name a city/country (e.g. "4 friends, 6 days in Dubai, beach clubs"), copy that place into destination. Do NOT leave destination empty just because destination_hint was empty — the place name is right there in the text. ALSO add it (lowercased, locality only) as the first entry of named_destinations.
+- Only return destination as an empty string when destination_hint is empty AND free_text/notes contain NO place name at all (e.g. surprise_me=true with vibes-only input). A separate step will pick one in that case.
+- Even when the user mentions group size, dates, vibes, must_haves, or other preferences, the destination extraction is still mandatory whenever a place is named anywhere in the input — preferences NEVER take precedence over the destination field.
 - Never invent a destination from thin air.
 
 vibes:
@@ -1378,7 +1381,18 @@ extracted_budget_level (OPTIONAL — omit when ambiguous):
 - Edge case (explicit budget word wins over premium venue mention): "Budget trip but I want to check out Nikki Beach" => extract "budget" — the explicit budget word beats the premium venue. Same for "shoestring … Atlantis" => budget. Document the user's explicit budget intent, not the venue.
 - OMIT when free_text expresses no clear budget signal. Do NOT echo the form's budget_level.
 
-EXAMPLES (extracted fields only — destination/vibes/must_haves omitted for brevity):
+EXAMPLES — destination + named_destinations + extracted_* are all mandatory whenever a place is named:
+0. destination_hint="" (free-text-only flow), free_text="4 friends, 6 days in Dubai, beach clubs and serious nightlife"
+   → destination: "Dubai", named_destinations: ["dubai"],
+     extracted_group_size: 4, extracted_travel_party: "friends", extracted_budget_level: "premium",
+     duration_days: 6
+0b. destination_hint="" (free-text-only flow), free_text="weekend in Lisbon with my partner"
+   → destination: "Lisbon", named_destinations: ["lisbon"],
+     extracted_group_size: 2, extracted_travel_party: "couple", duration_days: 2
+0c. destination_hint="" (free-text-only flow), free_text="surprise me, somewhere warm and chill"
+   → destination: "" (no place named anywhere), named_destinations: [] (or omitted)
+
+EXTRACTED-* EXAMPLES (extracted fields only — destination/vibes/must_haves omitted for brevity):
 1. "4 friends, 9 days in Dubai, beach clubs and serious nightlife"
    → extracted_group_size: 4, extracted_travel_party: "friends", extracted_budget_level: "premium"
 2. "Romantic anniversary in Paris, 5 days at a Michelin restaurant"
@@ -1410,7 +1424,14 @@ const INTENT_TOOL: ClaudeTool = {
     properties: {
       destination: {
         type: "string",
-        description: "Copy of destination_hint, or empty string if none was provided.",
+        description:
+          "REQUIRED. The primary city or country mentioned in destination_hint OR free_text. " +
+          "This MUST be extracted even when the user also mentions group size, dates, vibes, " +
+          "or preferences — preferences NEVER take precedence over the destination. " +
+          "Examples: 'Dubai', 'Tokyo', 'Paris, France', 'Saint-Petersburg'. " +
+          "If destination_hint is empty but free_text names a place ('6 days in Dubai'), " +
+          "copy that place here. Empty string ONLY when destination_hint is empty AND no " +
+          "place is named anywhere in the user input.",
       },
       vibes: {
         type: "array",
@@ -1523,6 +1544,78 @@ const INTENT_TOOL: ClaudeTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Recovery LLM call — fires only when the primary parseIntent tool result
+// arrives with destination="" / named_destinations=[] AND the request is
+// free-text-only (no destination_hint, not surprise_me). The Phase A
+// schema expansion has been observed to crowd out the destination field
+// even though the prompt + schema mark it required; this minimal-token
+// focused call reliably surfaces a place because it asks for nothing else.
+//
+// Cheap on the order of ~100-200 input tokens / ~30 output tokens (Haiku
+// is < $0.001 per call) and fires on a single edge of the funnel, so the
+// production cost impact is negligible.
+// ---------------------------------------------------------------------------
+const DESTINATION_RECOVERY_TOOL: ClaudeTool = {
+  name: "record_destination",
+  description: "Record the primary destination city or country mentioned in the trip request.",
+  input_schema: {
+    type: "object",
+    properties: {
+      destination: {
+        type: "string",
+        description:
+          "The primary city or country named in the user's text. Examples: 'Dubai', 'Tokyo', " +
+          "'Paris, France', 'Saint-Petersburg'. Copy the user's spelling verbatim — do not " +
+          "translate or substitute. Empty string ONLY when the text genuinely names no place.",
+      },
+    },
+    required: ["destination"],
+  },
+};
+
+const DESTINATION_RECOVERY_SYSTEM_PROMPT =
+  "You extract the primary destination city or country from a free-form trip request. " +
+  "Output the placename the user typed, verbatim — do not translate, paraphrase, or substitute " +
+  "for a 'safer' alternative. Hyphenated names ('Saint-Petersburg', 'Cape Town', 'Rio de Janeiro') " +
+  "stay intact. If the user named multiple places, return the first one mentioned. If the user " +
+  "named no place at all, return an empty string.";
+
+async function recoverDestinationFromFreeText(
+  anthropicKey: string,
+  freeText: string,
+  logger: LLMLogger,
+  pipelineStartedAt: number,
+): Promise<string> {
+  const userMessage =
+    `Free-form trip request:\n\n${freeText}\n\n` +
+    `Return the primary destination only.`;
+  const result = await callClaudeHaiku<{ destination?: unknown }>(
+    anthropicKey,
+    [{
+      type: "text",
+      text: DESTINATION_RECOVERY_SYSTEM_PROMPT,
+      cache_control: { type: "ephemeral" },
+    }],
+    userMessage,
+    DESTINATION_RECOVERY_TOOL,
+    256,
+    pipelineStartedAt,
+    "recoverDestinationFromFreeText",
+    0,
+  );
+  await logger.log({
+    feature: "trip_builder_destination_recovery",
+    model: HAIKU_MODEL,
+    input_tokens: result.usage.input_tokens,
+    output_tokens: result.usage.output_tokens,
+    cost_usd: computeHaikuCost(result.usage),
+    cached: result.usage.cache_read_input_tokens > 0,
+  });
+  const raw = result.data?.destination;
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
 function buildIntentUserMessage(body: TripBuilderRequest, destinationHint: string): string {
   const payload = {
     destination_hint: destinationHint,
@@ -1588,6 +1681,31 @@ async function parseIntent(
     throw new Error("parseIntent: Claude returned no tool input");
   }
   const data = result.data as Record<string, unknown>;
+
+  // Permanent visibility into what the LLM emitted for the destination
+  // fields. The Phase A schema expansion (extracted_group_size /
+  // travel_party / budget_level + multi-destination shape) crowded out the
+  // destination field intermittently in production: tool calls succeeded
+  // 200 OK with the extracted_* fields populated but destination="" and
+  // named_destinations=[]. Logging the tool result every call gives us a
+  // permanent trail to confirm whether downstream recovery (LLM + regex)
+  // is firing because the LLM omitted the field, vs a legitimate
+  // surprise-me request.
+  {
+    const tlDest = typeof data.destination === "string" ? data.destination : "";
+    const tlNamed = Array.isArray(data.named_destinations)
+      ? (data.named_destinations as unknown[]).filter((s) => typeof s === "string").length
+      : 0;
+    const overridesPresent =
+      (data.extracted_group_size != null ? 1 : 0) +
+      (data.extracted_travel_party != null ? 1 : 0) +
+      (data.extracted_budget_level != null ? 1 : 0);
+    console.log(
+      `[parseIntent] tool_result destination=${JSON.stringify(tlDest)} ` +
+      `named_destinations_count=${tlNamed} overrides_present=${overridesPresent} ` +
+      `dest_hint=${JSON.stringify(destinationHint)} free_text_len=${(body.free_text ?? "").length}`,
+    );
+  }
 
   const rawNotes = [body.notes ?? "", body.free_text ?? ""].filter(Boolean).join("\n\n").trim();
 
@@ -9144,14 +9262,26 @@ Deno.serve(async (req) => {
     };
 
     // Helper: when the user supplied only free_text (no destination, not
-    // surprise mode), parseIntent's system prompt forces intent.destination
-    // to "" — the surprise picker would normally fill it in. For a non-
-    // surprise free-text request we instead derive the destination from
-    // intent.named_destinations[0] (e.g. "4 day trip to Marrakech" =>
-    // "marrakech"). Throws a user-facing PipelineError when neither path
-    // produced a destination so the caller gets actionable feedback rather
-    // than the old "destination is required" pre-flight rejection.
-    const ensureDerivedDestination = (intent: Intent): void => {
+    // surprise mode), parseIntent's system prompt asks the model to copy
+    // the named place into intent.destination — but the Phase A schema
+    // expansion has been observed to crowd that field out (tool call
+    // succeeds 200 OK with destination="" / named_destinations=[]).
+    //
+    // Three layers of recovery, in order:
+    //   1. PRIMARY:  intent.named_destinations[0] (when present).
+    //   2. SECONDARY: focused recovery LLM call with a minimal Haiku prompt
+    //                 that asks for ONLY the destination — no schema
+    //                 crowding so the model reliably surfaces a place.
+    //   3. LAST RESORT: regex extraction over free_text. Conservative
+    //                 patterns ("days in <City>", "trip to <City>",
+    //                 "<City>, <Country>"). Logs a warning when it fires
+    //                 so we can monitor false-positive rate in production.
+    //
+    // Throws PipelineError("parseIntent") only when ALL three layers fail.
+    // The user-facing copy is unchanged; only the internal classification
+    // changes when recovery fires (still maps to unknown_destination on
+    // the frontend, but ensures real destinations don't get rejected).
+    const ensureDerivedDestination = async (intent: Intent): Promise<void> => {
       if (intent.destination?.trim()) return;
       const first = intent.named_destinations?.[0]?.trim();
       if (first) {
@@ -9162,10 +9292,59 @@ Deno.serve(async (req) => {
         );
         return;
       }
+      const freeText = (body.free_text ?? "").trim();
+      if (freeText) {
+        // Layer 2: focused recovery LLM call. Short prompt → reliable
+        // destination extraction. Failures (timeout, schema mismatch,
+        // 5xx) fall through to the regex layer rather than aborting,
+        // because we'd rather ship a possibly-imperfect place than 500
+        // a real Dubai trip.
+        try {
+          const recoveredDest = await recoverDestinationFromFreeText(
+            anthropicKey,
+            freeText,
+            logger,
+            pipelineStartedAt,
+          );
+          if (recoveredDest) {
+            intent.destination = recoveredDest;
+            // Mirror into named_destinations[0] (lowercased) so downstream
+            // consumers that read named_destinations also see the
+            // recovered place.
+            intent.named_destinations = [recoveredDest.toLowerCase()];
+            console.warn(
+              `[free_text_destination.recovery_llm] recovered destination=${JSON.stringify(recoveredDest)} ` +
+              `via secondary LLM call (primary parseIntent emitted destination="" / named_destinations=[])`,
+            );
+            return;
+          }
+          console.warn(
+            `[free_text_destination.recovery_llm] secondary LLM returned empty destination for ` +
+            `free_text_len=${freeText.length} — falling through to regex fallback`,
+          );
+        } catch (err) {
+          console.warn(
+            `[free_text_destination.recovery_llm] threw — falling through to regex fallback: ` +
+            `${(err as Error).message}`,
+          );
+        }
+        // Layer 3: regex last-resort. Conservative; only fires when both
+        // LLM passes failed to surface a place from a non-empty free_text.
+        const regexDest = extractDestinationFromTextRegex(freeText);
+        if (regexDest) {
+          intent.destination = regexDest;
+          intent.named_destinations = [regexDest.toLowerCase()];
+          console.warn(
+            `[free_text_destination.regex] regex fallback fired destination=${JSON.stringify(regexDest)} ` +
+            `(both LLM passes failed; review prompt/schema if this fires often)`,
+          );
+          return;
+        }
+      }
       throw new PipelineError(
         "parseIntent",
         "We couldn't find a destination in your description. Try \"3 days in Lisbon\" or fill in the destination field.",
-        "free-text-only request produced no destination; named_destinations=[]",
+        "free-text-only request produced no destination; named_destinations=[] AND recovery LLM/regex all failed",
       );
     };
 
@@ -9394,9 +9573,11 @@ Deno.serve(async (req) => {
             if (intent.destination) loggedDestination = intent.destination;
 
             // Free-text-only flow: parseIntent leaves destination empty (the
-            // system prompt requires it). Recover from named_destinations[0].
+            // system prompt requires it). Recover from named_destinations[0],
+            // a focused recovery LLM call, then a regex fallback — see
+            // ensureDerivedDestination for the layered logic.
             if (!surpriseMe && !rawDest) {
-              ensureDerivedDestination(intent);
+              await ensureDerivedDestination(intent);
               loggedDestination = intent.destination;
             }
 
@@ -10931,9 +11112,11 @@ Deno.serve(async (req) => {
     if (intent.destination) loggedDestination = intent.destination;
 
     // Free-text-only flow: parseIntent leaves destination empty (the system
-    // prompt requires it). Recover from named_destinations[0].
+    // prompt requires it). Recover from named_destinations[0], a focused
+    // recovery LLM call, then a regex fallback — see ensureDerivedDestination
+    // for the layered logic.
     if (!surpriseMe && !rawDest) {
-      ensureDerivedDestination(intent);
+      await ensureDerivedDestination(intent);
       loggedDestination = intent.destination;
     }
 
