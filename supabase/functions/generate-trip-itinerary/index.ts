@@ -50,6 +50,12 @@ import {
   type AnonStorageClient,
   persistAnonymousTrip,
 } from "../_shared/anon/storage.ts";
+import {
+  buildMustHaveHaystackForActivity,
+  inferExtraPoolsFromTypes,
+  MUST_HAVE_QUERY_EXPANSIONS,
+  mustHaveMatches,
+} from "./must-have-fidelity.ts";
 
 // ---------------------------------------------------------------------------
 // CORS / response helpers
@@ -616,6 +622,12 @@ interface PlacesSearchQuery {
   includedType?: string;
   priceLevels?: string[];
   locationBias: { circle: { center: { latitude: number; longitude: number }; radius: number } };
+  // True when this query was emitted to satisfy an `intent.must_haves` entry.
+  // Results from must-have queries are eligible for multi-pool retagging in
+  // searchPlacesBatch (see inferExtraPoolsFromTypes) so a "beach club Dubai"
+  // result that Places types as `night_club` also surfaces in the nightlife
+  // pool, not just `experiences`.
+  isMustHaveQuery?: boolean;
   // For routing the result back to the right slot pool:
   poolKey: PoolKey;
   // Index into the unified leg list (legs[]). Multi-destination trips fire
@@ -672,11 +684,27 @@ interface BatchPlaceResult {
   // hours in that case (categoryFallbackHoursForTypes).
   openingHours: OpeningHoursPeriod[] | null;
   poolKey: PoolKey;
+  // Additional pool memberships inferred from this venue's Place types. Used
+  // when a must-have query surfaces a venue whose types span multiple pools
+  // (e.g. a Dubai beach club returned by "beach club Dubai" with types
+  // ["night_club","bar"] gets extraPoolKeys=["nightlife"] so it's reachable
+  // by the nightlife slot, not just the experiences slot the must-have query
+  // originally tagged it with). Empty/undefined for venues from non-must-have
+  // queries — generic "top attractions Dubai" results stay in `attractions`
+  // only. groupVenuesByLegAndPool expands the venue into every pool listed.
+  extraPoolKeys?: PoolKey[];
   // Carries the leg index forward from the search query so the ranker can
   // scope its candidate pool to the day's leg (multi-destination trips).
   // Single-destination trips always have 0 here.
   destinationIndex: number;
 }
+
+// ---------------------------------------------------------------------------
+// Must-have intent fidelity helpers (Phase 1).
+// Pure functions + tables live in ./must-have-fidelity.ts so unit tests can
+// import them without loading this module's Deno.serve. Imported at the top
+// of this file alongside the other module imports.
+// ---------------------------------------------------------------------------
 
 interface EventCandidate {
   name: string;
@@ -3872,13 +3900,35 @@ function buildPlacesQueriesForLeg(
   }
 
   // ---- Must-haves → specialized experience queries (fills remaining budget) ----
+  // Each must-have always emits the generic `${mh} ${city}` query into the
+  // experiences pool (preserving the prior behavior). For known keywords
+  // (beach club, rooftop, spa/wellness) we ALSO emit sharper queries that
+  // route into the pool a real slot type binds to — e.g. a "rooftop" must-have
+  // emits `rooftop bar <city>` into the nightlife pool so the nightlife slot
+  // can pick it. All must-have queries are tagged isMustHaveQuery=true; results
+  // are then eligible for multi-pool retagging in searchPlacesBatch via the
+  // venue's Place types (inferExtraPoolsFromTypes).
   for (const mh of intent.must_haves) {
-    const dedupKey = `must_have:${mh.toLowerCase().trim()}`;
-    add(dedupKey, {
+    const mhKey = mh.toLowerCase().trim();
+    add(`must_have:${mhKey}`, {
       textQuery: `${mh} ${city}`,
       locationBias,
       poolKey: "experiences",
+      isMustHaveQuery: true,
     });
+    for (const exp of MUST_HAVE_QUERY_EXPANSIONS) {
+      if (!exp.matches.test(mhKey)) continue;
+      for (const e of exp.expansions) {
+        const tq = e.textQuery(city);
+        add(`must_have:${mhKey}:${e.poolKey}:${tq}`, {
+          textQuery: tq,
+          ...(e.includedType ? { includedType: e.includedType } : {}),
+          locationBias,
+          poolKey: e.poolKey,
+          isMustHaveQuery: true,
+        });
+      }
+    }
   }
 
   // ---- Vibes → typed retrieval (one query per matched vibe) ----
@@ -4535,18 +4585,45 @@ async function searchPlacesBatch(
   // which case we keep both copies tagged to their respective legs so the
   // ranker for each leg can use it. Within a single leg, dedup is by place_id
   // alone (the legacy behavior).
-  const seen = new Set<string>();
+  //
+  // Multi-pool retagging (Phase 1, intent fidelity): when a venue is returned
+  // by a query tagged isMustHaveQuery=true, fan it out into additional pools
+  // inferred from its Place types. When the SAME venue appears in a later
+  // query (would otherwise be dropped by the dedup key), we still merge that
+  // query's poolKey + must-have-derived extra pools into the kept entry's
+  // extraPoolKeys so a venue first seen in `experiences` and re-found by
+  // `night clubs <city>` ends up in both pools.
+  const byCompoundKey = new Map<string, BatchPlaceResult>();
   const out: BatchPlaceResult[] = [];
+  const addPool = (entry: BatchPlaceResult, k: PoolKey): void => {
+    if (k === entry.poolKey) return;
+    const list = entry.extraPoolKeys ?? [];
+    if (list.includes(k)) return;
+    entry.extraPoolKeys = [...list, k];
+  };
   for (let i = 0; i < perQueryResults.length; i++) {
     const pool = queries[i].poolKey;
     const destIdx = queries[i].destinationIndex;
+    const isMustHave = queries[i].isMustHaveQuery === true;
     for (const p of perQueryResults[i]) {
       const id = p.id as string | undefined;
       if (!id) continue;
+      const types = (p.types as string[] | undefined) ?? [];
       const compoundKey = `${destIdx}:${id}`;
-      if (seen.has(compoundKey)) continue;
-      seen.add(compoundKey);
-      out.push({
+      const existing = byCompoundKey.get(compoundKey);
+      if (existing) {
+        // Re-occurrence: keep the original entry but enrich its pool
+        // membership with this query's pool + (for must-have queries) every
+        // type-inferred pool. Type-inferred pools are only added for
+        // must-have-query re-occurrences to avoid widening generic queries
+        // (e.g. a generic "top attractions" hit shouldn't fan into nightlife).
+        addPool(existing, pool);
+        if (isMustHave) {
+          for (const k of inferExtraPoolsFromTypes(types)) addPool(existing, k);
+        }
+        continue;
+      }
+      const entry: BatchPlaceResult = {
         id,
         displayName: (p.displayName as { text?: string } | undefined)?.text ?? null,
         formattedAddress: (p.formattedAddress as string) ?? null,
@@ -4558,7 +4635,7 @@ async function searchPlacesBatch(
         userRatingCount: null,
         priceLevel: null,
         priceRange: null,
-        types: (p.types as string[] | undefined) ?? [],
+        types,
         photos: [],
         googleMapsUri: null,
         businessStatus: (p.businessStatus as string | null) ?? null,
@@ -4566,7 +4643,12 @@ async function searchPlacesBatch(
         openingHours: null,
         poolKey: pool,
         destinationIndex: destIdx,
-      });
+      };
+      if (isMustHave) {
+        for (const k of inferExtraPoolsFromTypes(types)) addPool(entry, k);
+      }
+      byCompoundKey.set(compoundKey, entry);
+      out.push(entry);
     }
   }
   return { places: out, stats };
@@ -5636,6 +5718,7 @@ ABSOLUTE RULES — violating any of these makes your output useless:
 6. Do not pick the venue listed in shared.accommodation_place_id — that's the lodging for the whole trip and is emitted separately.
 7. HARD CONSTRAINT — DO NOT pick any place_id listed in shared.avoid_place_ids. Those venues are already used by earlier days of this trip. The system will silently drop any slot that reuses a claimed place_id, leaving the slot visibly empty in the user's itinerary. If the unclaimed pool is too thin to fill every slot, RETURN FEWER ACTIVITIES — emit place_id=null for slots you cannot fill from the unclaimed pool (set is_event=false, slot_type matching the skeleton, and a short description explaining "no suitable venue available — leave open"). An empty slot is acceptable. A reused claimed venue is not.
 8. MULTI-DESTINATION ROUTING — HARD CONSTRAINT. The user message includes day.current_leg.{index, name, kind}. You MUST pick venues ONLY from legs[current_leg.index].venue_pool_by_category in the shared trip context. Picks from other legs' pools are silently dropped. If the day's current_leg.kind === "transit", DO NOT pick activity venues for any slot except dinner — emit place_id=null for transit_buffer/morning/afternoon slots (they're travel time, not sightseeing) and a one-sentence description naming the from→to route. Adjacent legs are surfaced in day.adjacent_legs so you can write narrative copy referencing the previous or next destination ("tomorrow you head to <next.name>") — but venues must come from the current leg only.
+9. MUST-HAVES — HARD INCLUSION SIGNAL AT TRIP LEVEL. intent.must_haves are the user's explicit asks ("beach clubs", "Michelin tasting menu", "live jazz"). Across the whole trip, EVERY entry in intent.must_haves MUST be reflected by at least one venue whose Place types or display name plausibly satisfies it. The day instruction surfaces day.must_haves and day.unfulfilled_must_haves: the second list is the subset still unsatisfied by earlier days when this day runs. Per-day rule: when the venue pool for any non-meal slot (afternoon_major, nightlife, morning_major) contains a venue matching an entry in day.unfulfilled_must_haves, you MUST prefer it over a higher-rated generic venue, unless picking it violates a hard constraint (operating hours, must_avoids, accommodation collision, or the place_id is in shared.avoid_place_ids). Last-day rule: if day.is_last_day is true and day.unfulfilled_must_haves is non-empty, you MUST attempt to fulfil each remaining must-have using a venue from this leg's pool — even at the cost of a lower-rated alternative — OR explicitly explain in the affected slot's why_for_you why no pool venue could fulfil it (e.g. "no beach clubs in this destination's pool — the pool only contains downtown nightlife venues"). Silent omission of a must-have is a failure.
 
 PACE DISCIPLINE — RESPECT THE EMPTY SPACE:
 - intent.pace tells you how full the user wants their days to feel. The skeleton already encodes this — light-pace days have only an afternoon anchor + dinner; balanced has morning + lunch + afternoon + dinner; active stacks three anchors plus all three meals.
@@ -5951,7 +6034,7 @@ function digestVenue(p: BatchPlaceResult): VenueDigestEntry {
 // explicitly above.
 // Group pool venues by (destinationIndex, poolKey) so multi-destination trips
 // can present each leg's candidate pool separately to the ranker.
-function groupVenuesByLegAndPool(
+export function groupVenuesByLegAndPool(
   venues: BatchPlaceResult[],
 ): Map<number, Map<PoolKey, BatchPlaceResult[]>> {
   const out = new Map<number, Map<PoolKey, BatchPlaceResult[]>>();
@@ -5962,9 +6045,19 @@ function groupVenuesByLegAndPool(
       legMap = new Map();
       out.set(legIdx, legMap);
     }
-    const arr = legMap.get(v.poolKey) ?? [];
-    arr.push(v);
-    legMap.set(v.poolKey, arr);
+    // A must-have-sourced venue can carry extraPoolKeys; surface it in every
+    // listed pool. Dedup by id within each pool so a venue that's in both
+    // primary + extra pools doesn't double-list when extraPoolKeys repeats
+    // an existing membership (defensive — addPool already prevents that).
+    const pools: PoolKey[] = [v.poolKey, ...(v.extraPoolKeys ?? [])];
+    const seenInThisVenue = new Set<PoolKey>();
+    for (const pool of pools) {
+      if (seenInThisVenue.has(pool)) continue;
+      seenInThisVenue.add(pool);
+      const arr = legMap.get(pool) ?? [];
+      if (!arr.some((x) => x.id === v.id)) arr.push(v);
+      legMap.set(pool, arr);
+    }
   }
   return out;
 }
@@ -6075,11 +6168,21 @@ function buildSharedContextText(
 // reserved for accommodation (so it doesn't duplicate it as a slot pick), and
 // which place_ids earlier-resolved days have claimed (best-effort dedup hint
 // — the runtime also dedupes after the fact).
+//
+// mustHaves: full intent.must_haves — surfaced per-day so the model doesn't
+//   have to dig through the shared context. unfulfilledMustHaves: the subset
+//   still unsatisfied by previous days at the moment this day is dispatched
+//   (sequential mode); identical to mustHaves in parallel mode and on day 1.
+//   isLastDay: when true the system prompt's last-day rule activates — the
+//   model must clear the unfulfilled set or explicitly explain why it can't.
 function buildDayInstruction(
   day: DaySkeleton,
   legs: Leg[],
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
+  mustHaves: string[],
+  unfulfilledMustHaves: string[],
+  isLastDay: boolean,
 ): string {
   // Intentionally do NOT pass day.theme. The skeleton's theme is a generic
   // fallback ("" for middle days, "Arrival in X" / "X farewell" for bookends);
@@ -6101,6 +6204,14 @@ function buildDayInstruction(
       day_number: day.day_number,
       date: day.date,
       weekday: dayWeekdayName,
+      // Must-haves are also in shared context (intent.must_haves) but are
+      // surfaced again here for prompt-attention reasons: nested fields in
+      // long shared contexts get under-attended by Haiku, while per-day
+      // instructions are short and read carefully. is_last_day flips on the
+      // system-prompt's last-day rule (must clear unfulfilled or explain).
+      must_haves: mustHaves,
+      unfulfilled_must_haves: unfulfilledMustHaves,
+      is_last_day: isLastDay,
       slots: day.slots.map((s, i) => ({
         slot_index: i,
         type: s.type,
@@ -6149,7 +6260,13 @@ function buildDayInstruction(
   const claimedBlock = avoidPlaceIds.length > 0
     ? `CLAIMED PLACES — HARD CONSTRAINT — ${avoidPlaceIds.length} venue(s) already used by earlier days of this trip. DO NOT pick any of these place_ids; the system will silently drop any slot that reuses one. Emit place_id=null for slots you cannot fill from the unclaimed pool — fewer activities is the correct outcome:\n${avoidPlaceIds.map((id) => `  - ${id}`).join("\n")}\n\n`
     : "";
-  return `Generate THIS day only. Call emit_day exactly once.\n\n${claimedBlock}${JSON.stringify(slotPayload)}`;
+  // Mirror the claimed-places treatment for unfulfilled must-haves: visually
+  // prominent block at the top of the user message when non-empty so the
+  // model cannot scroll past it. Empty list = nothing to do, suppress block.
+  const mustHaveBlock = unfulfilledMustHaves.length > 0
+    ? `UNFULFILLED MUST-HAVES — ${unfulfilledMustHaves.length} item(s) the user explicitly asked for that earlier days have NOT yet covered:\n${unfulfilledMustHaves.map((m) => `  - ${m}`).join("\n")}\nWhen this leg's pool contains a venue matching one of these (by Place type or name), prefer it for an afternoon_major / nightlife / morning_major slot over a higher-rated generic venue. ${isLastDay ? "THIS IS THE LAST DAY — you MUST attempt to clear this list, or explain in the affected activity's why_for_you why no pool venue could fulfil it." : ""}\n\n`
+    : "";
+  return `Generate THIS day only. Call emit_day exactly once.\n\n${claimedBlock}${mustHaveBlock}${JSON.stringify(slotPayload)}`;
 }
 
 function buildMetadataInstruction(
@@ -6613,6 +6730,8 @@ async function rankDay(
   sharedContext: string,
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
+  unfulfilledMustHaves: string[],
+  isLastDay: boolean,
   pipelineStartedAt: number,
   step: string,
 ): Promise<{ data: RawRankerDay | null; usage: ClaudeUsage }> {
@@ -6621,7 +6740,7 @@ async function rankDay(
     [{ type: "text", text: RANKER_DAY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     [
       { type: "text", text: sharedContext, cache_control: { type: "ephemeral" } },
-      { type: "text", text: buildDayInstruction(day, legs, accommodationPlaceId, avoidPlaceIds) },
+      { type: "text", text: buildDayInstruction(day, legs, accommodationPlaceId, avoidPlaceIds, intent.must_haves, unfulfilledMustHaves, isLastDay) },
     ],
     RANKER_DAY_TOOL,
     DAY_MAX_TOKENS[intent.pace],
@@ -6702,6 +6821,8 @@ async function rankDayWithRetry(
   sharedContext: string,
   accommodationPlaceId: string | null,
   avoidPlaceIds: string[],
+  unfulfilledMustHaves: string[],
+  isLastDay: boolean,
   pipelineStartedAt: number,
   logger: LLMLogger,
 ): Promise<{
@@ -6722,6 +6843,8 @@ async function rankDayWithRetry(
         sharedContext,
         accommodationPlaceId,
         avoidPlaceIds,
+        unfulfilledMustHaves,
+        isLastDay,
         pipelineStartedAt,
         step,
       );
@@ -7063,7 +7186,12 @@ async function rankInParallel(
 
   // Helper: rank one day. Transit days bypass the LLM entirely (we generate a
   // structured fallback). Real-destination days call rankDayWithRetry.
-  const rankOneDay = async (day: DaySkeleton, avoidIds: string[]) => {
+  const rankOneDay = async (
+    day: DaySkeleton,
+    avoidIds: string[],
+    unfulfilledMustHaves: string[],
+    isLastDay: boolean,
+  ) => {
     if (day.transit) {
       return {
         raw: buildTransitDayFallback(day),
@@ -7074,13 +7202,36 @@ async function rankInParallel(
     return await rankDayWithRetry(
       anthropicKey, intent, day, legs, sharedContext,
       accomByLeg.get(day.destination_index) ?? null,
-      avoidIds, pipelineStartedAt, logger,
+      avoidIds, unfulfilledMustHaves, isLastDay, pipelineStartedAt, logger,
     );
+  };
+
+  // Track which must-haves earlier days have already covered. In sequential
+  // mode this set grows as days resolve, so each later day's instruction
+  // surfaces the still-unfulfilled subset. In parallel mode every day sees
+  // the full must-have list (best-effort — the system prompt's trip-level
+  // rule still applies). The post-pipeline coverage validator (Fix F) is
+  // the safety net that flags trips where this fan-out still missed a
+  // must-have.
+  const satisfiedMustHaves = new Set<string>();
+  const recordSatisfaction = (rawDay: RawRankerDay | null, legIdx: number): void => {
+    if (!rawDay || intent.must_haves.length === 0) return;
+    const legPool = placeByIdByLeg.get(legIdx) ?? new Map<string, BatchPlaceResult>();
+    for (const act of rawDay.activities ?? []) {
+      if (!act) continue;
+      const place = act.place_id ? legPool.get(act.place_id) ?? null : null;
+      const haystack = buildMustHaveHaystackForActivity(act, place);
+      for (const mh of intent.must_haves) {
+        if (satisfiedMustHaves.has(mh)) continue;
+        if (mustHaveMatches(mh, haystack)) satisfiedMustHaves.add(mh);
+      }
+    }
   };
 
   if (sequentialRanking) {
     let budgetExhausted = false;
-    for (const day of skeleton) {
+    for (let dayIdx = 0; dayIdx < skeleton.length; dayIdx++) {
+      const day = skeleton[dayIdx];
       if (!budgetExhausted) {
         const remainingMs =
           PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
@@ -7101,13 +7252,20 @@ async function rankInParallel(
         continue;
       }
       const avoidIds = Array.from(getSeenForLeg(day.destination_index));
-      const settled = await rankOneDay(day, avoidIds);
+      const unfulfilled = intent.must_haves.filter((mh) => !satisfiedMustHaves.has(mh));
+      const isLastDay = dayIdx === skeleton.length - 1;
+      const settled = await rankOneDay(day, avoidIds, unfulfilled, isLastDay);
       if (settled.source === "fallback") fallbackDays++;
+      recordSatisfaction(settled.raw, day.destination_index);
       hydrateDay(day, settled.raw, settled.source);
     }
   } else {
-    const dayPromises = skeleton.map((day) =>
-      rankOneDay(day, []).then((res) => ({ day, ...res })),
+    // Parallel mode: every day sees the full must-have list as "unfulfilled".
+    // Days fire concurrently so we can't pass a dynamic subset; the
+    // per-day rule + the post-pipeline validator (Fix F) are the guards.
+    const dayPromises = skeleton.map((day, idx) =>
+      rankOneDay(day, [], intent.must_haves, idx === skeleton.length - 1)
+        .then((res) => ({ day, ...res })),
     );
     const settledDays = await Promise.all(dayPromises);
     settledDays.sort((a, b) => a.day.day_number - b.day.day_number);
@@ -7436,19 +7594,70 @@ function collectVenueAllowlist(days: RankedDay[]): string[] {
   return out;
 }
 
+// ---- emitIntentFidelitySentryEvent ----
+//
+// Edge functions don't currently have @sentry/deno wired up (see CLAUDE.md
+// — Sentry is frontend-only at the time of writing). Until that lands, we
+// emit a structured stderr line with a `[sentry-event]` envelope tag and a
+// JSON payload that mirrors a real Sentry capture. Supabase's log drain
+// forwards stderr at error level to the project's log aggregator, where
+// infra-side scrapers can re-emit into Sentry.
+//
+// The shape is intentionally identical to what `Sentry.captureMessage(msg,
+// { level, tags, extra })` would produce so the swap to a real SDK is a
+// single-file change later. Always emitted regardless of analytics consent
+// — operational telemetry, not user analytics.
+function emitIntentFidelitySentryEvent(payload: {
+  message: string;
+  level: "warning" | "error";
+  tag: string;
+  trip_id: string | null;
+  must_haves: string[];
+  vibes: string[];
+  unfulfilled: string[];
+  activities_by_day: Array<{ day_number: number; titles: string[] }>;
+}): void {
+  const envelope = {
+    event_id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    level: payload.level,
+    message: payload.message,
+    tags: {
+      tag: payload.tag,
+      trip_id: payload.trip_id ?? "unknown",
+    },
+    extra: {
+      must_haves: payload.must_haves,
+      vibes: payload.vibes,
+      unfulfilled: payload.unfulfilled,
+      activities_by_day: payload.activities_by_day,
+    },
+  };
+  // Stderr at error level so the log drain promotes it.
+  console.error(`[sentry-event] ${JSON.stringify(envelope)}`);
+}
+
 // ---- logVibeCoverage ----
 //
-// Observability-only post-generation check. For each user-selected vibe,
-// count how many activities in the final itinerary plausibly match it (by
-// keyword scan over title/category/description). Emits a structured
-// console.log line per vibe and a console.warn when coverage is zero — the
-// "silent vibe drop" failure mode this PR exists to fix.
+// Observability post-generation check. For each user-selected vibe AND each
+// must-have, count how many activities in the final itinerary plausibly
+// match it (by keyword scan over title/category/description, with
+// must-have-specific synonyms — see MUST_HAVE_SYNONYMS).
 //
-// NOT a gate: the response is returned regardless of coverage. The warning
-// is for log-aggregation alerts so we can iterate when a vibe stops landing
-// in production.
-function logVibeCoverage(result: PipelineResult, intent: Intent): void {
-  if (intent.vibes.length === 0) return;
+// Vibes that go uncovered emit a structured console.warn — the legacy
+// "silent vibe drop" detector. Must-haves that go uncovered emit BOTH a
+// console.warn AND a structured Sentry envelope (via
+// emitIntentFidelitySentryEvent) tagged trip_intent_fidelity. Must-have
+// drops are operational regressions worth alerting on; vibe drops are
+// noisier and stay in the log-only path.
+//
+// NOT a gate: the response is returned regardless of coverage.
+function logVibeCoverage(
+  result: PipelineResult,
+  intent: Intent,
+  tripId: string | null = null,
+): void {
+  if (intent.vibes.length === 0 && intent.must_haves.length === 0) return;
 
   const haystacks: string[] = [];
   for (const dest of result.destinations) {
@@ -7480,6 +7689,46 @@ function logVibeCoverage(result: PipelineResult, intent: Intent): void {
       console.warn(`${line} — SILENT DROP: user selected this vibe but the itinerary contains no matching activities`);
     } else {
       console.log(line);
+    }
+  }
+
+  // Must-have coverage. Synonym-aware (MUST_HAVE_SYNONYMS) so "beach club"
+  // matches a venue named "Nikki Beach" or typed as a Dubai resort. For
+  // each unfulfilled must-have we ALSO emit a Sentry envelope so prod
+  // alerts fire — must-haves are explicit user asks, not inferred.
+  if (intent.must_haves.length > 0) {
+    const unfulfilled: string[] = [];
+    for (const mh of intent.must_haves) {
+      let matches = 0;
+      for (const hs of haystacks) if (mustHaveMatches(mh, hs)) matches++;
+      const line = `[must_have_coverage] must_have="${mh}" matches=${matches} total_activities=${haystacks.length}`;
+      if (matches === 0) {
+        console.warn(`${line} — UNFULFILLED: user explicitly asked for this and the itinerary contains no matching activities`);
+        unfulfilled.push(mh);
+      } else {
+        console.log(line);
+      }
+    }
+    if (unfulfilled.length > 0) {
+      const activitiesByDay: Array<{ day_number: number; titles: string[] }> = [];
+      for (const dest of result.destinations) {
+        for (const day of dest.days) {
+          activitiesByDay.push({
+            day_number: day.day_number,
+            titles: day.activities.map((a) => a.title).filter(Boolean) as string[],
+          });
+        }
+      }
+      emitIntentFidelitySentryEvent({
+        message: `Must-have(s) unfulfilled: ${unfulfilled.join(", ")}`,
+        level: "warning",
+        tag: "trip_intent_fidelity",
+        trip_id: tripId,
+        must_haves: intent.must_haves,
+        vibes: intent.vibes,
+        unfulfilled,
+        activities_by_day: activitiesByDay,
+      });
     }
   }
 }
@@ -9160,7 +9409,7 @@ Deno.serve(async (req) => {
                 // differ for this caller. markJuntoPicks resets stale flags
                 // internally.
                 markJuntoPicks(payload as unknown as PipelineResult, intent);
-                logVibeCoverage(payload as unknown as PipelineResult, intent);
+                logVibeCoverage(payload as unknown as PipelineResult, intent, tripIdForClickref);
                 logDescriptionGrounding(payload as unknown as PipelineResult, intent);
                 logOpeningHoursViolations(payload as unknown as PipelineResult);
                 logPricingAnomalies(payload as unknown as PipelineResult);
@@ -9728,7 +9977,12 @@ Deno.serve(async (req) => {
             });
 
             // Helper: rank one day. Transit days bypass the LLM entirely.
-            const rankOneDayStream = async (day: DaySkeleton, avoidIds: string[]) => {
+            const rankOneDayStream = async (
+              day: DaySkeleton,
+              avoidIds: string[],
+              unfulfilledMustHaves: string[],
+              isLastDay: boolean,
+            ) => {
               if (day.transit) {
                 return {
                   raw: buildTransitDayFallback(day),
@@ -9739,8 +9993,30 @@ Deno.serve(async (req) => {
               return await rankDayWithRetry(
                 anthropicKey, intent, day, legs, sharedContext,
                 accomByLeg.get(day.destination_index) ?? null,
-                avoidIds, pipelineStartedAt, logger,
+                avoidIds, unfulfilledMustHaves, isLastDay, pipelineStartedAt, logger,
               );
+            };
+
+            // Sequential-mode tracker for "which must-haves have been
+            // satisfied by earlier days". Mirrors rankInParallel's
+            // recordSatisfaction logic. Parallel-mode dispatches all days
+            // with the full must-have list (Fix F validates the result).
+            const satisfiedMustHavesStream = new Set<string>();
+            const recordSatisfactionStream = (
+              rawDay: RawRankerDay | null,
+              legIdx: number,
+            ): void => {
+              if (!rawDay || intent.must_haves.length === 0) return;
+              const legPool = placeByIdByLeg.get(legIdx) ?? new Map<string, BatchPlaceResult>();
+              for (const act of rawDay.activities ?? []) {
+                if (!act) continue;
+                const place = act.place_id ? legPool.get(act.place_id) ?? null : null;
+                const haystack = buildMustHaveHaystackForActivity(act, place);
+                for (const mh of intent.must_haves) {
+                  if (satisfiedMustHavesStream.has(mh)) continue;
+                  if (mustHaveMatches(mh, haystack)) satisfiedMustHavesStream.add(mh);
+                }
+              }
             };
 
             // Track which legs have already had their accommodation emitted
@@ -9926,7 +10202,8 @@ Deno.serve(async (req) => {
 
             if (sequentialRanking) {
               let budgetExhausted = false;
-              for (const day of skeleton) {
+              for (let dayIdx = 0; dayIdx < skeleton.length; dayIdx++) {
+                const day = skeleton[dayIdx];
                 if (!budgetExhausted) {
                   const remainingMs =
                     PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
@@ -9947,13 +10224,17 @@ Deno.serve(async (req) => {
                   continue;
                 }
                 const avoidIds = Array.from(getSeenForLeg(day.destination_index));
-                const settled = await rankOneDayStream(day, avoidIds);
+                const unfulfilled = intent.must_haves.filter((mh) => !satisfiedMustHavesStream.has(mh));
+                const isLastDay = dayIdx === skeleton.length - 1;
+                const settled = await rankOneDayStream(day, avoidIds, unfulfilled, isLastDay);
                 if (settled.source === "fallback") fallbackDays++;
+                recordSatisfactionStream(settled.raw, day.destination_index);
                 hydrateAndEmit(settled.raw, day, settled.source, baselinesByLeg);
               }
             } else {
-              const dayPromises = skeleton.map((day) =>
-                rankOneDayStream(day, []).then((res) => ({ day, ...res }))
+              const dayPromises = skeleton.map((day, idx) =>
+                rankOneDayStream(day, [], intent.must_haves, idx === skeleton.length - 1)
+                  .then((res) => ({ day, ...res }))
               );
               for (const p of dayPromises) {
                 const settled = await p;
@@ -10176,7 +10457,7 @@ Deno.serve(async (req) => {
             };
 
             markJuntoPicks(pipelineResult, intent);
-            logVibeCoverage(pipelineResult, intent);
+            logVibeCoverage(pipelineResult, intent, tripIdForClickref);
             logDescriptionGrounding(pipelineResult, intent);
             logOpeningHoursViolations(pipelineResult);
             logPricingAnomalies(pipelineResult);
@@ -10495,7 +10776,7 @@ Deno.serve(async (req) => {
           };
           const bookingRewriteStats = rewriteCachedBookingUrls(payload, cacheAffEnv);
           markJuntoPicks(payload as unknown as PipelineResult, intent);
-          logVibeCoverage(payload as unknown as PipelineResult, intent);
+          logVibeCoverage(payload as unknown as PipelineResult, intent, tripIdForClickref);
           logDescriptionGrounding(payload as unknown as PipelineResult, intent);
           logOpeningHoursViolations(payload as unknown as PipelineResult);
           logPricingAnomalies(payload as unknown as PipelineResult);
