@@ -90,8 +90,21 @@ To switch from Mailtrap to a different inbox provider, replace
 ## CI
 
 A GitHub Actions workflow at `.github/workflows/e2e.yml` runs the suite on
-PRs targeting `main` (and on demand via `workflow_dispatch`). The required
-secrets are read from the repo's Actions secrets.
+PRs that carry the `e2e` label, on every push to `main`, and on demand via
+`workflow_dispatch`. The required secrets are read from the repo's Actions
+secrets.
+
+### Manual run ("test the live app right now")
+
+GitHub → **Actions** → **E2E (Playwright)** → **Run workflow**. Two inputs:
+
+| Input      | Values                                  | Notes                                                                         |
+| ---------- | --------------------------------------- | ----------------------------------------------------------------------------- |
+| `target`   | `production` / `preview` / `local`      | `production` (default) hits `https://junto.pro`. `local` builds & previews the checked-out commit on the runner. |
+| `base_url` | URL string, used only when `target=preview` | e.g. `https://preview-xyz.lovable.app`. Required when `target=preview`, ignored otherwise. |
+
+For non-`workflow_dispatch` triggers the URL falls back to the
+`E2E_BASE_URL` repo variable, then to `https://junto.pro`.
 
 ## Troubleshooting
 
