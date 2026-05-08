@@ -1,10 +1,12 @@
 // Run with:
 //   deno test supabase/functions/generate-trip-itinerary/anchor-duration.test.ts
 //
-// Covers Fix 3 (anchor-venue duration override). Slot durations are
+// Covers the anchor-venue duration override. Slot durations are
 // deterministic per-slot defaults (90 min dinner, 120 min nightlife);
-// anchorDurationOverride raises them for venues where Place types signal
-// a multi-hour anchor experience (beach club, premium nightclub, spa).
+// anchorDurationOverride RAISES them for venues where Place types signal a
+// multi-hour anchor experience (beach club, full spa retreat) and CAPS them
+// for venues that the earlier 360-min floor was over-extending (premium
+// nightclubs, rooftop lounges, sky bars — real averages are 2-3.5h).
 
 import { anchorDurationOverride } from "./anchor-duration.ts";
 
@@ -19,46 +21,98 @@ function assertEqual<T>(a: T, b: T, msg: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// night_club override
+// night_club / lounge cap (formerly a 360-min floor — production bug fix)
 // ---------------------------------------------------------------------------
 
-Deno.test("anchorDurationOverride: night_club in nightlife slot lifts to ≥360 min", () => {
-  // Production failure: a Dubai BLING-style nightclub shipped with the
-  // skeleton's 120-min default. Real "serious nightlife" is 5-8 hours.
+Deno.test("anchorDurationOverride: night_club in nightlife slot capped at 210 min", () => {
+  // Production failure: DECK TOO Burj Khalifa rooftop and Level 43 Sky
+  // Lounge shipped at 6h because the rule was a 360-min floor. Real
+  // "evening at the club" is 2-3.5h. Cap at 210 (3.5h).
   assertEqual(
     anchorDurationOverride(120, "nightlife", ["night_club", "establishment"]),
-    360,
-    "night_club at 120 min slot bumps to 360",
+    120,
+    "night_club at 120-min slot stays at 120 (within cap)",
   );
-});
-
-Deno.test("anchorDurationOverride: night_club rule preserves longer slot defaults", () => {
-  // active-pace nightlife happens to set 180 min — even longer than 120.
-  // Override uses Math.max so the longer slot wins.
   assertEqual(
-    anchorDurationOverride(180, "nightlife", ["night_club"]),
-    360,
-    "180 < 360 → 360",
+    anchorDurationOverride(360, "nightlife", ["night_club"]),
+    210,
+    "night_club fed an oversized 360-min default clamps to 210",
   );
   assertEqual(
     anchorDurationOverride(420, "nightlife", ["night_club"]),
-    420,
-    "slot 420 > rule 360 → keep 420",
+    210,
+    "night_club fed an oversized 420-min default clamps to 210",
   );
 });
 
-Deno.test("anchorDurationOverride: night_club restricted to nightlife slot", () => {
+Deno.test("anchorDurationOverride: lounge venue capped at 210 min", () => {
+  // Generic lounge bar that types as `lounge` (not as `night_club`)
+  // should also clamp to 210 — same kind of multi-hour-but-not-6-hour
+  // venue.
+  assertEqual(
+    anchorDurationOverride(360, "nightlife", ["lounge", "bar"]),
+    210,
+    "lounge clamps to 210",
+  );
+});
+
+Deno.test("anchorDurationOverride: night_club rule limited to nightlife slot", () => {
   // A nightclub picked into a dinner slot (rare, but possible) shouldn't
-  // claim 6 hours of dinner — leave the slot default in place.
+  // see the cap fire — leave the slot default in place.
   assertEqual(
     anchorDurationOverride(90, "dinner", ["night_club"]),
     90,
-    "night_club outside nightlife → no bump",
+    "night_club outside nightlife → no rule fires",
   );
 });
 
 // ---------------------------------------------------------------------------
-// beach_club / swimming_pool override
+// rooftop bar / sky lounge / cocktail bar cap (1.5-2.5h)
+// ---------------------------------------------------------------------------
+
+Deno.test("anchorDurationOverride: rooftop bar capped at 150 min", () => {
+  // Even when typed as `night_club` by Google, the displayName "rooftop"
+  // discriminator pulls these into the tighter 150-min cap.
+  assertEqual(
+    anchorDurationOverride(360, "nightlife", ["night_club", "bar"], "DECK TOO Rooftop"),
+    150,
+    "rooftop in displayName → 150 cap",
+  );
+  assertEqual(
+    anchorDurationOverride(120, "nightlife", ["bar"], "Sky Lounge Burj Khalifa"),
+    120,
+    "sky lounge under cap → unchanged",
+  );
+  assertEqual(
+    anchorDurationOverride(180, "nightlife", ["bar"], "Skybar Dubai"),
+    150,
+    "skybar over cap → clamps to 150",
+  );
+  assertEqual(
+    anchorDurationOverride(240, "nightlife", ["bar", "night_club"], "Level 43 Sky Lounge"),
+    150,
+    "Level 43 Sky Lounge → 150 cap",
+  );
+  assertEqual(
+    anchorDurationOverride(200, "nightlife", ["bar"], "The Cocktail Bar"),
+    150,
+    "cocktail bar → 150 cap",
+  );
+});
+
+Deno.test("anchorDurationOverride: rooftop rule needs both type AND name discriminators", () => {
+  // A bar without a rooftop/lounge/cocktail name doesn't fire the tight
+  // cap — falls through to the next rule. With `bar` only types it
+  // doesn't match the night_club rule either, so it returns slot default.
+  assertEqual(
+    anchorDurationOverride(120, "nightlife", ["bar"], "Generic Pub"),
+    120,
+    "plain bar with non-matching name → slot default",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// beach_club / swimming_pool floor (unchanged behavior)
 // ---------------------------------------------------------------------------
 
 Deno.test("anchorDurationOverride: beach_club in afternoon_major lunch lifts to ≥300 min", () => {
@@ -71,6 +125,16 @@ Deno.test("anchorDurationOverride: beach_club in afternoon_major lunch lifts to 
     anchorDurationOverride(75, "lunch", ["beach_club", "restaurant"]),
     300,
     "beach_club lunch (brunch) → 300",
+  );
+});
+
+Deno.test("anchorDurationOverride: beach_club preserves longer slot defaults", () => {
+  // A 360-min slot default for a beach_club should pass through — the
+  // floor is 300, but Math.max keeps the longer value.
+  assertEqual(
+    anchorDurationOverride(360, "afternoon_major", ["beach_club"]),
+    360,
+    "beach_club at 360-min slot stays at 360",
   );
 });
 
@@ -98,7 +162,7 @@ Deno.test("anchorDurationOverride: beach_club outside daytime anchor slots → n
 });
 
 // ---------------------------------------------------------------------------
-// spa / wellness override
+// spa / wellness floor (unchanged behavior)
 // ---------------------------------------------------------------------------
 
 Deno.test("anchorDurationOverride: spa in afternoon_major lifts to ≥180 min", () => {
@@ -130,7 +194,7 @@ Deno.test("anchorDurationOverride: spa outside afternoon_major → no bump", () 
 // ---------------------------------------------------------------------------
 
 Deno.test("anchorDurationOverride: regular restaurant retains slot default", () => {
-  // The user explicitly asked: "a regular restaurant retains its slot default".
+  // Regression: a restaurant must not get a duration override.
   assertEqual(
     anchorDurationOverride(75, "lunch", ["restaurant", "food", "establishment"]),
     75,
@@ -157,22 +221,29 @@ Deno.test("anchorDurationOverride: null/empty placeTypes returns slot default", 
   assertEqual(anchorDurationOverride(120, "afternoon_major", []), 120, "empty types");
 });
 
-Deno.test("anchorDurationOverride: night_club rule beats beach_club ordering", () => {
-  // A venue typed as both — night_club takes precedence (it's a more
-  // specific signal of "stay until late"). Beach club rule won't fire
-  // because we hit night_club first; nightlife slot type is required for
-  // night_club rule, so a daytime slot still falls through to beach_club.
-  // Verify the rule precedence in nightlife slot:
+Deno.test("anchorDurationOverride: night_club rule beats beach_club ordering in nightlife", () => {
+  // A venue typed as both — in nightlife slot the night_club rule fires
+  // (cap at 210) because beach_club's slotTypes filter excludes nightlife.
   assertEqual(
-    anchorDurationOverride(120, "nightlife", ["night_club", "beach_club"]),
-    360,
-    "night_club wins in nightlife",
+    anchorDurationOverride(360, "nightlife", ["night_club", "beach_club"]),
+    210,
+    "night_club rule fires in nightlife (cap 210)",
   );
   // In afternoon_major, night_club rule's slotTypes filter blocks it,
-  // so the next rule (beach_club) fires:
+  // so the next eligible rule (beach_club) fires:
   assertEqual(
     anchorDurationOverride(120, "afternoon_major", ["night_club", "beach_club"]),
     300,
     "afternoon → night_club blocked, beach_club fires",
+  );
+});
+
+Deno.test("anchorDurationOverride: rooftop rule beats night_club rule when name signals rooftop", () => {
+  // Specificity: the rooftop discriminator must run first so a rooftop
+  // venue typed as night_club doesn't get the 210 cap.
+  assertEqual(
+    anchorDurationOverride(360, "nightlife", ["night_club", "bar"], "DECK TOO Rooftop"),
+    150,
+    "rooftop venue typed as night_club → 150 cap (not 210)",
   );
 });
