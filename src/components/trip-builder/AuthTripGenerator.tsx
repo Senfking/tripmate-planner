@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TripGenerationErrorState, classifyTripGenError } from "./TripGenerationErrorState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
