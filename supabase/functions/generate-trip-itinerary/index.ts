@@ -38,7 +38,11 @@ import {
   placesSpendLastDayUsd,
   userGenerationsInLastHour,
 } from "../_shared/places/cache.ts";
-import { mirrorPhotosForPlaces } from "../_shared/places/photoMirror.ts";
+import {
+  mirrorPhotosForPlaces,
+  verifyPlacePhotosBucket,
+  type MirrorBatchResult,
+} from "../_shared/places/photoMirror.ts";
 import {
   decideAnonRateLimit,
   extractClientIp,
@@ -7141,14 +7145,40 @@ async function rankInParallel(
   for (const venues of venuesByPool.values()) {
     for (const v of venues) allCandidatePlaces.push(v);
   }
-  const photoMirrorPromise = mirrorPhotosForPlaces(
-    svcClient,
-    googleKey,
-    allCandidatePlaces,
-    { max: 1 },
-  ).catch((e) => {
+  // Same preflight + structured summary as the streaming path. See the
+  // streaming call site for the rationale; without these counters a
+  // "photos:[] for every activity" regression couldn't be diagnosed from
+  // Edge Function logs.
+  const placesWithPhotosCountRP = allCandidatePlaces.reduce(
+    (n, p) => n + ((p?.photos?.length ?? 0) > 0 ? 1 : 0),
+    0,
+  );
+  console.log(
+    `[rankInParallel.photo_mirror] starting places_total=${allCandidatePlaces.length} ` +
+    `places_with_photos_input=${placesWithPhotosCountRP}`,
+  );
+  const photoMirrorPromise: Promise<MirrorBatchResult> = (async () => {
+    const preflightErr = await verifyPlacePhotosBucket(svcClient);
+    if (preflightErr) {
+      console.error(
+        `[rankInParallel.photo_mirror] BUCKET PREFLIGHT FAILED — every activity ` +
+        `will get photos:[] until this is fixed: ${preflightErr}`,
+      );
+    }
+    return mirrorPhotosForPlaces(svcClient, googleKey, allCandidatePlaces, { max: 1 });
+  })().catch((e) => {
     console.warn("[rankInParallel] photo mirror batch threw:", (e as Error).message);
-    return new Map<string, string[]>();
+    return {
+      urlsByPlaceId: new Map<string, string[]>(),
+      places_with_input_photos: 0,
+      places_with_output_photos: 0,
+      stats: {
+        attempted: 0, succeeded: 0, no_photo_name: 0,
+        google_fetch_not_ok: 0, google_fetch_threw: 0, empty_body: 0,
+        storage_upload_failed: 0, no_public_url: 0,
+        first_google_err: null, first_storage_err: null,
+      },
+    } as MirrorBatchResult;
   });
 
   // Await baselines + hotel estimates + photo mirror before any hydrate runs.
@@ -7156,9 +7186,24 @@ async function rankInParallel(
   // cache hit they resolve in ~50ms, on miss in ~1-3s — well under the rank
   // step's 5-30s critical path. Per-leg failures resolve to null/empty
   // entries; clamps fall back to PR #264's hardcoded bands and photos to [].
-  const [baselinesByLeg, hotelEstimatesByPlaceId, photoUrlByPlaceId] = await Promise.all([
+  const [baselinesByLeg, hotelEstimatesByPlaceId, mirrorResultRP] = await Promise.all([
     baselinesPromise, hotelEstimatesPromise, photoMirrorPromise,
   ]);
+  const photoUrlByPlaceId = mirrorResultRP.urlsByPlaceId;
+  console.log(
+    `[rankInParallel.photo_mirror] summary ` +
+    `places_with_input_photos=${mirrorResultRP.places_with_input_photos} ` +
+    `places_with_output_photos=${mirrorResultRP.places_with_output_photos} ` +
+    `attempted=${mirrorResultRP.stats.attempted} ` +
+    `succeeded=${mirrorResultRP.stats.succeeded} ` +
+    `google_fetch_not_ok=${mirrorResultRP.stats.google_fetch_not_ok} ` +
+    `google_fetch_threw=${mirrorResultRP.stats.google_fetch_threw} ` +
+    `empty_body=${mirrorResultRP.stats.empty_body} ` +
+    `storage_upload_failed=${mirrorResultRP.stats.storage_upload_failed} ` +
+    `no_public_url=${mirrorResultRP.stats.no_public_url} ` +
+    `first_google_err=${JSON.stringify(mirrorResultRP.stats.first_google_err)} ` +
+    `first_storage_err=${JSON.stringify(mirrorResultRP.stats.first_storage_err)}`,
+  );
 
   const hydrateDay = (
     day: DaySkeleton,
@@ -9765,14 +9810,45 @@ Deno.serve(async (req) => {
             // Runs concurrently with metadata + day rankers; awaited along
             // with baselines/hotel estimates before any hydrate step. See
             // _shared/places/photoMirror.ts for the cost/security rationale.
-            const photoMirrorPromise = mirrorPhotosForPlaces(
-              svcClient, googleKey, places, { max: 1 },
-            ).catch((e) => {
+            //
+            // Preflight verifies the place-photos bucket is reachable. If it's
+            // missing (migration not applied) or RLS blocks writes, every
+            // per-photo upload would silently warn and return null — turning
+            // every activity into photos:[]. Logging the preflight reason
+            // ONCE makes that root cause obvious in Edge Function logs.
+            const placesWithPhotosCount = places.reduce(
+              (n, p) => n + ((p?.photos?.length ?? 0) > 0 ? 1 : 0),
+              0,
+            );
+            console.log(
+              `[stream.photo_mirror] starting places_total=${places.length} ` +
+              `places_with_photos_input=${placesWithPhotosCount}`,
+            );
+            const photoMirrorPromise: Promise<MirrorBatchResult> = (async () => {
+              const preflightErr = await verifyPlacePhotosBucket(svcClient);
+              if (preflightErr) {
+                console.error(
+                  `[stream.photo_mirror] BUCKET PREFLIGHT FAILED — every activity ` +
+                  `will get photos:[] until this is fixed: ${preflightErr}`,
+                );
+              }
+              return mirrorPhotosForPlaces(svcClient, googleKey, places, { max: 1 });
+            })().catch((e) => {
               console.warn(
                 "[stream.photo_mirror] batch threw — proceeding with empty photos:",
                 (e as Error).message,
               );
-              return new Map<string, string[]>();
+              return {
+                urlsByPlaceId: new Map<string, string[]>(),
+                places_with_input_photos: 0,
+                places_with_output_photos: 0,
+                stats: {
+                  attempted: 0, succeeded: 0, no_photo_name: 0,
+                  google_fetch_not_ok: 0, google_fetch_threw: 0, empty_body: 0,
+                  storage_upload_failed: 0, no_public_url: 0,
+                  first_google_err: null, first_storage_err: null,
+                },
+              } as MirrorBatchResult;
             });
 
             // Mutable shared map populated when photoMirrorPromise resolves.
@@ -10243,8 +10319,8 @@ Deno.serve(async (req) => {
               baselinesPromise,
               hotelEstimatesPromise,
               photoMirrorPromise,
-            ]).then(([res, baselinesByLeg, hotelEstimatesByPlaceId, mirroredPhotos]) => {
-              photoUrlByPlaceId = mirroredPhotos;
+            ]).then(([res, baselinesByLeg, hotelEstimatesByPlaceId, mirrorResult]) => {
+              photoUrlByPlaceId = mirrorResult.urlsByPlaceId;
               const out = new Map<number, EarlyAccommodationEntry>();
               const accomRaw = res.data?.accommodation;
               // Validate the metadata's pick against the lodging pool — refuses
@@ -10288,12 +10364,30 @@ Deno.serve(async (req) => {
             // ~1-3s — well under the rank step's 5-30s critical path.
             // Failures resolve to empty entries; clamps fall through to
             // baselines and PR #264's hardcoded bands, and photos to [].
-            const [baselinesByLeg, hotelEstimatesByPlaceId, mirroredPhotos] = await Promise.all([
+            const [baselinesByLeg, hotelEstimatesByPlaceId, mirrorResult] = await Promise.all([
               baselinesPromise, hotelEstimatesPromise, photoMirrorPromise,
             ]);
             // Same Map identity is reused if accommodationEarlyPromise
             // already assigned; harmless re-assignment otherwise.
-            photoUrlByPlaceId = mirroredPhotos;
+            photoUrlByPlaceId = mirrorResult.urlsByPlaceId;
+            // Single-line summary that surfaces "every photo failed" in
+            // production logs with the exact category breakdown. If
+            // places_with_output_photos=0 while places_with_input_photos>0,
+            // first_storage_err / first_google_err names the root cause.
+            console.log(
+              `[stream.photo_mirror] summary ` +
+              `places_with_input_photos=${mirrorResult.places_with_input_photos} ` +
+              `places_with_output_photos=${mirrorResult.places_with_output_photos} ` +
+              `attempted=${mirrorResult.stats.attempted} ` +
+              `succeeded=${mirrorResult.stats.succeeded} ` +
+              `google_fetch_not_ok=${mirrorResult.stats.google_fetch_not_ok} ` +
+              `google_fetch_threw=${mirrorResult.stats.google_fetch_threw} ` +
+              `empty_body=${mirrorResult.stats.empty_body} ` +
+              `storage_upload_failed=${mirrorResult.stats.storage_upload_failed} ` +
+              `no_public_url=${mirrorResult.stats.no_public_url} ` +
+              `first_google_err=${JSON.stringify(mirrorResult.stats.first_google_err)} ` +
+              `first_storage_err=${JSON.stringify(mirrorResult.stats.first_storage_err)}`,
+            );
 
             if (sequentialRanking) {
               let budgetExhausted = false;
