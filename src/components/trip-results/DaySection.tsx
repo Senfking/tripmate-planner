@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { AIDay, AIActivity, AITripResult } from "./useResultsState";
 import type { ActivityCostFormatter } from "./formatActivityCost";
+import { backendActivityPhoto, hasBackendActivityPhoto } from "@/lib/activityPhoto";
 
 interface Props {
   day: AIDay;
@@ -49,9 +50,19 @@ interface Props {
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
-  const { photos, isLoading } = useGooglePlaceDetails(activity.title || "", location);
+  // Prefer the backend-mirrored Storage URL. See lib/activityPhoto.ts and
+  // ActivityCard for rationale.
+  const backendHero = backendActivityPhoto(activity);
+  const hasBackendHero = hasBackendActivityPhoto(activity);
+  const { photos, isLoading } = useGooglePlaceDetails(
+    activity.title || "",
+    location,
+    { enabled: !hasBackendHero },
+  );
   const [imgError, setImgError] = useState(false);
-  const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
+  const heroSrc = !imgError
+    ? (backendHero ?? (photos.length > 0 ? photos[0] : null))
+    : null;
 
   if (isLoading) return <Skeleton className="w-full h-full rounded-none" />;
   if (heroSrc) {

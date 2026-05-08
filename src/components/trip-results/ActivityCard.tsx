@@ -8,6 +8,8 @@ import { ActivityComments } from "./ActivityComments";
 import type { AIActivity, AIDay } from "./useResultsState";
 import type { ActivityCostFormatter } from "./formatActivityCost";
 import { isGetYourGuideEligible, buildGetYourGuideUrl } from "@/lib/affiliateLinks";
+import { backendActivityPhoto, hasBackendActivityPhoto } from "@/lib/activityPhoto";
+import { formatActivityDuration } from "@/lib/formatDuration";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface Props {
@@ -93,8 +95,15 @@ export function ActivityCard({
   const IconComponent = getCategoryIcon(activity.category);
   const actKey = dayIndex != null && activityIndex != null ? `day-${dayIndex}-activity-${activityIndex}` : null;
 
+  // Backend mirrors a Place photo into Storage and writes the public URL
+  // to activity.photos[0] at trip generation time. Prefer that — it's
+  // place_id-correct, deterministic, and free to render. Only fall back to
+  // the runtime get-place-details fetch when the activity record has no
+  // photos (older trips that pre-date the mirror, or mirror failures).
+  const backendHero = backendActivityPhoto(activity);
+  const hasBackendHero = hasBackendActivityPhoto(activity);
   const { photos, reviews, rating, totalRatings, googleMapsUrl, latitude: refinedLat, longitude: refinedLng, isLoading } =
-    useGooglePlaceDetails(activity.title || "", activity.location_name || "");
+    useGooglePlaceDetails(activity.title || "", activity.location_name || "", { enabled: !hasBackendHero });
 
   useEffect(() => {
     if (refinedLat != null && refinedLng != null && onCoordsRefined) {
@@ -114,7 +123,9 @@ export function ActivityCard({
     return () => document.removeEventListener("mousedown", handler);
   }, [swapMode]);
 
-  const heroSrc = !imgError && photos.length > 0 ? photos[0] : null;
+  const heroSrc = !imgError
+    ? (backendHero ?? (photos.length > 0 ? photos[0] : null))
+    : null;
   
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((activity.title || '') + ' ' + (activity.location_name || ''))}`;
   const displayRating = rating ?? (typeof (activity as any).rating === "number" ? (activity as any).rating : null);
@@ -295,9 +306,10 @@ export function ActivityCard({
                 {activity.start_time}
               </span>
             )}
-            {activity.duration_minutes != null && (
-              <span>{activity.duration_minutes}min</span>
-            )}
+            {(() => {
+              const label = formatActivityDuration(activity.duration_minutes);
+              return label ? <span>{label}</span> : null;
+            })()}
           </div>
 
           {/* Footer row — pricing anchor + booking CTA */}
@@ -416,7 +428,10 @@ export function ActivityCard({
                     <Clock className="h-3 w-3" /> {activity.start_time}
                   </span>
                 )}
-                {activity.duration_minutes != null && <span>{activity.duration_minutes}min</span>}
+                {(() => {
+                  const label = formatActivityDuration(activity.duration_minutes);
+                  return label ? <span>{label}</span> : null;
+                })()}
                 {displayRating != null && (
                   <span className="flex items-center gap-1">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />

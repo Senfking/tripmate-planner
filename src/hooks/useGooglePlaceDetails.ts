@@ -20,9 +20,30 @@ interface PlaceDetails {
   priceLevel: GooglePriceLevel | null;
 }
 
-export function useGooglePlaceDetails(activityName: string, location: string) {
+/**
+ * Optional flags so callers can opt out of the runtime `get-place-details`
+ * fetch when the data is already on the activity record. Keeps trip-card
+ * renders cheap by avoiding a round-trip + Google Places quota burn for
+ * every visible activity.
+ */
+export interface UseGooglePlaceDetailsOptions {
+  /**
+   * When false, the underlying React Query is disabled (no fetch, no cache
+   * read). Defaults to true to preserve callers that didn't pass anything.
+   * Set to false from cards that have already resolved a hero from
+   * `activity.photos[0]` via `hasBackendActivityPhoto`.
+   */
+  enabled?: boolean;
+}
+
+export function useGooglePlaceDetails(
+  activityName: string,
+  location: string,
+  options: UseGooglePlaceDetailsOptions = {},
+) {
   const query = `${activityName} ${location}`.trim();
-  const enabled = !!activityName && activityName.length > 2;
+  const optEnabled = options.enabled ?? true;
+  const enabled = optEnabled && !!activityName && activityName.length > 2;
 
   const { data, isLoading } = useQuery<PlaceDetails>({
     queryKey: ["place-details", activityName, location],
