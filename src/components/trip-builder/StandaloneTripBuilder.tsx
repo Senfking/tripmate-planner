@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackEvent } from "@/lib/analytics";
 import { stripEmoji } from "@/lib/stripEmoji";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { PremiumTripInput, type PremiumInputData } from "./PremiumTripInput";
 // ConfirmationCard removed — flow now submits straight from PremiumTripInput.
