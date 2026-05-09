@@ -167,7 +167,7 @@ const CHIP_THEMES: Record<string, ThemeCard> = {
   },
   Adventure: {
     title: "Adventure Days",
-    description: "Trails, water and altitude — the kind of plans that earn you the night out after.",
+    description: "Trails, water and altitude , the kind of plans that earn you the night out after.",
     photo: U("photo-1551632811-561732d1e306"),
   },
   Nature: {
@@ -222,7 +222,7 @@ const CHIP_THEMES: Record<string, ThemeCard> = {
   },
   Snow: {
     title: "Snow Days",
-    description: "Pistes, powder and fireside après — the season at full volume.",
+    description: "Pistes, powder and fireside après , the season at full volume.",
     photo: U("photo-1551524559-8af4e6624178"),
   },
   Safari: {
@@ -277,7 +277,7 @@ const CHIP_THEMES: Record<string, ThemeCard> = {
   },
   Bike: {
     title: "On Two Wheels",
-    description: "Pedal between cafés and canals — the easiest way to see a city like a local.",
+    description: "Pedal between cafés and canals , the easiest way to see a city like a local.",
     photo: U("photo-1485965120184-e220f721d03e"),
   },
   Party: {
@@ -356,9 +356,9 @@ const CHIP_THEMES_BY_REGION: Partial<
     western_europe: { title: "Alps & Lakes",        description: "Storybook lakes, hiking trails and villages that feel painted into the mountain.", photo: U("photo-1464822759023-fed622ff2c3b") },
   },
   Adventure: {
-    south_america: { title: "Big Adventures",       description: "Inca trails, Amazon rivers, dunes and altitude — earned days, hard-slept nights.", photo: U("photo-1526392060635-9d6019884377") },
+    south_america: { title: "Big Adventures",       description: "Inca trails, Amazon rivers, dunes and altitude , earned days, hard-slept nights.", photo: U("photo-1526392060635-9d6019884377") },
     central_america: { title: "Rainforest & Surf",  description: "Surf breaks, zip-lines, river floats and waterfalls you can swim under.", photo: U("photo-1518562923054-9a8f74917d61") },
-    south_asia:    { title: "High Himalaya",        description: "Trek days that turn into stories — passes, prayer flags and cups of butter tea.", photo: U("photo-1464822759023-fed622ff2c3b") },
+    south_asia:    { title: "High Himalaya",        description: "Trek days that turn into stories , passes, prayer flags and cups of butter tea.", photo: U("photo-1464822759023-fed622ff2c3b") },
     sub_saharan_africa: { title: "Bush & Beyond",   description: "Walking safaris, dune driving and rivers full of more than just water.", photo: U("photo-1516426122078-c23e76319801") },
     se_asia:       { title: "Jungle Days",          description: "Cave systems, waterfalls and motorbike rides between rice paddies.", photo: U("photo-1531168556467-80aace0d0144") },
   },
@@ -1345,7 +1345,7 @@ export function getDestinationGuide(
   };
 
   for (const chip of chips) tryPush(chipTheme(chip, region));
-  // Pad to 4 if thin — pull region-appropriate generics in priority order.
+  // Pad to 4 if thin , pull region-appropriate generics in priority order.
   for (const fallbackChip of ["Food", "Culture", "Nature", "City"]) {
     if (themes.length >= 4) break;
     tryPush(chipTheme(fallbackChip, region));
@@ -1355,7 +1355,7 @@ export function getDestinationGuide(
     hero: fallbacks.hero ?? U("photo-1488646953014-85cb44e25828"),
     tagline:
       fallbacks.tagline ??
-      "A trip built around what you actually want — your dates, your pace, your group.",
+      "A trip built around what you actually want , your dates, your pace, your group.",
     themes,
   };
 }
