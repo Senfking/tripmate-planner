@@ -1,22 +1,62 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Check } from "lucide-react";
 
 interface Props {
   /** Latest stage from edge function. user_text drives non-ranking stages. */
   stage: { stage: string; user_text: string; percent_complete: number } | null;
-  /** Destination-specific rotating micro-copy. Used during ranking_days. */
+  /** Destination-specific rotating micro-copy emitted by the backend.
+   *  Used during ranking_days when present. */
   statusMessages: string[];
   /** Fallback message when no stage events have arrived yet. */
   fallback: string;
+  /** Trip destinations — used to synthesise rotating fallback copy when the
+   *  backend's status_messages event hasn't arrived (e.g. LLM timeout). */
+  destinations?: string[];
+}
+
+/** Templates for client-side rotating fallback during ranking_days when the
+ *  backend's destination-specific messages aren't available. Each template
+ *  takes a destination name. Order is intentional — opens with mapping/route
+ *  then drills into category-specific copy. */
+const FALLBACK_TEMPLATES: ReadonlyArray<(dest: string) => string> = [
+  (d) => `Mapping your route in ${d}`,
+  (d) => `Curating restaurants in ${d}`,
+  (d) => `Finding hidden gems in ${d}`,
+  (d) => `Picking experiences in ${d}`,
+  (d) => `Hunting nightlife in ${d}`,
+  (d) => `Routing your days in ${d}`,
+  (d) => `Polishing your ${d} itinerary`,
+];
+
+function buildFallbackMessages(destinations: string[] | undefined): string[] {
+  if (!destinations || destinations.length === 0) return [];
+  const out: string[] = [];
+  // Interleave templates across destinations so multi-leg trips see variety.
+  for (let i = 0; i < FALLBACK_TEMPLATES.length; i++) {
+    const dest = destinations[i % destinations.length];
+    if (!dest) continue;
+    out.push(FALLBACK_TEMPLATES[i](dest));
+  }
+  return out;
 }
 
 /**
  * Cinematic, glassmorphic status pill shown at the top of the streaming
  * results surface. See StreamingProgressLadder for state-pill details.
  */
-export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) {
+export function StreamingStatusPill({ stage, statusMessages, fallback, destinations }: Props) {
   const isRanking = stage?.stage === "ranking_days" || stage?.stage === "ranking";
-  const rotate = isRanking && statusMessages.length >= 2;
+
+  // Prefer backend-supplied destination-specific copy; otherwise build a
+  // client-side rotation from the destination names so the pill never gets
+  // stuck on the static "Crafting your itinerary" string.
+  const fallbackRotation = useMemo(
+    () => buildFallbackMessages(destinations),
+    [destinations],
+  );
+  const activeMessages =
+    statusMessages.length >= 2 ? statusMessages : fallbackRotation;
+  const rotate = isRanking && activeMessages.length >= 2;
 
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -27,22 +67,22 @@ export function StreamingStatusPill({ stage, statusMessages, fallback }: Props) 
       setupKeyRef.current = "";
       return;
     }
-    const key = `${statusMessages.length}:${statusMessages[0] ?? ""}`;
+    const key = `${activeMessages.length}:${activeMessages[0] ?? ""}`;
     if (setupKeyRef.current === key) return;
     setupKeyRef.current = key;
     setIdx(0);
     const interval = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        setIdx((i) => (i + 1) % statusMessages.length);
+        setIdx((i) => (i + 1) % activeMessages.length);
         setVisible(true);
       }, 250);
     }, 3500);
     return () => clearInterval(interval);
-  }, [rotate, statusMessages]);
+  }, [rotate, activeMessages]);
 
   const text = rotate
-    ? statusMessages[idx % statusMessages.length]
+    ? activeMessages[idx % activeMessages.length]
     : stage?.user_text || fallback;
 
   return (

@@ -674,6 +674,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 stage={streamingStage ?? null}
                 statusMessages={streamingStatusMessages ?? []}
                 fallback={streamingMessage || "Crafting your trip"}
+                destinations={realDestinations.map((d) => d.name).filter(Boolean)}
               />
             </div>
             {/* Day ladder spans the full width of the itinerary column
