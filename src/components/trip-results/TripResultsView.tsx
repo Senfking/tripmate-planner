@@ -209,6 +209,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // has no additive (legacy plans, or no Haiku baselines on any leg), the
   // toggle is hidden and this state is irrelevant.
   const [itineraryOnly, setItineraryOnly] = useState(false);
+  const [dailyLivingInfoOpen, setDailyLivingInfoOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [mapState, setMapState] = useState<MapState>(() => {
     if (typeof window === "undefined") return "closed";
@@ -1012,17 +1013,32 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                           <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-[#94A3B8]" />
                           <span className="text-xs text-white/80 flex-1 inline-flex items-center gap-1.5 min-w-0">
                             <span className="truncate">Daily living estimate</span>
-                            <Popover>
+                            <Popover open={dailyLivingInfoOpen} onOpenChange={setDailyLivingInfoOpen}>
                               <PopoverTrigger asChild>
                                 <button
                                   type="button"
                                   aria-label="What's in daily living estimate"
+                                  onClick={(e) => {
+                                    // Defensive: explicit toggle so the popover
+                                    // works even when an ancestor swallows the
+                                    // pointerdown Radix uses by default.
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDailyLivingInfoOpen((v) => !v);
+                                  }}
+                                  onMouseEnter={() => setDailyLivingInfoOpen(true)}
                                   className="shrink-0 inline-flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
                                 >
                                   <Info className="h-3 w-3" />
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent side="top" className="max-w-[240px] text-[11px] p-2.5">
+                              <PopoverContent
+                                side="top"
+                                align="center"
+                                sideOffset={6}
+                                onOpenAutoFocus={(e) => e.preventDefault()}
+                                className="max-w-[240px] w-auto text-[11px] p-2.5 z-[100]"
+                              >
                                 Estimated breakfasts, local transport, tips, drinks, and snacks not in your itinerary.
                               </PopoverContent>
                             </Popover>
