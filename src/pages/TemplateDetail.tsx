@@ -25,7 +25,8 @@ import { useSmartBack } from "@/hooks/useSmartBack";
 import { stashIntent } from "@/lib/templateIntent";
 import { getCountryFacts } from "@/lib/countryFacts";
 import { formatTimezone } from "@/lib/timezoneFormat";
-import { getDestinationGuide, type ThemeCard } from "@/lib/destinationGuides";
+import { getDestinationGuide, resolvePhoto, type ThemeCard } from "@/lib/destinationGuides";
+import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
 
@@ -126,7 +127,9 @@ export default function TemplateDetail() {
     hero: template.cover_image_url,
     tagline: template.description,
     chips: template.chips ?? [],
+    countryIso: template.country_iso,
   });
+  const heroResolved = resolvePhoto(guide.hero);
 
   // Floating back button
   const FloatingBack = (
@@ -187,7 +190,8 @@ export default function TemplateDetail() {
           durationDays={template.duration_days}
           recommendedSeason={template.recommended_season}
           chips={template.chips ?? []}
-          heroPhoto={guide.hero}
+          heroPhoto={heroResolved.url}
+          heroMeta={heroResolved.meta}
         />
 
         <QuickFactsStrip
