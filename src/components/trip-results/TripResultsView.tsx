@@ -209,6 +209,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
   // has no additive (legacy plans, or no Haiku baselines on any leg), the
   // toggle is hidden and this state is irrelevant.
   const [itineraryOnly, setItineraryOnly] = useState(false);
+  const [dailyLivingInfoOpen, setDailyLivingInfoOpen] = useState(false);
   const [editTripOpen, setEditTripOpen] = useState(false);
   const [mapState, setMapState] = useState<MapState>(() => {
     if (typeof window === "undefined") return "closed";
