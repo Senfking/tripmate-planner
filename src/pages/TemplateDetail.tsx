@@ -238,12 +238,14 @@ function CinematicHero({
   recommendedSeason,
   chips,
   heroPhoto,
+  heroMeta,
 }: {
   destination: string;
   durationDays: number;
   recommendedSeason: string | null;
   chips: string[];
   heroPhoto: string;
+  heroMeta: import("@/lib/unsplashAttribution").UnsplashPhotoMeta | null;
 }) {
   return (
     <div className="relative w-full h-[60vh] min-h-[420px] md:h-[75vh] md:min-h-[560px] md:max-h-[760px] overflow-hidden">
@@ -280,6 +282,11 @@ function CinematicHero({
           )}
         </div>
       </div>
+      {heroMeta && (
+        <div className="absolute bottom-2 right-3 z-10">
+          <UnsplashAttribution photo={heroMeta} variant="light" />
+        </div>
+      )}
     </div>
   );
 }
@@ -361,10 +368,11 @@ function ThemesSection({
 }
 
 function ThemeCardView({ theme }: { theme: ThemeCard }) {
+  const { url, meta } = resolvePhoto(theme.photo);
   return (
     <article className="group relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 h-[340px] md:h-[380px]">
       <img
-        src={theme.photo}
+        src={url}
         alt={theme.title}
         loading="lazy"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
@@ -381,6 +389,11 @@ function ThemeCardView({ theme }: { theme: ThemeCard }) {
           {theme.description}
         </p>
       </div>
+      {meta && (
+        <div className="absolute top-2 right-3 z-10">
+          <UnsplashAttribution photo={meta} variant="light" />
+        </div>
+      )}
     </article>
   );
 }
