@@ -297,8 +297,11 @@ function ErrorBoundaryWithUser({ children }: { children: React.ReactNode }) {
   return <ErrorBoundary userId={user?.id}>{children}</ErrorBoundary>;
 }
 
+import { HelmetProvider } from "react-helmet-async";
+
 const App = () => (
   <ErrorBoundary>
+    <HelmetProvider>
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={{
@@ -314,6 +317,7 @@ const App = () => (
     >
       <AppInner />
     </PersistQueryClientProvider>
+    </HelmetProvider>
   </ErrorBoundary>
 );
 
