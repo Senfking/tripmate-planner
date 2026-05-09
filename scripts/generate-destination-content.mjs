@@ -24,7 +24,7 @@ const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
 const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
-const MODEL = process.env.CLAUDE_MODEL || "claude-opus-4-5-20250929";
+const MODEL = process.env.CLAUDE_MODEL || "claude-opus-4-7";
 const OUT_PATH = "/tmp/destination-content.json";
 
 const argv = process.argv.slice(2);
