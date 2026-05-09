@@ -197,6 +197,7 @@ export default function TemplatePersonalize() {
       </button>
 
       <TripCreationSurface
+        prefill={themedPrompt}
         templateCard={templateCard}
         headline={
           <>
