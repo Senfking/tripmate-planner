@@ -625,7 +625,7 @@ Mid-range here means three-star international chains or boutique courtyard hotel
       { title: "Beijing's Mutianyu Great Wall", description: "Hike the restored ramparts at sunrise before tour buses arrive, then toboggan down through chestnut forests below the watchtowers.", photo: "" },
       { title: "Xi'an Terracotta Army", description: "Walk Pit 1 at the Qin tomb complex, then bike the 14-kilometer Ming city wall above the Muslim Quarter's lamb skewer smoke.", photo: "" },
       { title: "Chengdu Panda Base and Sichuan Kitchens", description: "Morning with juvenile pandas in Dujiangyan, evenings over mapo tofu and numbing hotpot in Jinli's lantern-lit lanes.", photo: "" },
-      { title: "Zhangjiajie Sandstone Pillars", description: "Ride the Bailong elevator up quartzite spires that inspired Avatar, then trek the Golden Whip Stream through misted valleys.", photo: "" },
+      { title: "Zhangjiajie Sandstone Pillars", description: "Ride the Bailong elevator up sandstone spires that inspired Avatar, then trek the Golden Whip Stream through misted valleys.", photo: "" },
       { title: "Shanghai's Bund and Former French Concession", description: "Photograph Pudong's skyline from Waitan at blue hour, then wander plane-tree streets around Wukang Mansion and Anfu Lu.", photo: "" },
       { title: "Forbidden City and Hutong Photography", description: "Shoot vermilion gates and gold roofs in the Palace Museum, then lose the crowds in Beijing's Gulou hutong courtyards.", photo: "" },
     ],
