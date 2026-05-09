@@ -1327,36 +1327,51 @@ export function getDestinationGuide(
   },
 ): DestinationGuide {
   const curated = slug ? DESTINATION_GUIDES[slug] : undefined;
-  if (curated) return curated;
-
   const region = regionForCountry(fallbacks.countryIso ?? null);
   const chips = fallbacks.chips ?? [];
-  const themes: ThemeCard[] = [];
+  const FALLBACK_HERO = U("photo-1488646953014-85cb44e25828");
+
+  // Build chip-based fallback themes (used both for fully uncurated destinations
+  // and to fill in photos for curated entries that don't yet have them).
+  const chipThemes: ThemeCard[] = [];
   const seenTitle = new Set<string>();
   const seenPhoto = new Set<string>();
-
   const tryPush = (t: ThemeCard | null) => {
     if (!t) return;
     const photoUrl = typeof t.photo === "string" ? t.photo : t.photo.url;
     if (seenTitle.has(t.title) || seenPhoto.has(photoUrl)) return;
-    themes.push(t);
+    chipThemes.push(t);
     seenTitle.add(t.title);
     seenPhoto.add(photoUrl);
   };
-
   for (const chip of chips) tryPush(chipTheme(chip, region));
-  // Pad to 4 if thin, pull region-appropriate generics in priority order.
   for (const fallbackChip of ["Food", "Culture", "Nature", "City"]) {
-    if (themes.length >= 4) break;
+    if (chipThemes.length >= 4) break;
     tryPush(chipTheme(fallbackChip, region));
   }
 
+  if (curated) {
+    // Photo-curation for the 38 newly-generated entries happens in a later phase;
+    // until then, fall back to the template's cover image / chip-based theme photos
+    // so the UI stays intact.
+    const heroIsEmpty =
+      typeof curated.hero === "string" ? curated.hero === "" : !curated.hero;
+    const hero = heroIsEmpty ? (fallbacks.hero ?? FALLBACK_HERO) : curated.hero;
+    const themes = curated.themes.map((t, i) => {
+      const photoEmpty = typeof t.photo === "string" ? t.photo === "" : !t.photo;
+      if (!photoEmpty) return t;
+      const fallback = chipThemes[i % Math.max(chipThemes.length, 1)]?.photo;
+      return { ...t, photo: fallback ?? (fallbacks.hero ?? FALLBACK_HERO) };
+    });
+    return { ...curated, hero, themes };
+  }
+
   return {
-    hero: fallbacks.hero ?? U("photo-1488646953014-85cb44e25828"),
+    hero: fallbacks.hero ?? FALLBACK_HERO,
     tagline:
       fallbacks.tagline ??
       "A trip built around what you actually want, your dates, your pace, your group.",
-    themes,
+    themes: chipThemes,
   };
 }
 
