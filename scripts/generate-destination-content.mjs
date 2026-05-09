@@ -48,6 +48,10 @@ HARD BANS:
 
 EVERY tagline must contain at least one unexpected sensory detail (a specific sound, smell, taste, texture, or quality of light).
 
+Vary your opening structure across destinations. Don't reuse framing devices like "moves fast", "is a sprint", "packs in", "rewards travelers who..." across multiple destinations. Each destination should feel like it was written by a journalist on assignment for THAT specific place, with its own opening hook (a scene, a sound, a contradiction, geography, a meal, the quality of light).
+
+longForm MUST be 3-4 paragraphs separated by \\n\\n. Never one block. First paragraph sets the scene and frames the trip duration. Middle paragraphs cover specific regions/experiences. Final paragraph is practical (food, lodging, logistics, when to go).
+
 Theme card titles must reference REAL attractions, neighborhoods, dishes, or landscapes specific to that destination. Generic ("Cultural Heritage") is wrong; specific ("Xi'an Terracotta Warriors") is right. Each theme should be something a trip planner could actually build itinerary stops around.`;
 
 const TOOL = {
