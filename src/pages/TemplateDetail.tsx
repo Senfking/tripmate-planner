@@ -5,9 +5,8 @@ import {
   Loader2,
   Sparkles,
   CalendarDays,
-  MapPin,
   Wallet,
-  Users,
+  Vote,
   Clock,
   Globe2,
   Coins,
@@ -15,21 +14,20 @@ import {
   FileText,
   PiggyBank,
   CloudSun,
-  ExternalLink,
-  Vote,
   FileArchive,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useTripTemplate, type CuratedHighlight } from "@/hooks/useTripTemplates";
+import { useTripTemplate } from "@/hooks/useTripTemplates";
 import { useSmartBack } from "@/hooks/useSmartBack";
 import { stashIntent } from "@/lib/templateIntent";
 import { getCountryFacts } from "@/lib/countryFacts";
+import { formatTimezone } from "@/lib/timezoneFormat";
+import { getDestinationGuide, type ThemeCard } from "@/lib/destinationGuides";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
-import { HighlightCard } from "@/components/templates/HighlightCard";
 
 export default function TemplateDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -124,37 +122,13 @@ export default function TemplateDetail() {
 
   const ctaLabel = `Build my ${template.destination} itinerary`;
 
-  // Sticky bottom action bar (rendered in both states)
-  const StickyActions = (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-center">
-        <Button
-          variant="outline"
-          onClick={handlePersonalize}
-          className="rounded-full sm:w-auto h-11"
-        >
-          <Sparkles className="h-4 w-4 mr-1.5" />
-          Personalize for me
-        </Button>
-        <Button
-          onClick={handleClone}
-          disabled={cloning}
-          className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground sm:w-auto sm:px-6 h-11"
-        >
-          {cloning ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              Creating trip…
-            </>
-          ) : (
-            "Use this trip"
-          )}
-        </Button>
-      </div>
-    </div>
-  );
+  const guide = getDestinationGuide(template.slug, {
+    hero: template.cover_image_url,
+    tagline: template.description,
+    chips: template.chips ?? [],
+  });
 
-  // Floating back button shared between both states.
+  // Floating back button
   const FloatingBack = (
     <button
       onClick={goBack}
@@ -165,20 +139,73 @@ export default function TemplateDetail() {
     </button>
   );
 
-  // STATE 1: cached result exists
-  if (template.cached_result) {
-    return (
-      <>
-        {FloatingBack}
-
-        <div className="pb-32">
-          <QuickFactsStrip
-            countryIso={template.country_iso}
-            recommendedSeason={template.recommended_season}
-          />
-          {template.curated_highlights && template.curated_highlights.length > 0 && (
-            <HighlightsSection highlights={template.curated_highlights} />
+  // Sticky CTA — single primary CTA on the no-cache state, dual on cached
+  const StickyCTA = (
+    <div className="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+      {/* Soft top gradient so the bar visually separates on desktop */}
+      <div className="h-8 bg-gradient-to-t from-white/95 to-transparent" />
+      <div className="bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pointer-events-auto shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)]">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:justify-center">
+          {template.cached_result && (
+            <Button
+              variant="outline"
+              onClick={handlePersonalize}
+              className="rounded-full sm:w-auto h-12"
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Personalize for me
+            </Button>
           )}
+          <Button
+            onClick={template.cached_result ? handleClone : handlePersonalize}
+            disabled={cloning}
+            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-8 h-12 text-base font-semibold"
+          >
+            {cloning ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                Creating trip…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                {template.cached_result ? "Use this trip" : ctaLabel}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {FloatingBack}
+      <div className="min-h-screen bg-white pb-36">
+        <CinematicHero
+          destination={template.destination}
+          durationDays={template.duration_days}
+          recommendedSeason={template.recommended_season}
+          chips={template.chips ?? []}
+          heroPhoto={guide.hero}
+        />
+
+        <QuickFactsStrip
+          countryIso={template.country_iso}
+          recommendedSeason={template.recommended_season}
+        />
+
+        {/* Tagline */}
+        <section className="max-w-3xl mx-auto px-5 pt-4 pb-2">
+          <p className="text-base md:text-lg text-gray-700 leading-relaxed">
+            {guide.tagline}
+          </p>
+        </section>
+
+        <ThemesSection destination={template.destination} themes={guide.themes} />
+
+        {/* Cached itinerary preview, when available */}
+        {template.cached_result && (
           <TripResultsView
             tripId={`template-${template.slug}`}
             planId={null}
@@ -189,98 +216,69 @@ export default function TemplateDetail() {
             dateMode="generic"
             readOnly
           />
-          <JuntoValueGrid />
-        </div>
-
-        {StickyActions}
-
-      </>
-    );
-  }
-
-  // STATE 2: no cache — premium destination guide preview
-  return (
-    <>
-      {FloatingBack}
-      <div className="min-h-screen bg-white pb-32">
-
-        {/* Hero */}
-        <div className="relative h-[280px] md:h-[400px]">
-          {template.cover_image_url ? (
-            <img
-              src={template.cover_image_url}
-              alt={template.destination}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
-          <div className="absolute bottom-6 left-5 right-5">
-            <div className="max-w-3xl mx-auto">
-              <h1
-                className="text-3xl md:text-5xl font-semibold text-white leading-tight"
-                style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
-              >
-                {template.destination}
-              </h1>
-              <p className="mt-2 text-white/85 text-sm md:text-base">
-                {template.duration_days} days
-                {template.recommended_season ? ` · ${template.recommended_season}` : ""}
-              </p>
-              {template.chips?.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {template.chips.map((chip) => (
-                    <span
-                      key={chip}
-                      className="inline-flex items-center text-[11px] md:text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 text-white backdrop-blur-md border border-white/20"
-                    >
-                      {chip}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <QuickFactsStrip
-          countryIso={template.country_iso}
-          recommendedSeason={template.recommended_season}
-        />
-
-        {/* Description */}
-        <section className="max-w-3xl mx-auto px-5 pt-2 pb-6">
-          <p className="text-base text-gray-600 leading-relaxed">{template.description}</p>
-        </section>
-
-        {/* Highlights — destination-specific hook first */}
-        {template.curated_highlights && template.curated_highlights.length > 0 && (
-          <HighlightsSection highlights={template.curated_highlights} />
         )}
 
-        {/* Everything you'll get with Junto AI — product pitch second */}
-        <JuntoValueGrid />
+        <JuntoFeatureBlocks />
       </div>
 
-      {/* Sticky CTA — centered */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-        <div className="max-w-3xl mx-auto flex justify-center">
-          <Button
-            onClick={handlePersonalize}
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto sm:px-8 h-12 text-base font-semibold"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            {ctaLabel}
-          </Button>
-        </div>
-      </div>
-
+      {StickyCTA}
     </>
   );
 }
 
 /* ───────────────── Sub-sections ───────────────── */
+
+function CinematicHero({
+  destination,
+  durationDays,
+  recommendedSeason,
+  chips,
+  heroPhoto,
+}: {
+  destination: string;
+  durationDays: number;
+  recommendedSeason: string | null;
+  chips: string[];
+  heroPhoto: string;
+}) {
+  return (
+    <div className="relative w-full h-[60vh] min-h-[420px] md:h-[75vh] md:min-h-[560px] md:max-h-[760px] overflow-hidden">
+      <img
+        src={heroPhoto}
+        alt={destination}
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="eager"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/20" />
+      <div className="absolute inset-x-0 bottom-0 px-5 pb-10 md:pb-14">
+        <div className="max-w-4xl mx-auto">
+          <h1
+            className="text-white font-semibold leading-[1.05] tracking-tight text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl"
+            style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+          >
+            {destination}
+          </h1>
+          <p className="mt-3 text-white/90 text-base md:text-lg font-medium">
+            {durationDays} days
+            {recommendedSeason ? ` · ${recommendedSeason}` : ""}
+          </p>
+          {chips?.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {chips.map((chip) => (
+                <span
+                  key={chip}
+                  className="inline-flex items-center text-[10px] md:text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/15 text-white/90 backdrop-blur-md border border-white/20"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function QuickFactsStrip({
   countryIso,
@@ -290,6 +288,7 @@ function QuickFactsStrip({
   recommendedSeason: string | null;
 }) {
   const facts = getCountryFacts(countryIso);
+  const tz = formatTimezone(facts?.timezone);
   const items: Array<{ icon: typeof Clock; label: string; value: string }> = [];
 
   if (recommendedSeason) {
@@ -301,24 +300,24 @@ function QuickFactsStrip({
   if (facts?.language) {
     items.push({ icon: Globe2, label: "Language", value: facts.language });
   }
-  if (facts?.timezone) {
-    items.push({ icon: Clock, label: "Time zone", value: facts.timezone });
+  if (tz) {
+    items.push({ icon: Clock, label: "Time zone", value: tz });
   }
 
   if (items.length === 0) return null;
 
   return (
-    <section className="max-w-3xl mx-auto px-5 pt-6">
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
+    <section className="max-w-3xl mx-auto px-5 pt-5">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
         {items.map(({ icon: Icon, label, value }) => (
           <div
             key={label}
-            className="flex items-center gap-2 shrink-0 rounded-full border border-gray-200 bg-white px-3.5 py-2 shadow-sm"
+            className="flex items-center gap-2 shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 shadow-sm"
           >
-            <Icon className="h-4 w-4 text-primary" />
+            <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
             <div className="leading-tight">
-              <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
-              <p className="text-sm font-medium text-gray-800">{value}</p>
+              <p className="text-[9px] uppercase tracking-wide text-gray-500 font-medium">{label}</p>
+              <p className="text-[13px] font-medium text-gray-800">{value}</p>
             </div>
           </div>
         ))}
@@ -327,54 +326,143 @@ function QuickFactsStrip({
   );
 }
 
-function JuntoValueGrid() {
-  const items = [
-    { icon: CalendarDays, title: "Day-by-day itinerary", copy: "A full plan timed to your dates and pace." },
-    { icon: MapPin, title: "Curated venues", copy: "Hand-picked stays, food, and activities." },
-    { icon: ExternalLink, title: "Booking links", copy: "One-tap booking for hotels and experiences." },
-    { icon: Wallet, title: "Group expense splitting", copy: "Track costs and settle up effortlessly." },
-    { icon: Vote, title: "Group decisions & polls", copy: "Vote on options, decide together." },
-    { icon: Users, title: "Real-time collaboration", copy: "Plan together, edit live." },
-    { icon: FileText, title: "Visa & entry", copy: "Personalized entry requirements." },
-    { icon: PiggyBank, title: "Budget guide", copy: "Cost breakdown for your travel style." },
-    { icon: CloudSun, title: "Packing & weather", copy: "Smart list and forecast for your dates." },
-    { icon: FileArchive, title: "Trip docs & receipts", copy: "Keep tickets, confirmations, receipts in one place." },
-  ];
+function ThemesSection({
+  destination,
+  themes,
+}: {
+  destination: string;
+  themes: ThemeCard[];
+}) {
+  if (!themes || themes.length === 0) return null;
   return (
-    <section className="max-w-3xl mx-auto px-5 py-8">
-      <h2
-        className="text-xl font-semibold text-gray-900 mb-1"
-        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
-      >
-        Everything you'll get with Junto AI
-      </h2>
-      <p className="text-sm text-gray-600 mb-5 leading-relaxed">
-        From itinerary to settle-up, one tool for the whole trip.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {items.map(({ icon: Icon, title, copy }) => (
+    <section className="max-w-6xl mx-auto px-5 py-10">
+      <div className="max-w-3xl">
+        <h2
+          className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
+          style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+        >
+          What's waiting for you in {destination}
+        </h2>
+        <p className="text-[15px] text-gray-600 mt-2 leading-relaxed">
+          Junto AI builds your full itinerary around your dates, your group and the way you like to travel.
+        </p>
+      </div>
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {themes.map((t) => (
+          <ThemeCardView key={t.title} theme={t} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ThemeCardView({ theme }: { theme: ThemeCard }) {
+  return (
+    <article className="group relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 h-[340px] md:h-[380px]">
+      <img
+        src={theme.photo}
+        alt={theme.title}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-5">
+        <h3
+          className="text-white text-xl md:text-[22px] font-semibold leading-tight"
+          style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+        >
+          {theme.title}
+        </h3>
+        <p className="mt-2 text-[13.5px] md:text-sm text-white/85 leading-snug">
+          {theme.description}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+function JuntoFeatureBlocks() {
+  const heroBlocks = [
+    {
+      title: "A day-by-day plan, built around your group",
+      copy: "Junto AI maps every day to your pace, dates and the people you're with — with venues, timings and a real route.",
+      icon: CalendarDays,
+      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.04))",
+      visual: <ItineraryMockup />,
+    },
+    {
+      title: "Settle up effortlessly",
+      copy: "Track every shared expense and let Junto figure out who owes what. No spreadsheets, no awkward Venmos.",
+      icon: Wallet,
+      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))",
+      visual: <ExpensesMockup />,
+    },
+    {
+      title: "Decide together, in real time",
+      copy: "Polls and shared ideas keep the whole group in sync — so the loudest voice doesn't win by default.",
+      icon: Vote,
+      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))",
+      visual: <DecisionsMockup />,
+    },
+  ];
+
+  const chipFeatures = [
+    { icon: FileText, label: "Visa & entry" },
+    { icon: PiggyBank, label: "Budget guide" },
+    { icon: CloudSun, label: "Packing & weather" },
+    { icon: FileArchive, label: "Trip docs & receipts" },
+  ];
+
+  return (
+    <section className="max-w-5xl mx-auto px-5 py-12">
+      <div className="max-w-3xl">
+        <h2
+          className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
+          style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+        >
+          One tool for the whole trip
+        </h2>
+        <p className="text-[15px] text-gray-600 mt-2 leading-relaxed">
+          From the first idea to settling up at the end — Junto handles the planning so you don't have to be the group's travel agent.
+        </p>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {heroBlocks.map(({ title, copy, icon: Icon, mockupBg, visual }) => (
           <div
             key={title}
-            className="rounded-2xl bg-white shadow-sm p-5 flex items-center gap-4 transition-shadow hover:shadow-md"
+            className="rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden flex flex-col"
           >
             <div
-              className="h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center"
-              style={{
-                background:
-                  "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.06))",
-              }}
+              className="relative h-44 flex items-center justify-center"
+              style={{ background: mockupBg }}
             >
-              <Icon className="h-6 w-6 text-primary" />
+              {visual}
             </div>
-            <div className="min-w-0">
-              <p
-                className="text-sm font-semibold text-gray-900 leading-snug"
-                style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
-              >
-                {title}
-              </p>
-              <p className="text-xs text-gray-600 leading-snug mt-0.5 truncate">{copy}</p>
+            <div className="p-5">
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-primary" />
+                <h3
+                  className="text-[15px] font-semibold text-gray-900 leading-snug"
+                  style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+                >
+                  {title}
+                </h3>
+              </div>
+              <p className="mt-2 text-sm text-gray-600 leading-snug">{copy}</p>
             </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        {chipFeatures.map(({ icon: Icon, label }) => (
+          <div
+            key={label}
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12.5px] text-gray-700 shadow-sm"
+          >
+            <Icon className="h-3.5 w-3.5 text-primary" />
+            {label}
           </div>
         ))}
       </div>
@@ -382,25 +470,79 @@ function JuntoValueGrid() {
   );
 }
 
-function HighlightsSection({ highlights }: { highlights: CuratedHighlight[] }) {
+/* ───────────── Lightweight in-card mockups (no real screenshots) ───────────── */
+
+function ItineraryMockup() {
   return (
-    <section className="max-w-3xl mx-auto px-5 py-6">
-      <h2
-        className="text-xl font-semibold text-gray-900 mb-1"
-        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
-      >
-        Highlights
-      </h2>
-      <p className="text-sm text-gray-600 mb-5 leading-relaxed">
-        A taste of what your itinerary will include. Junto AI builds the full plan around your
-        dates, pace, and group.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {highlights.map((h) => (
-          <HighlightCard key={h.place_id} highlight={h} />
-        ))}
+    <div className="w-[78%] rounded-xl bg-white shadow-md border border-gray-100 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold text-gray-900">Day 2 · Tulum</span>
+        <span className="text-[9px] text-gray-400">3 stops</span>
       </div>
-    </section>
+      {[
+        { time: "9:00", t: "Cenote Dos Ojos", w: "w-3/4" },
+        { time: "13:00", t: "Lunch at Hartwood", w: "w-2/3" },
+        { time: "18:00", t: "Sunset at Papaya Playa", w: "w-1/2" },
+      ].map((row) => (
+        <div key={row.time} className="flex items-center gap-2">
+          <span className="text-[9px] font-medium text-primary w-7 shrink-0">{row.time}</span>
+          <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className={`h-full rounded-full bg-primary/40 ${row.w}`} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
+function ExpensesMockup() {
+  const rows = [
+    { who: "Sara paid", amt: "€84", you: "+€21" },
+    { who: "Marcos paid", amt: "€42", you: "+€10.50" },
+    { who: "You paid", amt: "€120", you: "−€90" },
+  ];
+  return (
+    <div className="w-[78%] rounded-xl bg-white shadow-md border border-gray-100 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold text-gray-900">Group balance</span>
+        <span className="text-[10px] font-semibold text-primary">−€58.50</span>
+      </div>
+      <div className="space-y-1.5">
+        {rows.map((r) => (
+          <div key={r.who} className="flex items-center justify-between text-[10px]">
+            <span className="text-gray-700">{r.who}</span>
+            <span className="text-gray-400">{r.amt}</span>
+            <span className="font-medium text-gray-900 w-12 text-right">{r.you}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DecisionsMockup() {
+  const opts = [
+    { name: "Beach club Sunday", pct: 75 },
+    { name: "Cenote tour", pct: 50 },
+    { name: "Mayan ruins day", pct: 25 },
+  ];
+  return (
+    <div className="w-[78%] rounded-xl bg-white shadow-md border border-gray-100 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold text-gray-900">Pick a Sunday</span>
+        <span className="text-[9px] text-gray-400">4 votes</span>
+      </div>
+      {opts.map((o) => (
+        <div key={o.name}>
+          <div className="flex items-center justify-between text-[10px] mb-0.5">
+            <span className="text-gray-700">{o.name}</span>
+            <span className="text-gray-400">{o.pct}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-full rounded-full bg-primary/50" style={{ width: `${o.pct}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
