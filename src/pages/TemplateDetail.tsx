@@ -27,6 +27,7 @@ import { getCountryFacts } from "@/lib/countryFacts";
 import { formatTimezone } from "@/lib/timezoneFormat";
 import { getDestinationGuide, resolvePhoto, type ThemeCard } from "@/lib/destinationGuides";
 import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution";
+import { TemplateSEO } from "@/components/seo/TemplateSEO";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
 
@@ -83,22 +84,6 @@ export default function TemplateDetail() {
     }
     navigate(`/templates/${slug}/personalize`);
   }, [slug, user, navigate]);
-
-  const pageTitle = template ? `${template.destination} · ${template.duration_days} days` : "";
-  const pageDescription = template?.description ?? "";
-
-  useEffect(() => {
-    if (!template) return;
-    const prev = document.title;
-    document.title = `${pageTitle} | Junto`;
-    const meta = document.querySelector('meta[name="description"]');
-    const prevDesc = meta?.getAttribute("content") ?? null;
-    if (meta) meta.setAttribute("content", pageDescription);
-    return () => {
-      document.title = prev;
-      if (meta && prevDesc !== null) meta.setAttribute("content", prevDesc);
-    };
-  }, [template, pageTitle, pageDescription]);
 
   if (isLoading) {
     return (
@@ -183,6 +168,16 @@ export default function TemplateDetail() {
 
   return (
     <>
+      <TemplateSEO
+        slug={template.slug}
+        destination={template.destination}
+        country={template.country}
+        durationDays={template.duration_days}
+        description={template.description ?? guide.tagline}
+        heroImage={heroResolved.url}
+        recommendedSeason={template.recommended_season}
+        chips={template.chips ?? []}
+      />
       {FloatingBack}
       <div className="min-h-screen bg-white pb-36">
         <CinematicHero
@@ -251,7 +246,7 @@ function CinematicHero({
     <div className="relative w-full h-[60vh] min-h-[420px] md:h-[75vh] md:min-h-[560px] md:max-h-[760px] overflow-hidden">
       <img
         src={heroPhoto}
-        alt={destination}
+        alt={`${destination} skyline — ${durationDays}-day itinerary on Junto`}
         className="absolute inset-0 w-full h-full object-cover"
         loading="eager"
       />
@@ -373,7 +368,7 @@ function ThemeCardView({ theme }: { theme: ThemeCard }) {
     <article className="group relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 h-[340px] md:h-[380px]">
       <img
         src={url}
-        alt={theme.title}
+        alt={`${theme.title} — ${theme.description}`}
         loading="lazy"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
       />
