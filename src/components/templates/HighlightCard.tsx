@@ -1,4 +1,6 @@
 import { useState } from "react";
+import type { UnsplashPhotoMeta } from "@/lib/unsplashAttribution";
+import { UnsplashAttribution } from "./UnsplashAttribution";
 
 export type HighlightCardData = {
   name: string;
@@ -6,6 +8,8 @@ export type HighlightCardData = {
   description?: string;
   photo_url: string;
   category?: string;
+  /** Optional Unsplash attribution metadata. */
+  unsplash?: UnsplashPhotoMeta | null;
 };
 
 type Props = {
@@ -75,6 +79,12 @@ export function HighlightCard({ highlight, category }: Props) {
           </p>
         )}
       </div>
+
+      {highlight.unsplash && (
+        <div className="absolute top-2 right-3 z-10 pointer-events-auto">
+          <UnsplashAttribution photo={highlight.unsplash} variant="light" />
+        </div>
+      )}
     </button>
   );
 }

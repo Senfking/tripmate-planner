@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTripTemplate } from "@/hooks/useTripTemplates";
 import { stashIntent } from "@/lib/templateIntent";
+import { getDestinationGuide, buildSampleTripPrompt } from "@/lib/destinationGuides";
 import { StandaloneTripBuilder } from "@/components/trip-builder/StandaloneTripBuilder";
 import { BlankTripModal } from "@/components/trip-builder/BlankTripModal";
 import { TripCreationSurface, StandaloneInfoCards } from "@/components/trip-builder/TripCreationSurface";
@@ -57,9 +58,34 @@ export default function TemplatePersonalize() {
     else navigate("/templates");
   }, [navigate, slug]);
 
-  const seedData = useMemo(
-    () => (template ? templateToInputData(template, "") : null),
+  const guide = useMemo(
+    () =>
+      template
+        ? getDestinationGuide(template.slug, {
+            hero: template.cover_image_url,
+            tagline: template.description,
+            chips: template.chips ?? [],
+            countryIso: template.country_iso,
+          })
+        : null,
     [template],
+  );
+
+  const themedPrompt = useMemo(
+    () =>
+      template && guide
+        ? buildSampleTripPrompt({
+            destination: template.destination,
+            durationDays: template.duration_days,
+            themes: guide.themes,
+          })
+        : "",
+    [template, guide],
+  );
+
+  const seedData = useMemo(
+    () => (template ? templateToInputData(template, themedPrompt) : null),
+    [template, themedPrompt],
   );
 
   if (isLoading) {
@@ -171,6 +197,7 @@ export default function TemplatePersonalize() {
       </button>
 
       <TripCreationSurface
+        prefill={themedPrompt}
         templateCard={templateCard}
         headline={
           <>
