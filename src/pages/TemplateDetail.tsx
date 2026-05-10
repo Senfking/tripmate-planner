@@ -434,11 +434,11 @@ function ThemeCardView({ theme }: { theme: ThemeCard }) {
 function JuntoFeatureBlocks() {
   const heroBlocks = [
     {
-      title: "A day-by-day plan, built around your group",
-      copy: "Junto AI maps every day to your pace, dates and the people you're with — with venues, timings and a real route.",
+      title: "Your whole trip on one screen",
+      copy: "Dates, crew, flights, expenses and entry requirements all in one dashboard, so nothing falls through the cracks.",
       icon: CalendarDays,
       image: mockupItinerary,
-      alt: "Junto itinerary screen showing a day-by-day plan",
+      alt: "Junto trip dashboard showing trip overview, members, expenses and flight",
     },
     {
       title: "Settle up effortlessly",
@@ -449,7 +449,7 @@ function JuntoFeatureBlocks() {
     },
     {
       title: "Decide together, in real time",
-      copy: "Comments, reactions and decisions sit on the actual itinerary item — venue, day, address. No parallel group chat that drifts away from the plan.",
+      copy: "Comments, reactions and decisions sit on the actual itinerary item: venue, day, address. No parallel group chat that drifts away from the plan.",
       icon: Vote,
       image: mockupGroupActivity,
       alt: "Junto group activity screen showing threaded comments and reactions on itinerary items",
@@ -473,18 +473,32 @@ function JuntoFeatureBlocks() {
           One tool for the whole trip
         </h2>
         <p className="text-[15px] text-gray-600 mt-2 leading-relaxed">
-          From the first idea to settling up at the end — Junto handles the planning so you don't have to be the group's travel agent.
+          From the first idea to settling up at the end, Junto handles the planning so you don't have to be the group's travel agent.
         </p>
       </div>
 
-      {/* Standalone laptop hero */}
+      {/* Standalone laptop hero with copy */}
       <div className="mt-10 rounded-2xl border border-gray-100 shadow-sm overflow-hidden" style={{ backgroundColor: "#FAFAFA" }}>
         <img
           src={mockupLaptop}
-          alt="Junto AI trip builder on laptop showing a Singapore itinerary with map, days and budget"
+          alt="Junto AI trip builder on laptop showing a day-by-day itinerary with map and budget"
           loading="lazy"
           className="block w-full h-auto"
         />
+        <div className="px-6 md:px-10 pb-8 pt-2 max-w-3xl">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <h3
+              className="text-[17px] md:text-[19px] font-semibold text-gray-900 leading-snug"
+              style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+            >
+              A day-by-day plan, built around your group
+            </h3>
+          </div>
+          <p className="mt-2 text-[14.5px] md:text-[15px] text-gray-600 leading-relaxed">
+            Junto AI maps every day to your pace, dates and the people you're with, with venues, timings and a real route you can actually follow.
+          </p>
+        </div>
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
