@@ -437,7 +437,8 @@ function JuntoFeatureBlocks() {
       copy: "Junto AI maps every day to your pace, dates and the people you're with — with venues, timings and a real route.",
       icon: CalendarDays,
       image: mockupItinerary,
-      alt: "Junto itinerary screen showing a day-by-day plan",
+      alt: "Junto trip builder on laptop showing a day-by-day plan with map and budget",
+      orientation: "laptop" as const,
     },
     {
       title: "Settle up effortlessly",
