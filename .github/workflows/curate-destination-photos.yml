@@ -61,7 +61,9 @@ jobs:
         # Only run when the curation script signaled full completion. On
         # graceful early-exit (incomplete.flag) the workflow still succeeds
         # green and uploads the partial audit; Oliver re-triggers until done.
-        if: success() && hashFiles('/tmp/curation-complete.flag') != ''
+        # Flag is workspace-relative because hashFiles only resolves paths
+        # inside GITHUB_WORKSPACE.
+        if: success() && hashFiles('curation-complete.flag') != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.run_id }}

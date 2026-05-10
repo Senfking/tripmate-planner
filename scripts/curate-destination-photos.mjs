@@ -41,8 +41,15 @@ const REPO_ROOT = resolve(dirname(__filename), "..");
 const SRC_PATH = resolve(REPO_ROOT, "src/lib/destinationGuides.ts");
 const CHECKPOINT_PATH = "/tmp/curation-checkpoint.json";
 const AUDIT_PATH = "/tmp/photo-curation-audit.json";
-const COMPLETE_FLAG_PATH = "/tmp/curation-complete.flag";
-const INCOMPLETE_FLAG_PATH = "/tmp/curation-incomplete.flag";
+
+// Flag files are workspace-relative because the workflow gates the PR step on
+// hashFiles('curation-complete.flag'), which only resolves paths inside
+// GITHUB_WORKSPACE per GitHub's expression docs. (Audit + checkpoint stay in
+// /tmp because they are passed by absolute path to actions/cache and
+// actions/upload-artifact, which have no such restriction.)
+const FLAG_DIR = process.env.GITHUB_WORKSPACE || process.cwd();
+const COMPLETE_FLAG_PATH = resolve(FLAG_DIR, "curation-complete.flag");
+const INCOMPLETE_FLAG_PATH = resolve(FLAG_DIR, "curation-incomplete.flag");
 
 // Per-request delay; overridable for tests.
 const PER_REQUEST_DELAY_MS = parseInt(process.env.PER_REQUEST_DELAY_MS || "1100", 10);

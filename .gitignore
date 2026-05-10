@@ -40,3 +40,9 @@ bun.lockb
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Workspace-relative flag files written by scripts/curate-destination-photos.mjs.
+# Used by the curate-destination-photos workflow to gate PR creation on
+# completion; never commit them.
+/curation-complete.flag
+/curation-incomplete.flag
