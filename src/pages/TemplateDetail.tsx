@@ -30,7 +30,7 @@ import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution"
 import { TemplateSEO } from "@/components/seo/TemplateSEO";
 import mockupItinerary from "@/assets/mockup-trip-dashboard.webp";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
-import mockupTrips from "@/assets/mockup-trips-page.webp";
+import mockupGroupActivity from "@/assets/mockup-group-activity.webp";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
 
