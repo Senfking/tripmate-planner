@@ -102,6 +102,14 @@ export default function PublicLanding() {
       <FeatureAIBuilder />
       <FeatureTripDashboard />
       <FeaturePhoneSection
+        eyebrow="Group activity"
+        headline="Decide together, not across 12 separate group chats."
+        body="Comments, reactions and decisions sit on the actual itinerary item — the venue, the day, the address. No parallel WhatsApp thread that drifts away from the plan, no screenshots flying around. Everyone sees what changed, where, and why."
+        image={mockupGroupActivity}
+        alt="Junto group activity screen on iPhone showing threaded comments and reactions on itinerary items like 'Little Lazy Lizard dinner' and 'iO Italian Osteria'"
+        imageSide="right"
+      />
+      <FeaturePhoneSection
         eyebrow="Junto AI expenses"
         headline="Money sorts itself."
         body="Snap a receipt and Junto AI reads it, categorizes it, and splits it across the group. Multiple currencies, custom shares, live balances. No end-of-trip spreadsheet."
