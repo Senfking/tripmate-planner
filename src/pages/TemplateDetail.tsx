@@ -477,15 +477,18 @@ function JuntoFeatureBlocks() {
             key={title}
             className="rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden flex flex-col"
           >
-            <div
-              className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
-              style={{ background: "#FAFAF9" }}
-            >
+            <div className="relative h-72 flex items-end justify-center overflow-hidden pt-6 bg-white">
               <img
                 src={image}
                 alt={alt}
                 loading="lazy"
                 className="h-[110%] w-auto object-contain object-bottom drop-shadow-[0_18px_30px_rgba(0,0,0,0.18)]"
+                style={{
+                  WebkitMaskImage:
+                    "radial-gradient(ellipse 75% 80% at 50% 55%, #000 55%, transparent 100%)",
+                  maskImage:
+                    "radial-gradient(ellipse 75% 80% at 50% 55%, #000 55%, transparent 100%)",
+                }}
               />
             </div>
             <div className="p-5">
