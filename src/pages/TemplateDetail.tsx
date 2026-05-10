@@ -12,9 +12,14 @@ import {
   Coins,
   CalendarRange,
   FileText,
-  PiggyBank,
-  CloudSun,
-  FileArchive,
+  Lightbulb,
+  MapPin,
+  Receipt,
+  Plane,
+  MessageCircle,
+  Share2,
+  Bell,
+  CalendarPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
