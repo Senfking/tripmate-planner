@@ -28,7 +28,7 @@ import { formatTimezone } from "@/lib/timezoneFormat";
 import { getDestinationGuide, resolvePhoto, type ThemeCard } from "@/lib/destinationGuides";
 import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution";
 import { TemplateSEO } from "@/components/seo/TemplateSEO";
-import mockupItinerary from "@/assets/mockup-trip-dashboard.webp";
+import mockupItinerary from "@/assets/mockup-ai-builder.webp";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
 import mockupGroupActivity from "@/assets/mockup-group-activity.webp";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
@@ -437,7 +437,8 @@ function JuntoFeatureBlocks() {
       copy: "Junto AI maps every day to your pace, dates and the people you're with — with venues, timings and a real route.",
       icon: CalendarDays,
       image: mockupItinerary,
-      alt: "Junto itinerary screen showing a day-by-day plan",
+      alt: "Junto trip builder on laptop showing a day-by-day plan with map and budget",
+      orientation: "laptop" as const,
     },
     {
       title: "Settle up effortlessly",
@@ -477,21 +478,23 @@ function JuntoFeatureBlocks() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {heroBlocks.map(({ title, copy, icon: Icon, image, alt }) => (
+        {heroBlocks.map(({ title, copy, icon: Icon, image, alt, orientation }) => {
+          const isLaptop = orientation === "laptop";
+          return (
           <div
             key={title}
             className="rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
             style={{ backgroundColor: "#FAFAFA" }}
           >
             <div
-              className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
+              className={`relative h-72 flex overflow-hidden ${isLaptop ? "items-center justify-center px-4" : "items-end justify-center pt-6"}`}
               style={{ backgroundColor: "#FAFAFA" }}
             >
               <img
                 src={image}
                 alt={alt}
                 loading="lazy"
-                className="h-[110%] w-auto object-contain object-bottom"
+                className={isLaptop ? "w-full h-auto object-contain" : "h-[110%] w-auto object-contain object-bottom"}
               />
             </div>
             <div className="p-5">
@@ -507,7 +510,8 @@ function JuntoFeatureBlocks() {
               <p className="mt-2 text-sm text-gray-600 leading-snug">{copy}</p>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
