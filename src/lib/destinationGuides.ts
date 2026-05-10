@@ -1357,13 +1357,12 @@ export function getDestinationGuide(
     const heroIsEmpty =
       typeof curated.hero === "string" ? curated.hero === "" : !curated.hero;
     const hero = heroIsEmpty ? (fallbacks.hero ?? FALLBACK_HERO) : curated.hero;
-    const themes = curated.themes.map((t, i) => {
-      const photoEmpty = typeof t.photo === "string" ? t.photo === "" : !t.photo;
-      if (!photoEmpty) return t;
-      const fallback = chipThemes[i % Math.max(chipThemes.length, 1)]?.photo;
-      return { ...t, photo: fallback ?? (fallbacks.hero ?? FALLBACK_HERO) };
-    });
-    return { ...curated, hero, themes };
+    // When a curated theme lacks a photo, leave it empty so the UI can render
+    // a text-only card. The chip-based photo fallback was producing visible
+    // subject/region mismatches (e.g. Korean cityscapes on Beijing cards).
+    // Curated photos land via the GitHub Actions pipeline; once present, the
+    // image card automatically returns.
+    return { ...curated, hero };
   }
 
   return {
