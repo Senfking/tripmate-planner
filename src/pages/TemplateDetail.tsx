@@ -376,18 +376,20 @@ function AboutSection({ destination, longForm }: { destination: string; longForm
   if (paragraphs.length === 0) return null;
   return (
     <section className="max-w-6xl mx-auto px-5 py-10">
-      <h2
-        className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
-        style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
-      >
-        About {destination}
-      </h2>
-      <div className="mt-4 max-w-3xl space-y-4">
-        {paragraphs.map((p, i) => (
-          <p key={i} className="text-[15px] md:text-base text-gray-700 leading-relaxed">
-            {p}
-          </p>
-        ))}
+      <div className="max-w-3xl">
+        <h2
+          className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
+          style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+        >
+          About this {destination} trip
+        </h2>
+        <div className="mt-4 space-y-4">
+          {paragraphs.map((p, i) => (
+            <p key={i} className="text-[15px] md:text-base text-gray-700 leading-relaxed">
+              {p}
+            </p>
+          ))}
+        </div>
       </div>
     </section>
   );
