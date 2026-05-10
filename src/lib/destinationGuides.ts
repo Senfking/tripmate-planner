@@ -406,7 +406,7 @@ Afternoons are for the beach and the spa. Playa Paraíso remains the public stre
 Stay in Aldea Zama for mid-range comfort and easy taxis, or book a boutique on the beach road if you want to wake up to surf. Eat tacos in town (Antojitos La Chiapaneca, El Camello Jr.) and save one big night for Hartwood or Arca. November through April is dry and warm; sargassum is least likely in winter. Rent a bike or scooter, carry pesos, and bring reef-safe sunscreen.`,
     themes: [
       { title: "Cenotes & Crystal Pools", description: "Dive into freshwater cenotes hidden in jungle limestone, cool and impossibly clear.", photo: U("photo-1518638150340-f706e86654de") },
-      { title: "Ancient Mayan Ruins",     description: "Walk the cliffside ruins of Tulum at sunrise before the heat and the crowds arrive.", photo: U("photo-1568402102990-bbd4d11dee7c") },
+      { title: "Ancient Mayan Ruins",     description: "Walk the cliffside ruins of Tulum at sunrise before the heat and the crowds arrive.", photo: U("photo-1665618980645-ca9cd5e68508") },
       { title: "Boho Beach Clubs",        description: "Macramé hammocks, mezcal cocktails and DJ sets that drift into golden hour.", photo: U("photo-1507525428034-b723cf961d3e") },
       { title: "Yucatán Cuisine",         description: "Tacos al pastor, fresh ceviche and slow-cooked cochinita pibil from open-air kitchens.", photo: U("photo-1565299585323-38d6b0865b47") },
       { title: "Wellness & Yoga",         description: "Sunrise yoga on the sand, temazcal ceremonies and beachfront massages.", photo: U("photo-1545205597-3d9d02c29597") },
