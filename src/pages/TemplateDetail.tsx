@@ -28,6 +28,9 @@ import { formatTimezone } from "@/lib/timezoneFormat";
 import { getDestinationGuide, resolvePhoto, type ThemeCard } from "@/lib/destinationGuides";
 import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution";
 import { TemplateSEO } from "@/components/seo/TemplateSEO";
+import mockupItinerary from "@/assets/mockup-trip-dashboard.webp";
+import mockupExpenses from "@/assets/mockup-expenses.webp";
+import mockupTrips from "@/assets/mockup-trips-page.webp";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
 
@@ -195,8 +198,8 @@ export default function TemplateDetail() {
         />
 
         {/* Tagline */}
-        <section className="max-w-3xl mx-auto px-5 pt-4 pb-2">
-          <p className="text-base md:text-lg text-gray-700 leading-relaxed">
+        <section className="max-w-6xl mx-auto px-5 pt-4 pb-2">
+          <p className="max-w-3xl text-base md:text-lg text-gray-700 leading-relaxed">
             {guide.tagline}
           </p>
         </section>
@@ -315,7 +318,7 @@ function QuickFactsStrip({
   if (items.length === 0) return null;
 
   return (
-    <section className="max-w-3xl mx-auto px-5 pt-5">
+    <section className="max-w-6xl mx-auto px-5 pt-5">
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
         {items.map(({ icon: Icon, label, value }) => (
           <div
@@ -370,14 +373,14 @@ function AboutSection({ destination, longForm }: { destination: string; longForm
   const paragraphs = trimmed.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
   if (paragraphs.length === 0) return null;
   return (
-    <section className="max-w-3xl mx-auto px-5 py-10">
+    <section className="max-w-6xl mx-auto px-5 py-10">
       <h2
         className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
         style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
       >
         About {destination}
       </h2>
-      <div className="mt-4 space-y-4">
+      <div className="mt-4 max-w-3xl space-y-4">
         {paragraphs.map((p, i) => (
           <p key={i} className="text-[15px] md:text-base text-gray-700 leading-relaxed">
             {p}
@@ -425,22 +428,22 @@ function JuntoFeatureBlocks() {
       title: "A day-by-day plan, built around your group",
       copy: "Junto AI maps every day to your pace, dates and the people you're with — with venues, timings and a real route.",
       icon: CalendarDays,
-      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.04))",
-      visual: <ItineraryMockup />,
+      image: mockupItinerary,
+      alt: "Junto itinerary screen showing a day-by-day plan",
     },
     {
       title: "Settle up effortlessly",
       copy: "Track every shared expense and let Junto figure out who owes what. No spreadsheets, no awkward Venmos.",
       icon: Wallet,
-      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))",
-      visual: <ExpensesMockup />,
+      image: mockupExpenses,
+      alt: "Junto expenses screen showing group balances",
     },
     {
       title: "Decide together, in real time",
       copy: "Polls and shared ideas keep the whole group in sync — so the loudest voice doesn't win by default.",
       icon: Vote,
-      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))",
-      visual: <DecisionsMockup />,
+      image: mockupTrips,
+      alt: "Junto shared trips home screen",
     },
   ];
 
@@ -452,7 +455,7 @@ function JuntoFeatureBlocks() {
   ];
 
   return (
-    <section className="max-w-5xl mx-auto px-5 py-12">
+    <section className="max-w-6xl mx-auto px-5 py-12">
       <div className="max-w-3xl">
         <h2
           className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
@@ -466,16 +469,21 @@ function JuntoFeatureBlocks() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {heroBlocks.map(({ title, copy, icon: Icon, mockupBg, visual }) => (
+        {heroBlocks.map(({ title, copy, icon: Icon, image, alt }) => (
           <div
             key={title}
             className="rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden flex flex-col"
           >
             <div
-              className="relative h-44 flex items-center justify-center"
-              style={{ background: mockupBg }}
+              className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))" }}
             >
-              {visual}
+              <img
+                src={image}
+                alt={alt}
+                loading="lazy"
+                className="h-[110%] w-auto object-contain object-bottom drop-shadow-[0_18px_30px_rgba(0,0,0,0.18)]"
+              />
             </div>
             <div className="p-5">
               <div className="flex items-center gap-2">
@@ -508,79 +516,3 @@ function JuntoFeatureBlocks() {
   );
 }
 
-/* ───────────── Lightweight in-card mockups (no real screenshots) ───────────── */
-
-function ItineraryMockup() {
-  return (
-    <div className="w-[78%] rounded-xl bg-white shadow-md border border-gray-100 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-gray-900">Day 2 · Tulum</span>
-        <span className="text-[9px] text-gray-400">3 stops</span>
-      </div>
-      {[
-        { time: "9:00", t: "Cenote Dos Ojos", w: "w-3/4" },
-        { time: "13:00", t: "Lunch at Hartwood", w: "w-2/3" },
-        { time: "18:00", t: "Sunset at Papaya Playa", w: "w-1/2" },
-      ].map((row) => (
-        <div key={row.time} className="flex items-center gap-2">
-          <span className="text-[9px] font-medium text-primary w-7 shrink-0">{row.time}</span>
-          <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-            <div className={`h-full rounded-full bg-primary/40 ${row.w}`} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ExpensesMockup() {
-  const rows = [
-    { who: "Sara paid", amt: "€84", you: "+€21" },
-    { who: "Marcos paid", amt: "€42", you: "+€10.50" },
-    { who: "You paid", amt: "€120", you: "−€90" },
-  ];
-  return (
-    <div className="w-[78%] rounded-xl bg-white shadow-md border border-gray-100 p-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold text-gray-900">Group balance</span>
-        <span className="text-[10px] font-semibold text-primary">−€58.50</span>
-      </div>
-      <div className="space-y-1.5">
-        {rows.map((r) => (
-          <div key={r.who} className="flex items-center justify-between text-[10px]">
-            <span className="text-gray-700">{r.who}</span>
-            <span className="text-gray-400">{r.amt}</span>
-            <span className="font-medium text-gray-900 w-12 text-right">{r.you}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DecisionsMockup() {
-  const opts = [
-    { name: "Beach club Sunday", pct: 75 },
-    { name: "Cenote tour", pct: 50 },
-    { name: "Mayan ruins day", pct: 25 },
-  ];
-  return (
-    <div className="w-[78%] rounded-xl bg-white shadow-md border border-gray-100 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-gray-900">Pick a Sunday</span>
-        <span className="text-[9px] text-gray-400">4 votes</span>
-      </div>
-      {opts.map((o) => (
-        <div key={o.name}>
-          <div className="flex items-center justify-between text-[10px] mb-0.5">
-            <span className="text-gray-700">{o.name}</span>
-            <span className="text-gray-400">{o.pct}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            <div className="h-full rounded-full bg-primary/50" style={{ width: `${o.pct}%` }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
