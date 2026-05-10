@@ -12,6 +12,7 @@ import { FAQ } from "@/components/landing/FAQ";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
 import mockupBookings from "@/assets/mockup-bookings.webp";
 import mockupTrips from "@/assets/mockup-trips-page.webp";
+import mockupGroupActivity from "@/assets/mockup-group-activity.webp";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 const AnonTripGenerator = lazy(() =>
   import("@/components/trip-builder/AnonTripGenerator").then((m) => ({ default: m.AnonTripGenerator })),
@@ -100,6 +101,14 @@ export default function PublicLanding() {
       {/* Feature sections (part 1 of 3) */}
       <FeatureAIBuilder />
       <FeatureTripDashboard />
+      <FeaturePhoneSection
+        eyebrow="Group activity"
+        headline="Decide together, not across 12 separate group chats."
+        body="Comments, reactions and decisions sit on the actual itinerary item — the venue, the day, the address. No parallel WhatsApp thread that drifts away from the plan, no screenshots flying around. Everyone sees what changed, where, and why."
+        image={mockupGroupActivity}
+        alt="Junto group activity screen on iPhone showing threaded comments and reactions on itinerary items like 'Little Lazy Lizard dinner' and 'iO Italian Osteria'"
+        imageSide="right"
+      />
       <FeaturePhoneSection
         eyebrow="Junto AI expenses"
         headline="Money sorts itself."

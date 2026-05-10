@@ -30,7 +30,7 @@ import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution"
 import { TemplateSEO } from "@/components/seo/TemplateSEO";
 import mockupItinerary from "@/assets/mockup-trip-dashboard.webp";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
-import mockupTrips from "@/assets/mockup-trips-page.webp";
+import mockupGroupActivity from "@/assets/mockup-group-activity.webp";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
 
@@ -443,10 +443,10 @@ function JuntoFeatureBlocks() {
     },
     {
       title: "Decide together, in real time",
-      copy: "Polls and shared ideas keep the whole group in sync — so the loudest voice doesn't win by default.",
+      copy: "Comments, reactions and decisions sit on the actual itinerary item — venue, day, address. No parallel group chat that drifts away from the plan.",
       icon: Vote,
-      image: mockupTrips,
-      alt: "Junto shared trips home screen",
+      image: mockupGroupActivity,
+      alt: "Junto group activity screen showing threaded comments and reactions on itinerary items",
     },
   ];
 
