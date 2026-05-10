@@ -116,6 +116,8 @@ export default function TemplateDetail() {
     tagline: template.description,
     chips: template.chips ?? [],
     countryIso: template.country_iso,
+    highlightPhotos:
+      template.curated_highlights?.map((h) => h.photo_url).filter(Boolean) ?? null,
   });
   const heroResolved = resolvePhoto(guide.hero);
 
