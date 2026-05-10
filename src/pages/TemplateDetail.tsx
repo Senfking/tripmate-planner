@@ -28,6 +28,9 @@ import { formatTimezone } from "@/lib/timezoneFormat";
 import { getDestinationGuide, resolvePhoto, type ThemeCard } from "@/lib/destinationGuides";
 import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution";
 import { TemplateSEO } from "@/components/seo/TemplateSEO";
+import mockupItinerary from "@/assets/mockup-trip-dashboard.webp";
+import mockupExpenses from "@/assets/mockup-expenses.webp";
+import mockupTrips from "@/assets/mockup-trips-page.webp";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
 import { Button } from "@/components/ui/button";
 
@@ -425,22 +428,22 @@ function JuntoFeatureBlocks() {
       title: "A day-by-day plan, built around your group",
       copy: "Junto AI maps every day to your pace, dates and the people you're with — with venues, timings and a real route.",
       icon: CalendarDays,
-      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.04))",
-      visual: <ItineraryMockup />,
+      image: mockupItinerary,
+      alt: "Junto itinerary screen showing a day-by-day plan",
     },
     {
       title: "Settle up effortlessly",
       copy: "Track every shared expense and let Junto figure out who owes what. No spreadsheets, no awkward Venmos.",
       icon: Wallet,
-      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))",
-      visual: <ExpensesMockup />,
+      image: mockupExpenses,
+      alt: "Junto expenses screen showing group balances",
     },
     {
       title: "Decide together, in real time",
       copy: "Polls and shared ideas keep the whole group in sync — so the loudest voice doesn't win by default.",
       icon: Vote,
-      mockupBg: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))",
-      visual: <DecisionsMockup />,
+      image: mockupTrips,
+      alt: "Junto shared trips home screen",
     },
   ];
 
@@ -466,16 +469,21 @@ function JuntoFeatureBlocks() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {heroBlocks.map(({ title, copy, icon: Icon, mockupBg, visual }) => (
+        {heroBlocks.map(({ title, copy, icon: Icon, image, alt }) => (
           <div
             key={title}
             className="rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden flex flex-col"
           >
             <div
-              className="relative h-44 flex items-center justify-center"
-              style={{ background: mockupBg }}
+              className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))" }}
             >
-              {visual}
+              <img
+                src={image}
+                alt={alt}
+                loading="lazy"
+                className="h-[110%] w-auto object-contain object-bottom drop-shadow-[0_18px_30px_rgba(0,0,0,0.18)]"
+              />
             </div>
             <div className="p-5">
               <div className="flex items-center gap-2">
