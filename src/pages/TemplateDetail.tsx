@@ -28,7 +28,7 @@ import { formatTimezone } from "@/lib/timezoneFormat";
 import { getDestinationGuide, resolvePhoto, type ThemeCard } from "@/lib/destinationGuides";
 import { UnsplashAttribution } from "@/components/templates/UnsplashAttribution";
 import { TemplateSEO } from "@/components/seo/TemplateSEO";
-import mockupItinerary from "@/assets/mockup-trip-dashboard.webp";
+import mockupItinerary from "@/assets/mockup-ai-builder.webp";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
 import mockupGroupActivity from "@/assets/mockup-group-activity.webp";
 import { TripResultsView } from "@/components/trip-results/TripResultsView";
