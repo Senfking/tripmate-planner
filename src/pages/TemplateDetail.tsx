@@ -546,16 +546,30 @@ function JuntoFeatureBlocks() {
         ))}
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {chipFeatures.map(({ icon: Icon, label }) => (
-          <div
-            key={label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12.5px] text-gray-700 shadow-sm"
+      <div className="mt-12">
+        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+          <h3
+            className="text-xl md:text-2xl font-semibold text-gray-900 leading-tight"
+            style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
           >
-            <Icon className="h-3.5 w-3.5 text-primary" />
-            {label}
-          </div>
-        ))}
+            And a whole lot more under the hood
+          </h3>
+          <p className="text-[13.5px] text-gray-500">Every feature, built for groups.</p>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {chipFeatures.map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-primary/30 hover:shadow-[0_4px_14px_-6px_rgba(0,0,0,0.1)]"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icon className="h-4 w-4" strokeWidth={1.75} />
+              </div>
+              <span className="text-[13.5px] font-medium text-gray-800 leading-tight">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
