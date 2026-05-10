@@ -1317,6 +1317,24 @@ function chipTheme(chip: string, region: Region | null): ThemeCard | null {
   return regional ?? CHIP_THEMES[chip] ?? null;
 }
 
+/** A curated venue we can pull a photo from when a theme lacks one. */
+export type HighlightPhoto = { name: string; photo_url: string };
+
+/** Tokenize a string for fuzzy subject matching: lowercase, drop apostrophes,
+ *  split on non-letters, drop short stopwords. */
+const STOPWORDS = new Set([
+  "the", "and", "of", "a", "an", "in", "on", "at", "to", "for", "with",
+  "from", "by", "or", "into", "after", "until", "made", "two", "up", "into",
+  "along", "dark", "sunrise", "sunset", "trip", "tour", "day", "days",
+]);
+function tokens(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/['']/g, "")
+    .split(/[^a-z]+/)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+}
+
 export function getDestinationGuide(
   slug: string | undefined,
   fallbacks: {
@@ -1326,43 +1344,57 @@ export function getDestinationGuide(
     countryIso?: string | null;
     /** Country-accurate venue photos from the template's curated_highlights.
      *  Used to fill in theme cards on uncurated destinations so we never
-     *  render a wrong-country chip-pool image. */
-    highlightPhotos?: string[] | null;
+     *  render a wrong-country chip-pool image. Pass `{name, photo_url}` so
+     *  we can subject-match by name overlap; falls back to cover image when
+     *  no highlight name overlaps the theme title. */
+    highlights?: HighlightPhoto[] | null;
   },
 ): DestinationGuide {
   const curated = slug ? DESTINATION_GUIDES[slug] : undefined;
   const region = regionForCountry(fallbacks.countryIso ?? null);
   const chips = fallbacks.chips ?? [];
   const FALLBACK_HERO = U("photo-1488646953014-85cb44e25828");
-  const highlightPhotos = (fallbacks.highlightPhotos ?? []).filter(
-    (u): u is string => typeof u === "string" && u.length > 0,
+  const highlights = (fallbacks.highlights ?? []).filter(
+    (h): h is HighlightPhoto =>
+      !!h && typeof h.photo_url === "string" && h.photo_url.length > 0,
   );
 
-  // Deterministic per-index fallback: rotate through curated venue photos,
-  // then the cover image. Same destination → same render every time (SEO-safe).
-  const photoFallbackForIndex = (i: number): string => {
-    if (highlightPhotos.length > 0) {
-      return highlightPhotos[i % highlightPhotos.length];
+  // Subject-aware fallback: pick the highlight whose name overlaps the theme
+  // title most. If nothing matches, return the cover image — never a random
+  // venue close-up that would mislead (e.g. a temple photo under a Great Wall
+  // theme). Deterministic per (title, highlights) so SEO snapshots are stable.
+  const photoFallbackForTheme = (title: string): string => {
+    if (highlights.length === 0) return fallbacks.hero ?? FALLBACK_HERO;
+    const titleTokens = new Set(tokens(title));
+    if (titleTokens.size === 0) return fallbacks.hero ?? FALLBACK_HERO;
+    let bestScore = 0;
+    let bestUrl = "";
+    for (const h of highlights) {
+      let score = 0;
+      for (const t of tokens(h.name)) if (titleTokens.has(t)) score += 1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestUrl = h.photo_url;
+      }
     }
-    return fallbacks.hero ?? FALLBACK_HERO;
+    return bestScore > 0 ? bestUrl : (fallbacks.hero ?? FALLBACK_HERO);
   };
 
   if (curated) {
     const heroIsEmpty =
       typeof curated.hero === "string" ? curated.hero === "" : !curated.hero;
     const hero = heroIsEmpty ? (fallbacks.hero ?? FALLBACK_HERO) : curated.hero;
-    // When a curated theme lacks a photo, fill it with a country-accurate
-    // image from the template's curated_highlights (or cover as last resort).
-    // The chip-pool fallback was removed because it produced wrong-country
-    // mismatches (e.g. Korean cityscape on Beijing cards). Once the photo
-    // curation pipeline lands, themes carry their own subject-matched photos
-    // and this branch becomes dead code — kept for newly added destinations
-    // that haven't been curated yet.
-    const themes = curated.themes.map((t, i) => {
+    // When a curated theme lacks a photo, try a subject-matched highlight,
+    // then the cover image. The chip-pool fallback was removed because it
+    // produced wrong-country mismatches (e.g. Korean cityscape on Beijing
+    // cards). Once the photo curation pipeline lands, themes carry their
+    // own subject-matched photos and this branch becomes dead code — kept
+    // for newly added destinations that haven't been curated yet.
+    const themes = curated.themes.map((t) => {
       const photoEmpty =
         typeof t.photo === "string" ? t.photo === "" : !t.photo;
       if (!photoEmpty) return t;
-      return { ...t, photo: photoFallbackForIndex(i) };
+      return { ...t, photo: photoFallbackForTheme(t.title) };
     });
     return { ...curated, hero, themes };
   }
@@ -1382,9 +1414,9 @@ export function getDestinationGuide(
     if (chipThemes.length >= 4) break;
     tryPush(chipTheme(fallbackChip, region));
   }
-  const themes = chipThemes.map((t, i) => ({
+  const themes = chipThemes.map((t) => ({
     ...t,
-    photo: photoFallbackForIndex(i),
+    photo: photoFallbackForTheme(t.title),
   }));
 
   return {
