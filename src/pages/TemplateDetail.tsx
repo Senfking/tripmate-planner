@@ -510,7 +510,8 @@ function JuntoFeatureBlocks() {
               <p className="mt-2 text-sm text-gray-600 leading-snug">{copy}</p>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
