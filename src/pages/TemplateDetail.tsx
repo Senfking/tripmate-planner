@@ -478,21 +478,23 @@ function JuntoFeatureBlocks() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {heroBlocks.map(({ title, copy, icon: Icon, image, alt }) => (
+        {heroBlocks.map(({ title, copy, icon: Icon, image, alt, orientation }) => {
+          const isLaptop = orientation === "laptop";
+          return (
           <div
             key={title}
             className="rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
             style={{ backgroundColor: "#FAFAFA" }}
           >
             <div
-              className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
+              className={`relative h-72 flex overflow-hidden ${isLaptop ? "items-center justify-center px-4" : "items-end justify-center pt-6"}`}
               style={{ backgroundColor: "#FAFAFA" }}
             >
               <img
                 src={image}
                 alt={alt}
                 loading="lazy"
-                className="h-[110%] w-auto object-contain object-bottom"
+                className={isLaptop ? "w-full h-auto object-contain" : "h-[110%] w-auto object-contain object-bottom"}
               />
             </div>
             <div className="p-5">
