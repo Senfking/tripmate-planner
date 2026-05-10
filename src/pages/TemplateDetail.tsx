@@ -497,7 +497,7 @@ function JuntoFeatureBlocks() {
           >
             <div
               className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))" }}
+              style={{ background: "#FAFAF9" }}
             >
               <img
                 src={image}
