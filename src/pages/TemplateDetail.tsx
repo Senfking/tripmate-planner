@@ -195,8 +195,8 @@ export default function TemplateDetail() {
         />
 
         {/* Tagline */}
-        <section className="max-w-3xl mx-auto px-5 pt-4 pb-2">
-          <p className="text-base md:text-lg text-gray-700 leading-relaxed">
+        <section className="max-w-6xl mx-auto px-5 pt-4 pb-2">
+          <p className="max-w-3xl text-base md:text-lg text-gray-700 leading-relaxed">
             {guide.tagline}
           </p>
         </section>
