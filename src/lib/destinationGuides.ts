@@ -1324,53 +1324,75 @@ export function getDestinationGuide(
     tagline: string | null;
     chips: string[] | null;
     countryIso?: string | null;
+    /** Country-accurate venue photos from the template's curated_highlights.
+     *  Used to fill in theme cards on uncurated destinations so we never
+     *  render a wrong-country chip-pool image. */
+    highlightPhotos?: string[] | null;
   },
 ): DestinationGuide {
   const curated = slug ? DESTINATION_GUIDES[slug] : undefined;
   const region = regionForCountry(fallbacks.countryIso ?? null);
   const chips = fallbacks.chips ?? [];
   const FALLBACK_HERO = U("photo-1488646953014-85cb44e25828");
+  const highlightPhotos = (fallbacks.highlightPhotos ?? []).filter(
+    (u): u is string => typeof u === "string" && u.length > 0,
+  );
 
-  // Build chip-based fallback themes (used both for fully uncurated destinations
-  // and to fill in photos for curated entries that don't yet have them).
+  // Deterministic per-index fallback: rotate through curated venue photos,
+  // then the cover image. Same destination → same render every time (SEO-safe).
+  const photoFallbackForIndex = (i: number): string => {
+    if (highlightPhotos.length > 0) {
+      return highlightPhotos[i % highlightPhotos.length];
+    }
+    return fallbacks.hero ?? FALLBACK_HERO;
+  };
+
+  if (curated) {
+    const heroIsEmpty =
+      typeof curated.hero === "string" ? curated.hero === "" : !curated.hero;
+    const hero = heroIsEmpty ? (fallbacks.hero ?? FALLBACK_HERO) : curated.hero;
+    // When a curated theme lacks a photo, fill it with a country-accurate
+    // image from the template's curated_highlights (or cover as last resort).
+    // The chip-pool fallback was removed because it produced wrong-country
+    // mismatches (e.g. Korean cityscape on Beijing cards). Once the photo
+    // curation pipeline lands, themes carry their own subject-matched photos
+    // and this branch becomes dead code — kept for newly added destinations
+    // that haven't been curated yet.
+    const themes = curated.themes.map((t, i) => {
+      const photoEmpty =
+        typeof t.photo === "string" ? t.photo === "" : !t.photo;
+      if (!photoEmpty) return t;
+      return { ...t, photo: photoFallbackForIndex(i) };
+    });
+    return { ...curated, hero, themes };
+  }
+
+  // Fully uncurated destination: chips give titles + descriptions, but
+  // imagery always comes from country-accurate highlight/cover photos.
   const chipThemes: ThemeCard[] = [];
   const seenTitle = new Set<string>();
-  const seenPhoto = new Set<string>();
   const tryPush = (t: ThemeCard | null) => {
     if (!t) return;
-    const photoUrl = typeof t.photo === "string" ? t.photo : t.photo.url;
-    if (seenTitle.has(t.title) || seenPhoto.has(photoUrl)) return;
+    if (seenTitle.has(t.title)) return;
     chipThemes.push(t);
     seenTitle.add(t.title);
-    seenPhoto.add(photoUrl);
   };
   for (const chip of chips) tryPush(chipTheme(chip, region));
   for (const fallbackChip of ["Food", "Culture", "Nature", "City"]) {
     if (chipThemes.length >= 4) break;
     tryPush(chipTheme(fallbackChip, region));
   }
-
-  if (curated) {
-    // Photo-curation for the 38 newly-generated entries happens in a later phase;
-    // until then, fall back to the template's cover image / chip-based theme photos
-    // so the UI stays intact.
-    const heroIsEmpty =
-      typeof curated.hero === "string" ? curated.hero === "" : !curated.hero;
-    const hero = heroIsEmpty ? (fallbacks.hero ?? FALLBACK_HERO) : curated.hero;
-    // When a curated theme lacks a photo, leave it empty so the UI can render
-    // a text-only card. The chip-based photo fallback was producing visible
-    // subject/region mismatches (e.g. Korean cityscapes on Beijing cards).
-    // Curated photos land via the GitHub Actions pipeline; once present, the
-    // image card automatically returns.
-    return { ...curated, hero };
-  }
+  const themes = chipThemes.map((t, i) => ({
+    ...t,
+    photo: photoFallbackForIndex(i),
+  }));
 
   return {
     hero: fallbacks.hero ?? FALLBACK_HERO,
     tagline:
       fallbacks.tagline ??
       "A trip built around what you actually want, your dates, your pace, your group.",
-    themes: chipThemes,
+    themes,
   };
 }
 
