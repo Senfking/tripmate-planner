@@ -12,6 +12,7 @@ import { FAQ } from "@/components/landing/FAQ";
 import mockupExpenses from "@/assets/mockup-expenses.webp";
 import mockupBookings from "@/assets/mockup-bookings.webp";
 import mockupTrips from "@/assets/mockup-trips-page.webp";
+import mockupGroupActivity from "@/assets/mockup-group-activity.webp";
 import { TripCarousels } from "@/components/landing/TripCarousel";
 const AnonTripGenerator = lazy(() =>
   import("@/components/trip-builder/AnonTripGenerator").then((m) => ({ default: m.AnonTripGenerator })),
