@@ -315,7 +315,7 @@ function QuickFactsStrip({
   if (items.length === 0) return null;
 
   return (
-    <section className="max-w-3xl mx-auto px-5 pt-5">
+    <section className="max-w-6xl mx-auto px-5 pt-5">
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
         {items.map(({ icon: Icon, label, value }) => (
           <div
@@ -370,7 +370,7 @@ function AboutSection({ destination, longForm }: { destination: string; longForm
   const paragraphs = trimmed.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
   if (paragraphs.length === 0) return null;
   return (
-    <section className="max-w-3xl mx-auto px-5 py-10">
+    <section className="max-w-6xl mx-auto px-5 py-10">
       <h2
         className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
         style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
@@ -452,7 +452,7 @@ function JuntoFeatureBlocks() {
   ];
 
   return (
-    <section className="max-w-5xl mx-auto px-5 py-12">
+    <section className="max-w-6xl mx-auto px-5 py-12">
       <div className="max-w-3xl">
         <h2
           className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
