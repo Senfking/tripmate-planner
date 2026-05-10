@@ -477,24 +477,32 @@ function JuntoFeatureBlocks() {
         </p>
       </div>
 
+      {/* Standalone laptop hero */}
+      <div className="mt-10 rounded-2xl border border-gray-100 shadow-sm overflow-hidden" style={{ backgroundColor: "#FAFAFA" }}>
+        <img
+          src={mockupLaptop}
+          alt="Junto AI trip builder on laptop showing a Singapore itinerary with map, days and budget"
+          loading="lazy"
+          className="block w-full h-auto"
+        />
+      </div>
+
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {heroBlocks.map(({ title, copy, icon: Icon, image, alt, orientation }) => {
-          const isLaptop = orientation === "laptop";
-          return (
+        {heroBlocks.map(({ title, copy, icon: Icon, image, alt }) => (
           <div
             key={title}
             className="rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
             style={{ backgroundColor: "#FAFAFA" }}
           >
             <div
-              className={`relative h-72 flex overflow-hidden ${isLaptop ? "items-center justify-center px-4" : "items-end justify-center pt-6"}`}
+              className="relative h-72 flex items-end justify-center overflow-hidden pt-6"
               style={{ backgroundColor: "#FAFAFA" }}
             >
               <img
                 src={image}
                 alt={alt}
                 loading="lazy"
-                className={isLaptop ? "w-full h-auto object-contain" : "h-[110%] w-auto object-contain object-bottom"}
+                className="h-[110%] w-auto object-contain object-bottom"
               />
             </div>
             <div className="p-5">
@@ -510,8 +518,7 @@ function JuntoFeatureBlocks() {
               <p className="mt-2 text-sm text-gray-600 leading-snug">{copy}</p>
             </div>
           </div>
-          );
-        })}
+        ))}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
