@@ -462,10 +462,16 @@ function JuntoFeatureBlocks() {
   ];
 
   const chipFeatures = [
-    { icon: FileText, label: "Visa & entry" },
-    { icon: PiggyBank, label: "Budget guide" },
-    { icon: CloudSun, label: "Packing & weather" },
-    { icon: FileArchive, label: "Trip docs & receipts" },
+    { icon: Lightbulb, label: "Ideas board" },
+    { icon: Vote, label: "Group polls" },
+    { icon: Plane, label: "Bookings & docs" },
+    { icon: Receipt, label: "Receipt scanning" },
+    { icon: MapPin, label: "Map & route" },
+    { icon: MessageCircle, label: "Item comments" },
+    { icon: FileText, label: "Entry requirements" },
+    { icon: Share2, label: "Invite & share" },
+    { icon: Bell, label: "Push reminders" },
+    { icon: CalendarPlus, label: "Calendar export" },
   ];
 
   return (
