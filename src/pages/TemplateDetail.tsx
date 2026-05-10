@@ -203,6 +203,8 @@ export default function TemplateDetail() {
 
         <ThemesSection destination={template.destination} themes={guide.themes} />
 
+        <AboutSection destination={template.destination} longForm={guide.longForm} />
+
         {/* Cached itinerary preview, when available */}
         {template.cached_result && (
           <TripResultsView
