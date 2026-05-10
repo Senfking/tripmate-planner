@@ -23,7 +23,7 @@
 //
 // Re-run after a crash and it picks up from /tmp/curation-checkpoint.json.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,14 +41,43 @@ const REPO_ROOT = resolve(dirname(__filename), "..");
 const SRC_PATH = resolve(REPO_ROOT, "src/lib/destinationGuides.ts");
 const CHECKPOINT_PATH = "/tmp/curation-checkpoint.json";
 const AUDIT_PATH = "/tmp/photo-curation-audit.json";
+const COMPLETE_FLAG_PATH = "/tmp/curation-complete.flag";
+const INCOMPLETE_FLAG_PATH = "/tmp/curation-incomplete.flag";
 
-const PER_REQUEST_DELAY_MS = 1100; // be polite under any tier
+// Per-request delay; overridable for tests.
+const PER_REQUEST_DELAY_MS = parseInt(process.env.PER_REQUEST_DELAY_MS || "1100", 10);
 const RATE_LIMIT_FLOOR = 2;        // sleep when X-Ratelimit-Remaining <= this
 const SLEEP_MS_ON_FLOOR = 60 * 60 * 1000 + 30 * 1000; // ~1h, with 30s slack
+
+// Time budget. WORKFLOW_TIMEOUT_MINUTES is the workflow's job timeout; we exit
+// gracefully 3 minutes early so the post-cache step still has time to save
+// state. parseFloat lets tests pass fractional values.
+const WORKFLOW_TIMEOUT_MINUTES = parseFloat(process.env.WORKFLOW_TIMEOUT_MINUTES || "358");
+const BUDGET_SAFETY_MARGIN_MS = 3 * 60 * 1000;
+const BUDGET_MS = Math.max(0, WORKFLOW_TIMEOUT_MINUTES * 60 * 1000 - BUDGET_SAFETY_MARGIN_MS);
+const SCRIPT_START = Date.now();
+
+class BudgetExhausted extends Error {
+  constructor(reason) { super(reason); this.name = "BudgetExhausted"; }
+}
+
+function msElapsed() { return Date.now() - SCRIPT_START; }
+function budgetExceeded(extraMs = 0) {
+  return msElapsed() + extraMs >= BUDGET_MS;
+}
 
 /* ─────────────── small utils ─────────────── */
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function removeFlagsAtStartup() {
+  // Stale flags from a prior run could mislead the workflow's PR-creation step.
+  // Cache only restores /tmp/curation-checkpoint.json + /tmp/photo-curation-audit.json,
+  // but be defensive — wipe them anyway so the current run's state is authoritative.
+  for (const p of [COMPLETE_FLAG_PATH, INCOMPLETE_FLAG_PATH]) {
+    try { if (existsSync(p)) unlinkSync(p); } catch { /* noop */ }
+  }
+}
 
 function loadCheckpoint() {
   if (!existsSync(CHECKPOINT_PATH)) {
@@ -236,6 +265,11 @@ let rateLimitRemaining = Infinity;
 
 async function unsplashSearch(query) {
   if (rateLimitRemaining <= RATE_LIMIT_FLOOR) {
+    if (budgetExceeded(SLEEP_MS_ON_FLOOR)) {
+      throw new BudgetExhausted(
+        `would exceed time budget if we sleep ~1h for rate-limit reset`,
+      );
+    }
     const mins = Math.ceil(SLEEP_MS_ON_FLOOR / 60000);
     console.error(
       `   ⏸  Rate limit at ${rateLimitRemaining}/hr remaining — sleeping ~${mins}min before next call.`,
@@ -260,6 +294,11 @@ async function unsplashSearch(query) {
     // Could be rate-limit (msg includes "Rate Limit Exceeded") or auth.
     const body = await res.text();
     if (/rate limit/i.test(body)) {
+      if (budgetExceeded(SLEEP_MS_ON_FLOOR)) {
+        throw new BudgetExhausted(
+          `would exceed time budget if we sleep ~1h for 403 rate-limit retry`,
+        );
+      }
       console.error(`   ⏸  Got 403 Rate Limit Exceeded — sleeping ~1h then retrying.`);
       await sleep(SLEEP_MS_ON_FLOOR);
       rateLimitRemaining = Infinity;
@@ -364,140 +403,199 @@ async function main() {
     console.error(`FATAL: source file not found at ${SRC_PATH}`);
     process.exit(1);
   }
-  const src = readFileSync(SRC_PATH, "utf8");
-  const dests = parseDestinations(src);
+  removeFlagsAtStartup();
+
+  // Capture source as it is at the start of this run. The patcher applies
+  // every completed-so-far entry against this same base, so repeatedly calling
+  // patchSource is idempotent. (On a re-run via cache restore, the workspace
+  // is freshly checked out — empty placeholders are still present, and
+  // checkpoint completion data dictates which lines get patched.)
+  const srcAtRunStart = readFileSync(SRC_PATH, "utf8");
+  const dests = parseDestinations(srcAtRunStart);
   const todo = dests.filter(
     (d) => d.heroEmpty || d.themes.some((t) => t.photoEmpty),
   );
 
   console.error(`Found ${dests.length} destinations, ${todo.length} need photos.`);
+  console.error(
+    `Time budget: ${WORKFLOW_TIMEOUT_MINUTES.toFixed(2)}min total (` +
+      `${(BUDGET_MS / 60000).toFixed(2)}min after ${BUDGET_SAFETY_MARGIN_MS / 60000}min safety margin).`,
+  );
 
   const cp = loadCheckpoint();
   const startedCalls = cp.stats.totalCalls;
   let calls = 0;
 
-  for (let idx = 0; idx < todo.length; idx++) {
-    const d = todo[idx];
-    const need = (d.heroEmpty ? 1 : 0) + d.themes.filter((t) => t.photoEmpty).length;
-
-    // Skip fully-completed destinations.
-    const existing = cp.completed[d.slug];
-    if (existing) {
-      const haveHero = !d.heroEmpty || !!existing.hero;
-      const haveAllThemes = d.themes.every(
-        (t) => !t.photoEmpty || !!existing.themes?.[t.title],
-      );
-      if (haveHero && haveAllThemes) {
-        console.error(
-          `[${idx + 1}/${todo.length}] ${d.slug} — already curated, skip`,
-        );
-        continue;
-      }
-    }
-
-    console.error(
-      `[${idx + 1}/${todo.length}] ${d.slug} — need ${need} photo${need === 1 ? "" : "s"}`,
-    );
-
-    const slot = cp.completed[d.slug] || { hero: null, themes: {} };
-
-    try {
-      // Hero
-      if (d.heroEmpty && !slot.hero) {
-        const q = buildHeroQuery(d.slug);
-        const { meta, matchedQuery } = await search(q);
-        calls++;
-        slot.hero = meta;
-        cp.audit[`${d.slug}::hero`] = {
-          query: q,
-          matched_query: matchedQuery,
-          chosen_url: meta.url,
-          chosen_photoId: meta.photoId,
-          photographer: meta.photographerName,
-        };
-        console.error(`   ✓ hero: ${meta.photoId} by ${meta.photographerName} (q="${matchedQuery}")`);
-      }
-
-      // Themes
-      for (const t of d.themes) {
-        if (!t.photoEmpty) continue;
-        if (slot.themes[t.title]) continue;
-        const q = buildThemeQuery(t.title, d.slug);
-        const { meta, matchedQuery } = await search(q);
-        calls++;
-        slot.themes[t.title] = meta;
-        cp.audit[`${d.slug}::${t.title}`] = {
-          query: q,
-          matched_query: matchedQuery,
-          chosen_url: meta.url,
-          chosen_photoId: meta.photoId,
-          photographer: meta.photographerName,
-        };
-        console.error(`   ✓ "${t.title}": ${meta.photoId} by ${meta.photographerName} (q="${matchedQuery}")`);
-      }
-
-      cp.completed[d.slug] = slot;
-      cp.stats.totalCalls = startedCalls + calls;
-      saveCheckpoint(cp);
-
-      const totalThemes = d.themes.filter((t) => t.photoEmpty).length;
-      const heroDone = d.heroEmpty ? 1 : 0;
-      const totalPhotos = totalThemes + heroDone;
-      console.error(`   ✓ ${d.slug}: ${totalPhotos}/${totalPhotos} photos curated`);
-    } catch (e) {
-      console.error(`   ✗ ${d.slug} failed: ${e.message}`);
-      cp.stats.failures.push({ slug: d.slug, error: e.message, at: new Date().toISOString() });
-      // Persist partial progress, then keep going to next destination.
-      cp.completed[d.slug] = slot;
-      saveCheckpoint(cp);
-    }
-  }
-
-  /* ─── final write: patch source + audit ─── */
-
-  // Re-check completeness across all todo entries before patching.
-  const stillMissing = [];
-  for (const d of todo) {
-    const slot = cp.completed[d.slug];
-    if (d.heroEmpty && !slot?.hero) stillMissing.push(`${d.slug}::hero`);
-    for (const t of d.themes) {
-      if (t.photoEmpty && !slot?.themes?.[t.title]) {
-        stillMissing.push(`${d.slug}::${t.title}`);
-      }
-    }
-  }
-
-  if (stillMissing.length > 0) {
-    console.error(
-      `\n! Skipping file patch: ${stillMissing.length} entries still missing.`,
-    );
-    console.error("  Re-run the script to retry. Missing:");
-    for (const m of stillMissing.slice(0, 20)) console.error(`    - ${m}`);
-    if (stillMissing.length > 20) {
-      console.error(`    ... and ${stillMissing.length - 20} more`);
-    }
-  } else {
-    const patched = patchSource(src, dests, cp.completed);
+  // Helper: persist all state to disk. Called after each destination so a
+  // SIGKILL in the middle of the next destination still leaves usable artifacts.
+  const flushPartialState = () => {
+    saveCheckpoint(cp);
+    mkdirSync(dirname(AUDIT_PATH), { recursive: true });
+    writeFileSync(AUDIT_PATH, JSON.stringify(cp.audit, null, 2));
+    const patched = patchSource(srcAtRunStart, dests, cp.completed);
     writeFileSync(SRC_PATH, patched);
-    console.error(`\n✓ Patched ${SRC_PATH}`);
+  };
 
-    // Sanity-check: no `hero: ""` and no `, photo: "" }` remain in DESTINATION_GUIDES.
-    const remainingHero = (patched.match(/hero:\s*""/g) || []).length;
-    const remainingPhoto = (patched.match(/,\s*photo:\s*""\s*\}/g) || []).length;
+  // Helper: count how many of the current todo set are still missing photos.
+  const countStillMissing = () => {
+    const missing = [];
+    for (const d of todo) {
+      const slot = cp.completed[d.slug];
+      if (d.heroEmpty && !slot?.hero) missing.push(`${d.slug}::hero`);
+      for (const t of d.themes) {
+        if (t.photoEmpty && !slot?.themes?.[t.title]) {
+          missing.push(`${d.slug}::${t.title}`);
+        }
+      }
+    }
+    return missing;
+  };
+
+  let exitedEarly = false;
+  let exitReason = "";
+
+  try {
+    for (let idx = 0; idx < todo.length; idx++) {
+      // Pre-loop budget check: if we likely can't finish even one more
+      // destination's photos, stop here so the cache step has time to save.
+      if (budgetExceeded(0)) {
+        throw new BudgetExhausted(
+          `time budget reached before destination ${idx + 1}/${todo.length}`,
+        );
+      }
+
+      const d = todo[idx];
+      const need = (d.heroEmpty ? 1 : 0) + d.themes.filter((t) => t.photoEmpty).length;
+
+      // Skip fully-completed destinations.
+      const existing = cp.completed[d.slug];
+      if (existing) {
+        const haveHero = !d.heroEmpty || !!existing.hero;
+        const haveAllThemes = d.themes.every(
+          (t) => !t.photoEmpty || !!existing.themes?.[t.title],
+        );
+        if (haveHero && haveAllThemes) {
+          console.error(
+            `[${idx + 1}/${todo.length}] ${d.slug} — already curated, skip`,
+          );
+          continue;
+        }
+      }
+
+      console.error(
+        `[${idx + 1}/${todo.length}] ${d.slug} — need ${need} photo${need === 1 ? "" : "s"}` +
+          ` (elapsed ${(msElapsed() / 1000).toFixed(0)}s)`,
+      );
+
+      const slot = cp.completed[d.slug] || { hero: null, themes: {} };
+
+      try {
+        // Hero
+        if (d.heroEmpty && !slot.hero) {
+          const q = buildHeroQuery(d.slug);
+          const { meta, matchedQuery } = await search(q);
+          calls++;
+          slot.hero = meta;
+          cp.audit[`${d.slug}::hero`] = {
+            query: q,
+            matched_query: matchedQuery,
+            chosen_url: meta.url,
+            chosen_photoId: meta.photoId,
+            photographer: meta.photographerName,
+          };
+          console.error(`   ✓ hero: ${meta.photoId} by ${meta.photographerName} (q="${matchedQuery}")`);
+        }
+
+        // Themes
+        for (const t of d.themes) {
+          if (!t.photoEmpty) continue;
+          if (slot.themes[t.title]) continue;
+          const q = buildThemeQuery(t.title, d.slug);
+          const { meta, matchedQuery } = await search(q);
+          calls++;
+          slot.themes[t.title] = meta;
+          cp.audit[`${d.slug}::${t.title}`] = {
+            query: q,
+            matched_query: matchedQuery,
+            chosen_url: meta.url,
+            chosen_photoId: meta.photoId,
+            photographer: meta.photographerName,
+          };
+          console.error(`   ✓ "${t.title}": ${meta.photoId} by ${meta.photographerName} (q="${matchedQuery}")`);
+        }
+
+        cp.completed[d.slug] = slot;
+        cp.stats.totalCalls = startedCalls + calls;
+        flushPartialState();
+
+        const totalThemes = d.themes.filter((t) => t.photoEmpty).length;
+        const heroDone = d.heroEmpty ? 1 : 0;
+        const totalPhotos = totalThemes + heroDone;
+        console.error(`   ✓ ${d.slug}: ${totalPhotos}/${totalPhotos} photos curated`);
+      } catch (e) {
+        if (e instanceof BudgetExhausted) {
+          // Save whatever we got for this destination, then propagate.
+          cp.completed[d.slug] = slot;
+          cp.stats.totalCalls = startedCalls + calls;
+          flushPartialState();
+          throw e;
+        }
+        console.error(`   ✗ ${d.slug} failed: ${e.message}`);
+        cp.stats.failures.push({ slug: d.slug, error: e.message, at: new Date().toISOString() });
+        cp.completed[d.slug] = slot;
+        flushPartialState();
+      }
+    }
+  } catch (e) {
+    if (e instanceof BudgetExhausted) {
+      exitedEarly = true;
+      exitReason = e.message;
+    } else {
+      throw e;
+    }
+  }
+
+  /* ─── final write: flag + summary ─── */
+
+  // Always re-flush in case we exited cleanly without a budget error
+  // (e.g. all destinations skipped from checkpoint).
+  flushPartialState();
+
+  const stillMissing = countStillMissing();
+
+  if (stillMissing.length === 0) {
+    writeFileSync(COMPLETE_FLAG_PATH, new Date().toISOString());
+    console.error(`\n✓ All photos curated. Wrote ${COMPLETE_FLAG_PATH}.`);
+
+    const finalSrc = readFileSync(SRC_PATH, "utf8");
+    const remainingHero = (finalSrc.match(/hero:\s*""/g) || []).length;
+    const remainingPhoto = (finalSrc.match(/,\s*photo:\s*""\s*\}/g) || []).length;
     if (remainingHero || remainingPhoto) {
       console.error(
         `! Sanity check: ${remainingHero} empty hero(s) and ${remainingPhoto} empty theme photo(s) still in file.`,
       );
     }
+  } else {
+    writeFileSync(INCOMPLETE_FLAG_PATH, new Date().toISOString());
+    if (exitedEarly) {
+      console.error(
+        `\n⏸  Exited early (${exitReason}). ${stillMissing.length} entries still missing.`,
+      );
+    } else {
+      console.error(`\n! ${stillMissing.length} entries still missing — re-run to retry.`);
+    }
+    console.error(`  Wrote ${INCOMPLETE_FLAG_PATH}. Re-run the workflow to resume from the cached checkpoint.`);
+    for (const m of stillMissing.slice(0, 10)) console.error(`    - ${m}`);
+    if (stillMissing.length > 10) {
+      console.error(`    ... and ${stillMissing.length - 10} more`);
+    }
   }
 
-  // Audit: always written, regardless of completeness, so partial runs are reviewable.
-  mkdirSync(dirname(AUDIT_PATH), { recursive: true });
-  writeFileSync(AUDIT_PATH, JSON.stringify(cp.audit, null, 2));
   console.error(`✓ Audit written to ${AUDIT_PATH} (${Object.keys(cp.audit).length} entries)`);
 
   /* ─── summary ─── */
   console.error(`\n── Summary ──`);
+  console.error(`  Elapsed:          ${(msElapsed() / 1000).toFixed(0)}s`);
   console.error(`  Calls this run:   ${calls}`);
   console.error(`  Calls cumulative: ${cp.stats.totalCalls}`);
   console.error(`  Destinations completed: ${Object.keys(cp.completed).length} / ${todo.length}`);
@@ -507,7 +605,8 @@ async function main() {
       console.error(`    - ${f.slug}: ${f.error}`);
     }
   }
-  if (stillMissing.length > 0) process.exit(2);
+
+  // Always exit 0. The complete/incomplete flag tells the workflow what to do.
 }
 
 main().catch((e) => {

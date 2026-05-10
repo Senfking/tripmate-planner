@@ -1,9 +1,12 @@
 name: Curate destination photos
 
 # Manually-triggered job that runs scripts/curate-destination-photos.mjs against
-# the Unsplash demo tier (~5-6h). On success it opens a PR with the patched
-# src/lib/destinationGuides.ts; the audit JSON is attached as an artifact for
-# manual review before merging.
+# the Unsplash demo tier. The full curation takes ~5-6h, longer than GitHub's
+# 6h job cap, so the script exits gracefully ~3min before the timeout-minutes
+# limit and writes /tmp/curation-incomplete.flag instead of finishing. State
+# (checkpoint + audit) is preserved across runs via actions/cache; subsequent
+# manual triggers resume from where the previous run left off, until the run
+# that finishes everything writes /tmp/curation-complete.flag and opens the PR.
 
 on:
   workflow_dispatch:
@@ -11,7 +14,7 @@ on:
 jobs:
   curate:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 358
     permissions:
       contents: write
       pull-requests: write
@@ -27,9 +30,23 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Restore curation state
+        # Cache key is unique per run so this run gets its own save slot.
+        # restore-keys does a prefix match against the most recent save from
+        # any prior run, so each manual trigger resumes the previous one.
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/curation-checkpoint.json
+            /tmp/photo-curation-audit.json
+          key: curation-progress-${{ github.run_id }}
+          restore-keys: |
+            curation-progress-
+
       - name: Run curation script
         env:
           UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          WORKFLOW_TIMEOUT_MINUTES: '358'
         run: node scripts/curate-destination-photos.mjs
 
       - name: Upload audit JSON
@@ -41,7 +58,10 @@ jobs:
           if-no-files-found: warn
 
       - name: Open PR with patched destinationGuides.ts
-        if: success()
+        # Only run when the curation script signaled full completion. On
+        # graceful early-exit (incomplete.flag) the workflow still succeeds
+        # green and uploads the partial audit; Oliver re-triggers until done.
+        if: success() && hashFiles('/tmp/curation-complete.flag') != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.run_id }}
