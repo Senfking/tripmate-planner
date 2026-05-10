@@ -392,6 +392,27 @@ function AboutSection({ destination, longForm }: { destination: string; longForm
 }
 
 function ThemeCardView({ theme }: { theme: ThemeCard }) {
+  const photoEmpty =
+    typeof theme.photo === "string" ? theme.photo === "" : !theme.photo;
+
+  if (photoEmpty) {
+    return (
+      <article className="relative rounded-2xl overflow-hidden shadow-sm bg-[#F0FDFA] border border-teal-100/70 h-[340px] md:h-[380px] flex">
+        <div className="mt-auto p-5">
+          <h3
+            className="text-gray-900 text-xl md:text-[22px] font-semibold leading-tight"
+            style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
+          >
+            {theme.title}
+          </h3>
+          <p className="mt-2 text-[13.5px] md:text-sm text-gray-700 leading-snug">
+            {theme.description}
+          </p>
+        </div>
+      </article>
+    );
+  }
+
   const { url, meta } = resolvePhoto(theme.photo);
   return (
     <article className="group relative rounded-2xl overflow-hidden shadow-sm bg-gray-100 h-[340px] md:h-[380px]">
