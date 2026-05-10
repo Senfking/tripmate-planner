@@ -140,6 +140,7 @@ export function AppLayout() {
 
         {!isTripPage && <BottomNav />}
         <InstallPrompt />
+        <FeedbackWidget />
         
       </div>
     </SidebarProvider>
