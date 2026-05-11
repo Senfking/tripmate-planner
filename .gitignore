@@ -46,3 +46,4 @@ bun.lockb
 # completion; never commit them.
 /curation-complete.flag
 /curation-incomplete.flag
+/curation-no-match.json
