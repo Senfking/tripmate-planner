@@ -7,6 +7,7 @@ import type { AITripResult } from "@/components/trip-results/useResultsState";
 import { ContextualSignupModal, type SignupTrigger } from "@/components/auth/ContextualSignupModal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { AnonTripSEO } from "@/components/seo/AnonTripSEO";
 
 interface LocationState {
   result?: AITripResult;
@@ -161,6 +162,12 @@ export default function AnonTripView() {
 
   return (
     <div className="relative">
+      <AnonTripSEO
+        id={id}
+        title={result.trip_title}
+        description={result.trip_summary}
+        heroImage={result.destination_image_url ?? null}
+      />
       {/* Persistent signup banner pinned to top of viewport. */}
       <div
         className="fixed top-0 left-0 right-0 z-[110] flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
