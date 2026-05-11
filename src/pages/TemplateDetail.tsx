@@ -546,27 +546,26 @@ function JuntoFeatureBlocks() {
         ))}
       </div>
 
-      <div className="mt-12">
-        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+      <div className="mt-14">
+        <div className="max-w-2xl">
           <h3
-            className="text-xl md:text-2xl font-semibold text-gray-900 leading-tight"
+            className="text-2xl md:text-3xl font-semibold text-gray-900 leading-tight"
             style={{ fontFamily: '"IBM Plex Sans", system-ui, sans-serif' }}
           >
             And a whole lot more under the hood
           </h3>
-          <p className="text-[13.5px] text-gray-500">Every feature, built for groups.</p>
+          <p className="mt-2 text-[15px] text-gray-600 leading-relaxed">
+            Everything you need to plan, book and remember the trip, in one place.
+          </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-5">
           {chipFeatures.map(({ icon: Icon, label }) => (
-            <div
-              key={label}
-              className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-primary/30 hover:shadow-[0_4px_14px_-6px_rgba(0,0,0,0.1)]"
-            >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Icon className="h-4 w-4" strokeWidth={1.75} />
+            <div key={label} className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </div>
-              <span className="text-[13.5px] font-medium text-gray-800 leading-tight">{label}</span>
+              <span className="text-[14px] font-medium text-gray-800 leading-tight">{label}</span>
             </div>
           ))}
         </div>
