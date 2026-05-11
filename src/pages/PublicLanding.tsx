@@ -107,7 +107,7 @@ export default function PublicLanding() {
         body="Comments, reactions and decisions sit on the actual itinerary item — the venue, the day, the address. No parallel WhatsApp thread that drifts away from the plan, no screenshots flying around. Everyone sees what changed, where, and why."
         image={mockupGroupActivity}
         alt="Junto group activity screen on iPhone showing threaded comments and reactions on itinerary items like 'Little Lazy Lizard dinner' and 'iO Italian Osteria'"
-        imageSide="right"
+        imageSide="left"
       />
       <FeaturePhoneSection
         eyebrow="Junto AI expenses"
@@ -115,7 +115,7 @@ export default function PublicLanding() {
         body="Snap a receipt and Junto AI reads it, categorizes it, and splits it across the group. Multiple currencies, custom shares, live balances. No end-of-trip spreadsheet."
         image={mockupExpenses}
         alt="Junto expenses screen on iPhone showing €255 owed, balances and a list of split expenses"
-        imageSide="left"
+        imageSide="right"
       />
       <FeaturePhoneSection
         eyebrow="Junto AI bookings"
@@ -123,7 +123,7 @@ export default function PublicLanding() {
         body="Drop in a hotel confirmation, flight ticket, or visa PDF and Junto AI pulls out the details automatically. It surfaces what needs attention and reminds the group what to bring."
         image={mockupBookings}
         alt="Junto bookings & docs screen on iPhone showing flight tickets, hotel confirmation and entry document warnings"
-        imageSide="right"
+        imageSide="left"
       />
 
       <FeaturePhoneSection
@@ -132,7 +132,7 @@ export default function PublicLanding() {
         body="Past trips, current ones, upcoming, drafts. Every trip you've planned with your groups lives in one home, with expenses, bookings and balances tracked across trips — so you can revisit memories and plan the next one in seconds."
         image={mockupTrips}
         alt="Junto trips home screen on iPhone showing a 'Good evening, Oliver' header, a live Bali trip card, and an upcoming Dubai trip"
-        imageSide="left"
+        imageSide="right"
       />
 
       <HowItWorks />
