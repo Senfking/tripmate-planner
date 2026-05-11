@@ -50,6 +50,11 @@ const AUDIT_PATH = "/tmp/photo-curation-audit.json";
 const FLAG_DIR = process.env.GITHUB_WORKSPACE || process.cwd();
 const COMPLETE_FLAG_PATH = resolve(FLAG_DIR, "curation-complete.flag");
 const INCOMPLETE_FLAG_PATH = resolve(FLAG_DIR, "curation-incomplete.flag");
+// Workspace-relative sidecar: list of theme/hero entries that returned zero
+// Unsplash results across every prefix retry. The workflow's auto-PR step
+// reads this so reviewers know exactly what needs a manual photoId override
+// after merging.
+const NO_MATCH_LIST_PATH = resolve(FLAG_DIR, "curation-no-match.json");
 
 // Per-request delay; overridable for tests.
 const PER_REQUEST_DELAY_MS = parseInt(process.env.PER_REQUEST_DELAY_MS || "1100", 10);
@@ -81,7 +86,7 @@ function removeFlagsAtStartup() {
   // Stale flags from a prior run could mislead the workflow's PR-creation step.
   // Cache only restores /tmp/curation-checkpoint.json + /tmp/photo-curation-audit.json,
   // but be defensive — wipe them anyway so the current run's state is authoritative.
-  for (const p of [COMPLETE_FLAG_PATH, INCOMPLETE_FLAG_PATH]) {
+  for (const p of [COMPLETE_FLAG_PATH, INCOMPLETE_FLAG_PATH, NO_MATCH_LIST_PATH]) {
     try { if (existsSync(p)) unlinkSync(p); } catch { /* noop */ }
   }
 }
@@ -323,10 +328,17 @@ async function unsplashSearch(query) {
 }
 
 // Run a query, falling back to progressively shorter prefixes if no results.
+// Returns either { meta, matchedQuery } on a hit or { noMatch: true,
+// attemptedQueries: [...] } when every prefix returned zero results. The
+// no-match outcome is deterministic for a given (query, Unsplash corpus), so
+// the caller flags the entry for manual override and moves on rather than
+// abandoning the whole destination — see main loop.
 async function search(query) {
   const words = query.split(/\s+/).filter(Boolean);
+  const attemptedQueries = [];
   for (let i = words.length; i >= 1; i--) {
     const q = words.slice(0, i).join(" ");
+    attemptedQueries.push(q);
     const results = await unsplashSearch(q);
     await sleep(PER_REQUEST_DELAY_MS);
     if (results.length > 0) {
@@ -344,7 +356,7 @@ async function search(query) {
     }
     console.error(`     (no results for "${q}", trying shorter prefix)`);
   }
-  throw new Error(`No Unsplash results for any prefix of "${query}"`);
+  return { noMatch: true, attemptedQueries };
 }
 
 /* ─────────────── source-file patcher ─────────────── */
@@ -443,20 +455,42 @@ async function main() {
     writeFileSync(SRC_PATH, patched);
   };
 
+  // An entry is "attempted" if it either has a curated photo OR has been
+  // recorded in the audit as a deterministic no_unsplash_match. The latter
+  // are flagged for manual override and must not block completion.
+  const isNoUnsplashMatch = (key) =>
+    cp.audit[key]?.status === "no_unsplash_match";
+
   // Helper: count how many of the current todo set are still missing photos.
   const countStillMissing = () => {
     const missing = [];
     for (const d of todo) {
       const slot = cp.completed[d.slug];
-      if (d.heroEmpty && !slot?.hero) missing.push(`${d.slug}::hero`);
+      if (d.heroEmpty && !slot?.hero && !isNoUnsplashMatch(`${d.slug}::hero`)) {
+        missing.push(`${d.slug}::hero`);
+      }
       for (const t of d.themes) {
-        if (t.photoEmpty && !slot?.themes?.[t.title]) {
+        if (
+          t.photoEmpty &&
+          !slot?.themes?.[t.title] &&
+          !isNoUnsplashMatch(`${d.slug}::${t.title}`)
+        ) {
           missing.push(`${d.slug}::${t.title}`);
         }
       }
     }
     return missing;
   };
+
+  // Collect every audit key recorded as no_unsplash_match for the summary.
+  const collectNoMatchEntries = () =>
+    Object.entries(cp.audit)
+      .filter(([, v]) => v?.status === "no_unsplash_match")
+      .map(([key, v]) => ({
+        key,
+        query: v.query,
+        attempted_queries: v.attempted_queries || [],
+      }));
 
   let exitedEarly = false;
   let exitReason = "";
@@ -474,12 +508,19 @@ async function main() {
       const d = todo[idx];
       const need = (d.heroEmpty ? 1 : 0) + d.themes.filter((t) => t.photoEmpty).length;
 
-      // Skip fully-completed destinations.
+      // Skip fully-attempted destinations. A hero/theme counts as attempted
+      // if it has a photo OR was recorded as no_unsplash_match in a prior run.
       const existing = cp.completed[d.slug];
       if (existing) {
-        const haveHero = !d.heroEmpty || !!existing.hero;
+        const haveHero =
+          !d.heroEmpty ||
+          !!existing.hero ||
+          isNoUnsplashMatch(`${d.slug}::hero`);
         const haveAllThemes = d.themes.every(
-          (t) => !t.photoEmpty || !!existing.themes?.[t.title],
+          (t) =>
+            !t.photoEmpty ||
+            !!existing.themes?.[t.title] ||
+            isNoUnsplashMatch(`${d.slug}::${t.title}`),
         );
         if (haveHero && haveAllThemes) {
           console.error(
@@ -498,47 +539,77 @@ async function main() {
 
       try {
         // Hero
-        if (d.heroEmpty && !slot.hero) {
+        if (
+          d.heroEmpty &&
+          !slot.hero &&
+          !isNoUnsplashMatch(`${d.slug}::hero`)
+        ) {
           const q = buildHeroQuery(d.slug);
-          const { meta, matchedQuery } = await search(q);
+          const result = await search(q);
           calls++;
-          slot.hero = meta;
-          cp.audit[`${d.slug}::hero`] = {
-            query: q,
-            matched_query: matchedQuery,
-            chosen_url: meta.url,
-            chosen_photoId: meta.photoId,
-            photographer: meta.photographerName,
-          };
-          console.error(`   ✓ hero: ${meta.photoId} by ${meta.photographerName} (q="${matchedQuery}")`);
+          if (result.noMatch) {
+            cp.audit[`${d.slug}::hero`] = {
+              query: q,
+              status: "no_unsplash_match",
+              attempted_queries: result.attemptedQueries,
+            };
+            console.error(
+              `   ✗ hero: no Unsplash match for "${q}" — flagged for manual override`,
+            );
+          } else {
+            slot.hero = result.meta;
+            cp.audit[`${d.slug}::hero`] = {
+              query: q,
+              matched_query: result.matchedQuery,
+              chosen_url: result.meta.url,
+              chosen_photoId: result.meta.photoId,
+              photographer: result.meta.photographerName,
+            };
+            console.error(`   ✓ hero: ${result.meta.photoId} by ${result.meta.photographerName} (q="${result.matchedQuery}")`);
+          }
         }
 
         // Themes
         for (const t of d.themes) {
           if (!t.photoEmpty) continue;
           if (slot.themes[t.title]) continue;
+          if (isNoUnsplashMatch(`${d.slug}::${t.title}`)) continue;
           const q = buildThemeQuery(t.title, d.slug);
-          const { meta, matchedQuery } = await search(q);
+          const result = await search(q);
           calls++;
-          slot.themes[t.title] = meta;
+          if (result.noMatch) {
+            cp.audit[`${d.slug}::${t.title}`] = {
+              query: q,
+              status: "no_unsplash_match",
+              attempted_queries: result.attemptedQueries,
+            };
+            console.error(
+              `   ✗ "${t.title}": no Unsplash match for "${q}" — flagged for manual override`,
+            );
+            continue;
+          }
+          slot.themes[t.title] = result.meta;
           cp.audit[`${d.slug}::${t.title}`] = {
             query: q,
-            matched_query: matchedQuery,
-            chosen_url: meta.url,
-            chosen_photoId: meta.photoId,
-            photographer: meta.photographerName,
+            matched_query: result.matchedQuery,
+            chosen_url: result.meta.url,
+            chosen_photoId: result.meta.photoId,
+            photographer: result.meta.photographerName,
           };
-          console.error(`   ✓ "${t.title}": ${meta.photoId} by ${meta.photographerName} (q="${matchedQuery}")`);
+          console.error(`   ✓ "${t.title}": ${result.meta.photoId} by ${result.meta.photographerName} (q="${result.matchedQuery}")`);
         }
 
         cp.completed[d.slug] = slot;
         cp.stats.totalCalls = startedCalls + calls;
         flushPartialState();
 
-        const totalThemes = d.themes.filter((t) => t.photoEmpty).length;
-        const heroDone = d.heroEmpty ? 1 : 0;
-        const totalPhotos = totalThemes + heroDone;
-        console.error(`   ✓ ${d.slug}: ${totalPhotos}/${totalPhotos} photos curated`);
+        const themeSlots = d.themes.filter((t) => t.photoEmpty);
+        const heroNeeded = d.heroEmpty ? 1 : 0;
+        const totalSlots = themeSlots.length + heroNeeded;
+        const themesGot = themeSlots.filter((t) => slot.themes?.[t.title]).length;
+        const heroGot = d.heroEmpty ? (slot.hero ? 1 : 0) : 0;
+        const got = themesGot + heroGot;
+        console.error(`   ✓ ${d.slug}: ${got}/${totalSlots} photos curated`);
       } catch (e) {
         if (e instanceof BudgetExhausted) {
           // Save whatever we got for this destination, then propagate.
@@ -569,17 +640,34 @@ async function main() {
   flushPartialState();
 
   const stillMissing = countStillMissing();
+  const noMatchEntries = collectNoMatchEntries();
+
+  // Sidecar list of no-match entries for the auto-PR step to include in
+  // the description. Written even when incomplete so partial-run reports
+  // still surface what's flagged.
+  writeFileSync(NO_MATCH_LIST_PATH, JSON.stringify(noMatchEntries, null, 2));
 
   if (stillMissing.length === 0) {
     writeFileSync(COMPLETE_FLAG_PATH, new Date().toISOString());
-    console.error(`\n✓ All photos curated. Wrote ${COMPLETE_FLAG_PATH}.`);
+    console.error(`\n✓ All photos attempted. Wrote ${COMPLETE_FLAG_PATH}.`);
+
+    if (noMatchEntries.length > 0) {
+      console.error(
+        `  ${noMatchEntries.length} entr${noMatchEntries.length === 1 ? "y" : "ies"} returned zero Unsplash results — flagged for manual override:`,
+      );
+      for (const m of noMatchEntries) {
+        console.error(`    - ${m.key} (q="${m.query}")`);
+      }
+    }
 
     const finalSrc = readFileSync(SRC_PATH, "utf8");
     const remainingHero = (finalSrc.match(/hero:\s*""/g) || []).length;
     const remainingPhoto = (finalSrc.match(/,\s*photo:\s*""\s*\}/g) || []).length;
-    if (remainingHero || remainingPhoto) {
+    const expectedRemaining = noMatchEntries.length;
+    const totalRemaining = remainingHero + remainingPhoto;
+    if (totalRemaining !== expectedRemaining) {
       console.error(
-        `! Sanity check: ${remainingHero} empty hero(s) and ${remainingPhoto} empty theme photo(s) still in file.`,
+        `! Sanity check: ${remainingHero} empty hero(s) and ${remainingPhoto} empty theme photo(s) still in file (expected ${expectedRemaining} from no-match list).`,
       );
     }
   } else {

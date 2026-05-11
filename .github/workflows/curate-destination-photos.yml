@@ -87,6 +87,26 @@ jobs:
           git commit -m "Curated Unsplash photos for 38 fallback destinations"
           git push -u origin "$BRANCH"
 
+          # Build the "needs manual override" section from the no-match
+          # sidecar written by the script. Entries here exhausted every
+          # prefix retry against Unsplash and were skipped without abandoning
+          # the destination; they need a manual photoId override (or will be
+          # caught by the Places-photo fallback shipping in Lovable).
+          NO_MATCH_SECTION=""
+          if [ -s curation-no-match.json ]; then
+            NO_MATCH_COUNT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('curation-no-match.json','utf8')).length)")
+            if [ "$NO_MATCH_COUNT" -gt 0 ]; then
+              NO_MATCH_LINES=$(node -e "
+                const entries = JSON.parse(require('fs').readFileSync('curation-no-match.json','utf8'));
+                for (const e of entries) {
+                  const tried = (e.attempted_queries || []).map(q => '\`' + q + '\`').join(', ');
+                  console.log('- \`' + e.key + '\` — query \`' + e.query + '\` (tried: ' + tried + ')');
+                }
+              ")
+              NO_MATCH_SECTION=$(printf '\n\n### Needs manual override (%s)\n\nThese entries returned zero Unsplash results for every prefix retry, so they were skipped (not abandoned). Override with a manual `photoId`, or rely on the Places-photo fallback shipping in Lovable.\n\n%s\n' "$NO_MATCH_COUNT" "$NO_MATCH_LINES")
+            fi
+          fi
+
           RUN_URL="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
           gh pr create \
             --title "Curated Unsplash photos for 38 fallback destinations" \
@@ -100,6 +120,6 @@ jobs:
 
           The per-entry audit JSON (\`photo-curation-audit.json\`) is attached as
           an artifact on the workflow run linked above — review it for any
-          subject mismatches before merging.
+          subject mismatches before merging.${NO_MATCH_SECTION}
           EOF
           )"
