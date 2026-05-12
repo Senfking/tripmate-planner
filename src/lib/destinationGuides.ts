@@ -466,7 +466,7 @@ For the back half, swap jungle for coast. Seminyak and Canggu suit travelers who
 Eat babi guling at Ibu Oka, grilled snapper at Jimbaran Bay, and breakfast bowls anywhere in Pererenan. Mid-range villas with private pools run 80 to 150 USD nightly. Visit between May and September for dry skies; pack a sarong for temple entries and download Grab and Gojek before you land.`,
     themes: [
       { title: "Ubud's Rice Terraces",  description: "Walk the carved green steps of Tegallalang in the cool of early morning.", photo: U("photo-1537996194471-e657df975ab4") },
-      { title: "Temples & Ceremony",    description: "Cliffside Uluwatu at sunset, water temples at sunrise, daily offerings on every doorstep.", photo: U("photo-1539650116574-75c0c6d73f6e") },
+      { title: "Temples & Ceremony",    description: "Cliffside Uluwatu at sunset, water temples at sunrise, daily offerings on every doorstep.", photo: U("photo-1518548419970-58e3b4079ab2") },
       { title: "Canggu Beach Clubs",    description: "Sunset cocktails at Single Fin, infinity pools and DJ sets long into the night.", photo: U("photo-1507525428034-b723cf961d3e") },
       { title: "Surf & Swim",           description: "Mellow long-boarding at Batu Bolong or barrels at Uluwatu, Bali has a wave for everyone.", photo: U("photo-1502933691298-84fc14542831") },
       { title: "Wellness & Yoga",       description: "Daily flow at the Yoga Barn, jungle spa days and breakfast bowls under thatched roofs.", photo: U("photo-1545205597-3d9d02c29597") },
