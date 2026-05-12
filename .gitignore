@@ -47,3 +47,8 @@ bun.lockb
 /curation-complete.flag
 /curation-incomplete.flag
 /curation-no-match.json
+
+# Workspace-relative sidecar written by scripts/prerender-templates.mjs.
+# Used by the prerender-templates workflow to append a "Failed pages"
+# section to the auto-PR description; never commit it.
+/prerender-failed.json

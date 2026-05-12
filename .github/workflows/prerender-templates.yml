@@ -89,6 +89,11 @@ jobs:
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Open PR
+        # Opens a PR whenever any snapshot changed — partial runs ship the
+        # pages that succeeded and surface the rest under "Failed pages"
+        # below for manual investigation. The prerender script exits 0 as
+        # long as at least one page succeeded, so step success here lines
+        # up with "we have something worth committing".
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -100,6 +105,26 @@ jobs:
         run: |
           set -euo pipefail
           RUN_URL="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+
+          # Build the "Failed pages" section from prerender-failed.json
+          # (written by the prerender script — always present, possibly an
+          # empty array when every page succeeded).
+          FAILED_SECTION=""
+          if [ -s prerender-failed.json ]; then
+            FAILED_COUNT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('prerender-failed.json','utf8')).length)")
+            if [ "$FAILED_COUNT" -gt 0 ]; then
+              FAILED_LINES=$(node -e "
+                const entries = JSON.parse(require('fs').readFileSync('prerender-failed.json','utf8'));
+                for (const e of entries) {
+                  const elapsed = typeof e.elapsedMs === 'number' ? (e.elapsedMs + 'ms') : 'unknown';
+                  const err = String(e.error || '').replace(/\`/g, \"'\");
+                  console.log('- \`' + e.slug + '\` — ' + err + ' (after ' + elapsed + ')');
+                }
+              ")
+              FAILED_SECTION=$(printf '\n\n## Failed pages (%s)\n\nThese slugs errored during this run (timeout, navigation failure, or missing DOM marker) and were skipped — their existing snapshot, if any, is unchanged. Each needs **manual investigation** before being re-included in the prerender run (check the live URL, look for a runtime error, confirm the template renders the TouristTrip JSON-LD).\n\n%s\n' "$FAILED_COUNT" "$FAILED_LINES")
+            fi
+          fi
+
           gh pr create \
             --base main \
             --head "$BRANCH" \
@@ -135,7 +160,7 @@ jobs:
 
           ## Do not auto-merge
           Hold this PR until the photo-curation auto-PR lands so snapshots
-          capture curated Unsplash photos rather than placeholders.
+          capture curated Unsplash photos rather than placeholders.${FAILED_SECTION}
           EOF
           )"
 
