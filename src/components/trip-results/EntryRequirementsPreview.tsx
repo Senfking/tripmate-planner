@@ -21,6 +21,8 @@ interface Props {
   destinationCountryIso: string | null | undefined;
   tripLengthDays: number;
   className?: string;
+  /** When provided, the anon "sign up" CTA calls this instead of using a route link. */
+  authGate?: () => void;
 }
 
 function countryName(iso: string | null | undefined): string | null {
