@@ -108,6 +108,7 @@ export function DaySection({
   costFormatter,
   dateMode = "calendar",
   readOnly = false,
+  authGate,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editDayOpen, setEditDayOpen] = useState(false);
