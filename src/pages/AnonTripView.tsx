@@ -200,7 +200,7 @@ export default function AnonTripView() {
           onCreateTrip={() => openSignup("save")}
           onSaveDraft={() => openSignup("save")}
           onShare={handleShare}
-          readOnly
+          authGate={() => openSignup("save")}
         />
       </div>
 
