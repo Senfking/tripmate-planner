@@ -600,9 +600,9 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                 <span className="text-xs font-semibold">Share</span>
               </button>
             )}
-            {!readOnly && (
+            {!effectiveReadOnly && (
               <button
-                onClick={() => setEditTripOpen(true)}
+                onClick={() => (gated ? authGate!() : setEditTripOpen(true))}
                 aria-label="Edit trip"
                 className="h-9 w-9 inline-flex items-center justify-center rounded-full text-white transition-transform active:opacity-80 hover:bg-black/40"
                 style={{
