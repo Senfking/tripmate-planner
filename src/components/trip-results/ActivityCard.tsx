@@ -204,7 +204,7 @@ export function ActivityCard({
             {/* Floating action cluster */}
             <div className="flex items-center gap-1 relative" ref={swapRef}>
               <button
-                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                onClick={(e) => { e.stopPropagation(); if (authGate) { authGate(); } else { onRemove(); } }}
                 aria-label="Remove activity"
                 className="p-1.5 rounded-lg bg-muted/60 text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-border transition-colors"
               >
@@ -213,6 +213,7 @@ export function ActivityCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (authGate) { authGate(); return; }
                   setSwapMode(swapMode === "menu" ? null : "menu");
                   setSwapText("");
                 }}
