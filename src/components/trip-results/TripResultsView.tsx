@@ -1327,6 +1327,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
               <EntryRequirementsPreview
                 destinationCountryIso={result.destination_country_iso ?? null}
                 tripLengthDays={allDays.length || 7}
+                authGate={authGate}
               />
             </div>
 
