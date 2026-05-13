@@ -64,12 +64,23 @@ jobs:
       - name: Detect changes
         id: diff
         run: |
-          if git diff --quiet -- public/templates; then
+          # `git diff` only inspects tracked files — on the first run no
+          # public/templates/<slug>/index.html paths exist in main yet, so
+          # `git diff --quiet` reports clean even though the script just
+          # wrote 48 new files. `git status --porcelain` covers both
+          # untracked-new and tracked-modified/deleted: empty = no changes,
+          # non-empty = changes worth committing.
+          STATUS="$(git status --porcelain -- public/templates)"
+          if [ -z "$STATUS" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No snapshot changes."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            git --no-pager diff --stat -- public/templates
+            echo "$STATUS" | head -100
+            # Diff stat for tracked-file modifications. New (untracked)
+            # files don't show up here — `git status` output above is the
+            # source of truth for those.
+            git --no-pager diff --stat -- public/templates || true
           fi
 
       - name: Commit refreshed snapshots to a PR branch
