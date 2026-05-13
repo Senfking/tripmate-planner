@@ -48,6 +48,7 @@ export function EntryRequirementsPreview({
   destinationCountryIso,
   tripLengthDays,
   className,
+  authGate,
 }: Props) {
   const { user, profile } = useAuth();
   const nationalities = useMemo(
