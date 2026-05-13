@@ -365,6 +365,7 @@ export function DaySection({
                       onCoordsRefined={(lat, lng) => onCoordsRefined?.(day.date, i, lat, lng)}
                       animDelay={i * 50}
                       costFormatter={costFormatter}
+                      authGate={authGate}
                     />
                   </div>
                 ))
