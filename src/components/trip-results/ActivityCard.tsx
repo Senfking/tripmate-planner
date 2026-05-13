@@ -68,6 +68,7 @@ export function ActivityCard({
   onCoordsRefined,
   animDelay = 0,
   costFormatter,
+  authGate,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   
