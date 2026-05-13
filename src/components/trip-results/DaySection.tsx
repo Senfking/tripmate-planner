@@ -47,6 +47,9 @@ interface Props {
   /** When true, hide editing affordances: edit-day, add-activity,
    *  request-change, remove, and the comments panel. */
   readOnly?: boolean;
+  /** When set, edit affordances render normally but every click is routed
+   *  here (used by the anonymous trip view to open the signup modal). */
+  authGate?: () => void;
 }
 
 function DayThumbnail({ activity, location }: { activity: AIActivity; location: string }) {
