@@ -125,14 +125,55 @@ export function EntryRequirementsPreview({
     </div>
   );
 
-  // Anonymous user — show signup-prompt preview instead of "Set nationality".
+  // Anonymous user — enticing signup CTA with passport visual.
   if (!user) {
+    const handleClick = (e: React.MouseEvent) => {
+      if (authGate) {
+        e.preventDefault();
+        authGate();
+      }
+    };
     return (
       wrap(<>
-        <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-[12.5px] text-muted-foreground leading-snug">
-          Sign up to see your personalized visa &amp; entry requirements for{" "}
-          {destName ?? "this destination"}.
-        </div>
+        <button
+          type="button"
+          onClick={authGate ? (e) => { e.preventDefault(); authGate(); } : undefined}
+          {...(!authGate ? {} : {})}
+          className="group relative w-full overflow-hidden rounded-2xl border border-[#0D9488]/25 bg-gradient-to-br from-[#0D9488] via-[#0F766E] to-[#134E4A] p-4 text-left shadow-[0_8px_24px_-12px_rgba(13,148,136,0.45)] transition-transform hover:scale-[1.01] active:scale-[0.99]"
+        >
+          {/* decorative passport stamp circles */}
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full border-2 border-white/10" />
+          <div className="pointer-events-none absolute -right-2 -top-2 h-16 w-16 rounded-full border border-white/15" />
+          <div className="pointer-events-none absolute right-3 top-3 rotate-12 rounded-md border border-white/30 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/70">
+            {destIso ?? "Visa"}
+          </div>
+
+          <div className="relative flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+              <ShieldCheck className="h-5 w-5 text-white" strokeWidth={2.25} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold leading-tight text-white">
+                Will you need a visa for {destName ?? "this trip"}?
+              </p>
+              <p className="mt-1 text-[12px] leading-snug text-white/80">
+                Get personalized entry requirements based on your passport — visa rules, passport validity, and required documents.
+              </p>
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-[#0F766E] shadow-sm transition-all group-hover:gap-2 group-hover:bg-white/95">
+                <Sparkles className="h-3.5 w-3.5" />
+                Sign up free to unlock
+                <span className="transition-transform group-hover:translate-x-0.5">→</span>
+              </span>
+            </div>
+          </div>
+        </button>
+        {!authGate && (
+          <Link
+            to="/ref"
+            className="absolute inset-0"
+            aria-label="Sign up to see entry requirements"
+          />
+        )}
       </>)
     );
   }
