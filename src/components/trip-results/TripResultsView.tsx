@@ -1358,7 +1358,7 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
             <>
               <button
                 type="button"
-                onClick={() => (readOnly ? onRegenerate() : setEditTripOpen(true))}
+                onClick={() => (gated || readOnly ? onRegenerate() : setEditTripOpen(true))}
                 className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-foreground/80 hover:bg-white/60 transition-colors inline-flex items-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
