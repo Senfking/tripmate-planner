@@ -296,9 +296,9 @@ export function DaySection({
                   <MapIcon className="h-3 w-3" /> View day on map
                 </button>
               )}
-              {!readOnly && (
+              {(!readOnly || authGate) && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setEditDayOpen(true); }}
+                  onClick={(e) => { e.stopPropagation(); if (authGate) { authGate(); } else { setEditDayOpen(true); } }}
                   className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 >
                   <PenLine className="h-3 w-3" /> Edit day
