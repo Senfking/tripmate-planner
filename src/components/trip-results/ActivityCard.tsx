@@ -28,6 +28,11 @@ interface Props {
   onCoordsRefined?: (lat: number, lng: number) => void;
   animDelay?: number;
   costFormatter?: ActivityCostFormatter;
+  /** When set, mutating buttons (Remove, Swap) render normally but route
+   *  every click here instead of running the real mutation. Used by the
+   *  anonymous trip view to surface the full UI but funnel any edit
+   *  attempt into the signup modal. */
+  authGate?: () => void;
 }
 
 function MiniStars({ rating }: { rating: number }) {
