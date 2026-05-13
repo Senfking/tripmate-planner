@@ -87,9 +87,22 @@ interface Props {
   /** When true, hide editing affordances inside day cards (edit, add,
    *  remove, comments). The hero edit/regenerate controls are also hidden. */
   readOnly?: boolean;
+  /** When provided, mutating affordances stay visible (with normal styling)
+   *  but route every click to this callback instead of running the real
+   *  mutation. Used by the anonymous trip view to surface the full UI but
+   *  funnel any edit attempt into the signup modal. Takes precedence over
+   *  `readOnly` for visibility — buttons render — but mutation handlers are
+   *  still suppressed. */
+  authGate?: () => void;
 }
 
-export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, onShare, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage, streamingStatusMessages, streamingStage, streamingCompletedDays, dateMode = "calendar", readOnly = false }: Props) {
+export function TripResultsView({ tripId, planId, result, onClose, onRegenerate, onAdjust, standalone, onCreateTrip, onSaveDraft, onShare, creatingTrip, onDashboard, revealMode, onRevealComplete, streaming, streamingDayNumbers, streamingMessage, streamingStatusMessages, streamingStage, streamingCompletedDays, dateMode = "calendar", readOnly = false, authGate }: Props) {
+  // When authGate is set, render mutating affordances (so anon users see what's
+  // possible) but never actually execute the mutation client-side. Treat
+  // authGate as "interactive but intercepted": readOnly stops applying to
+  // visibility, but every mutation handler short-circuits to authGate().
+  const gated = !!authGate;
+  const effectiveReadOnly = readOnly && !gated;
   const reveal = useStreamReveal(result, !!revealMode);
 
   // Fire "Day N ready ✓" toasts as each day_complete event arrives. Hook is
