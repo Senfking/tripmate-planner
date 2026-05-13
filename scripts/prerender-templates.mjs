@@ -22,13 +22,20 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import puppeteer from "puppeteer";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+// puppeteer is imported lazily inside main() so the test harness (which
+// drives runPrerender with a stub) can import this module without needing
+// puppeteer installed locally — CI installs it via `npm install --no-save`.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
 const GUIDES_FILE = resolve(REPO_ROOT, "src/lib/destinationGuides.ts");
 const OUT_ROOT = resolve(REPO_ROOT, "public/templates");
+// Workspace-relative sidecar listing every page that failed in this run.
+// The auto-PR step reads this to append a "Failed pages" section so each
+// failure is surfaced for manual investigation instead of silently retried.
+const FAILED_SIDECAR_PATH = resolve(REPO_ROOT, "prerender-failed.json");
 
 const BASE_URL = (process.env.BASE_URL || "https://junto.pro").replace(/\/$/, "");
 const NAV_TIMEOUT_MS = Number(process.env.NAV_TIMEOUT_MS || 60_000);
@@ -65,6 +72,7 @@ async function readSlugs() {
 
 async function renderOne(browser, slug) {
   const url = `${BASE_URL}/templates/${slug}`;
+  const startedAt = Date.now();
   const page = await browser.newPage();
   try {
     await page.setViewport({ width: 1280, height: 1800, deviceScaleFactor: 1 });
@@ -105,7 +113,7 @@ async function renderOne(browser, slug) {
     const outDir = resolve(OUT_ROOT, slug);
     await mkdir(outDir, { recursive: true });
     await writeFile(resolve(outDir, "index.html"), html, "utf8");
-    return { slug, ok: true, bytes: html.length };
+    return { slug, ok: true, bytes: html.length, elapsedMs: Date.now() - startedAt };
   } finally {
     await page.close().catch(() => {});
   }
@@ -118,13 +126,20 @@ async function runWithConcurrency(items, limit, fn) {
     while (cursor < items.length) {
       const idx = cursor++;
       const item = items[idx];
+      const startedAt = Date.now();
       try {
         const r = await fn(item);
         results.push(r);
-        console.log(`[${idx + 1}/${items.length}] ok  ${item} (${r.bytes} bytes)`);
+        console.log(
+          `[${idx + 1}/${items.length}] ok  ${item} (${r.bytes} bytes, ${r.elapsedMs ?? Date.now() - startedAt}ms)`,
+        );
       } catch (err) {
-        console.error(`[${idx + 1}/${items.length}] FAIL ${item}: ${err.message}`);
-        results.push({ slug: item, ok: false, error: err.message });
+        const elapsedMs = Date.now() - startedAt;
+        console.error(`[${idx + 1}/${items.length}] FAIL ${item} (${elapsedMs}ms): ${err.message}`);
+        // Swallow per-page errors so a single broken page never bails the
+        // whole run. The sidecar + summary at the end of main() surfaces
+        // each failure for the PR description and manual investigation.
+        results.push({ slug: item, ok: false, error: err.message, elapsedMs });
       }
     }
   });
@@ -132,11 +147,59 @@ async function runWithConcurrency(items, limit, fn) {
   return results;
 }
 
+export async function runPrerender({
+  slugs,
+  concurrency = CONCURRENCY,
+  renderSlug,
+  writeFailedSidecar = writeFailedSidecarToDisk,
+} = {}) {
+  if (!Array.isArray(slugs) || slugs.length === 0) {
+    throw new Error("runPrerender: slugs must be a non-empty array");
+  }
+  if (typeof renderSlug !== "function") {
+    throw new Error("runPrerender: renderSlug must be a function");
+  }
+
+  const results = await runWithConcurrency(slugs, concurrency, renderSlug);
+
+  const succeeded = results.filter((r) => r.ok);
+  const failed = results.filter((r) => !r.ok);
+
+  // Always write the sidecar (even when empty) so the workflow can rely on
+  // its presence — an empty array signals "every page succeeded".
+  await writeFailedSidecar(
+    failed.map((f) => ({ slug: f.slug, error: f.error, elapsedMs: f.elapsedMs })),
+  );
+
+  console.log(`\nDone. ${succeeded.length}/${results.length} succeeded, ${failed.length} failed.`);
+  if (failed.length > 0) {
+    console.error("Failed slugs (need manual investigation):");
+    for (const f of failed) {
+      console.error(` - ${f.slug} (${f.elapsedMs}ms): ${f.error}`);
+    }
+  }
+
+  // Exit 0 as long as at least one page rendered. The partial snapshots
+  // still ship via the auto-PR; only a fully-broken run (0 successes,
+  // entire site down or BASE_URL misconfigured) is a hard failure.
+  return {
+    exitCode: succeeded.length > 0 ? 0 : 1,
+    succeeded,
+    failed,
+    results,
+  };
+}
+
+async function writeFailedSidecarToDisk(entries) {
+  await writeFile(FAILED_SIDECAR_PATH, JSON.stringify(entries, null, 2) + "\n", "utf8");
+}
+
 async function main() {
   const slugs = await readSlugs();
   console.log(`Prerendering ${slugs.length} template pages from ${BASE_URL}`);
   if (slugs.length === 0) throw new Error("No slugs parsed from destinationGuides.ts");
 
+  const { default: puppeteer } = await import("puppeteer");
   const browser = await puppeteer.launch({
     headless: "new",
     args: [
@@ -146,23 +209,27 @@ async function main() {
       "--disable-gpu",
     ],
   });
-  let results;
+  let outcome;
   try {
-    results = await runWithConcurrency(slugs, CONCURRENCY, (slug) => renderOne(browser, slug));
+    outcome = await runPrerender({
+      slugs,
+      concurrency: CONCURRENCY,
+      renderSlug: (slug) => renderOne(browser, slug),
+    });
   } finally {
     await browser.close().catch(() => {});
   }
 
-  const failed = results.filter((r) => !r.ok);
-  console.log(`\nDone. ${results.length - failed.length}/${results.length} succeeded.`);
-  if (failed.length > 0) {
-    console.error("Failed slugs:");
-    for (const f of failed) console.error(` - ${f.slug}: ${f.error}`);
-    process.exitCode = 1;
-  }
+  process.exit(outcome.exitCode);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only run main() when invoked directly (node scripts/prerender-templates.mjs).
+// Importing this file from a test harness leaves main() dormant so tests can
+// drive runPrerender with a mock renderSlug.
+const isDirectInvocation = import.meta.url === pathToFileURL(process.argv[1] || "").href;
+if (isDirectInvocation) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
