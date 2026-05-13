@@ -1298,7 +1298,8 @@ export function TripResultsView({ tripId, planId, result, onClose, onRegenerate,
                     skeleton={!!streamingDayNumbers?.has(day.day_number)}
                     costFormatter={activityCostFormatter}
                     dateMode={dateMode}
-                    readOnly={readOnly}
+                    readOnly={effectiveReadOnly}
+                    authGate={authGate}
                   />
                   </DayCardReveal>
                   </div>
