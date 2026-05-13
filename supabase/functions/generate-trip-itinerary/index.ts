@@ -446,6 +446,54 @@ function computeMaxFinalists(numDays: number): number {
 // well within PIPELINE_WALL_CLOCK_MS. 1-day trips are unaffected (single call).
 const SEQUENTIAL_RANKING_MIN_DAYS = 2;
 
+// Opt-in parallel per-day ranking. Fires all per-day Haiku calls concurrently
+// (capped by PARALLEL_DAY_RANKING_MAX_CONCURRENCY) and resolves cross-day
+// place_id collisions in a post-processing pass; days that fall below the
+// dedup minActivities threshold trigger a single fill-in call with the
+// post-dedup claimed set as avoid_place_ids. Gated on the env flag so we can
+// A/B against the sequential baseline on prod logs. The sequential branch
+// (the SEQUENTIAL_RANKING_MIN_DAYS-driven path) is unchanged when this is off.
+// Values that enable: "true", "1", "yes", "on" (case-insensitive). Anything
+// else, or unset, leaves the sequential path in charge.
+function parallelDayRankingEnabled(): boolean {
+  const v = (Deno.env.get("TRIP_GEN_PARALLEL_DAY_RANKING") ?? "").toLowerCase();
+  return v === "true" || v === "1" || v === "yes" || v === "on";
+}
+
+// Concurrency cap for the parallel ranking path. Keeps 10-day trips from
+// firing ten simultaneous Anthropic calls (Anthropic per-org concurrent
+// request limits aside, our own observability dashboards get harder to read
+// when one user fans out double-digit calls in <1s). Tuned to fit typical
+// 3-7 day trips: 6 means everything fans out in one wave, while 10-day trips
+// pay one extra wave of ~max(day_latency) for the tail.
+const PARALLEL_DAY_RANKING_MAX_CONCURRENCY = 6;
+
+// Simple bounded-concurrency runner. Worker is expected to be exception-safe
+// (resolve with a sentinel on failure) — we don't reject on first error
+// because one bad day shouldn't sink the trip (same contract as
+// rankDayWithRetry's fallback-on-failure path).
+async function runWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const lanes: Promise<void>[] = [];
+  const lanesCount = Math.min(Math.max(1, concurrency), items.length);
+  for (let c = 0; c < lanesCount; c++) {
+    lanes.push((async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) return;
+        results[i] = await worker(items[i], i);
+      }
+    })());
+  }
+  await Promise.all(lanes);
+  return results;
+}
+
 // Per-pool digest size shown to the day ranker. Was an inline 15 in
 // buildSharedContextText; lifted to a named constant so PATCH B can express
 // the must-have-reserved-slots split clearly. POOL_DIGEST_SIZE stays at 15
@@ -10136,6 +10184,13 @@ Deno.serve(async (req) => {
             const emittedDayNumbers = new Set<number>();
             let totalDropped = 0;
             let fallbackDays = 0;
+            // Parallel-mode-only counters. Stay 0 in the sequential branch
+            // (which doesn't have collisions or fill-ins by construction) so
+            // the [timing-summary] line can be diffed across modes without
+            // missing-field surprises in the log parser.
+            let dedupCollisions = 0;
+            let fillInInvocations = 0;
+            let fillInTotalMs = 0;
 
             // Per-leg accommodation + leg-scoped place pool.
             const accomByLeg = pickAccommodationPlaceIdsByLeg(venuesByPool, legs);
@@ -10152,9 +10207,19 @@ Deno.serve(async (req) => {
             const sharedContext = buildSharedContextText(intent, legs, venuesByPool, events, currency, geo.country_code);
 
             const sequentialRanking = numDays >= SEQUENTIAL_RANKING_MIN_DAYS;
+            // Parallel-with-dedup is only relevant when the sequential branch
+            // would otherwise be taken (numDays >= 2). 1-day trips already go
+            // through the legacy parallel branch (single call, no contention)
+            // and are not affected by the flag.
+            const parallelDedupRanking = sequentialRanking && parallelDayRankingEnabled();
+            const rankModeLabel = parallelDedupRanking
+              ? "parallel_dedup"
+              : sequentialRanking
+                ? "sequential"
+                : "parallel_single_day";
             let thinDays = 0;
             console.log(
-              `[stream.rank] mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+              `[stream.rank] mode=${rankModeLabel} ` +
               `numDays=${numDays} pool_size=${placeById.size} legs=${legs.length}`,
             );
 
@@ -10604,7 +10669,217 @@ Deno.serve(async (req) => {
               `first_storage_err=${JSON.stringify(mirrorResult.stats.first_storage_err)}`,
             );
 
-            if (sequentialRanking) {
+            if (parallelDedupRanking) {
+              // ---- Parallel-with-dedup ranking (opt-in via
+              // TRIP_GEN_PARALLEL_DAY_RANKING). Fires every per-day call
+              // concurrently with no avoid_ids, then resolves cross-day
+              // place_id collisions in a post-processing pass; days that
+              // drop below the minActivities threshold after dedup trigger
+              // a single fill-in call with the post-dedup claimed set as
+              // avoid_place_ids. Same dedup correctness contract as the
+              // sequential branch (no duplicate place_ids in the final
+              // itinerary) — just paid with one extra LLM round-trip per
+              // thin day instead of N sequential round-trips. SSE `day`
+              // events flush at the end of the rank step in one batch (vs
+              // progressively) — a wash for users because the rank step
+              // itself completes far sooner. ----
+              type ParallelDayResult = {
+                day: DaySkeleton;
+                raw: RawRankerDay | null;
+                source: "llm" | "fallback";
+              };
+              const parallelStart = Date.now();
+              console.log(
+                `[stream.rank] llm.rankDay.parallel.start days=${skeleton.length} ` +
+                `cap=${PARALLEL_DAY_RANKING_MAX_CONCURRENCY}`,
+              );
+              const initialResults = await runWithConcurrency<DaySkeleton, ParallelDayResult>(
+                skeleton,
+                PARALLEL_DAY_RANKING_MAX_CONCURRENCY,
+                async (day, dayIdx) => {
+                  // Budget check before dispatch — once budget is gone,
+                  // remaining lanes resolve to fallback rather than firing
+                  // an Anthropic call that callClaudeHaiku would refuse
+                  // anyway. Matches the sequential branch's
+                  // budgetExhausted gate.
+                  const remainingMs =
+                    PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+                  if (remainingMs <= 0) {
+                    console.warn(
+                      `[stream.rank.parallel] remaining_budget_exhausted ` +
+                      `day_number=${day.day_number} numDays=${numDays} ` +
+                      `elapsed_ms=${Date.now() - pipelineStartedAt} ` +
+                      `pipeline_budget_ms=${PIPELINE_WALL_CLOCK_MS}`,
+                    );
+                    return { day, raw: null, source: "fallback" };
+                  }
+                  const isLastDay = dayIdx === skeleton.length - 1;
+                  try {
+                    // No avoid_ids on initial call — the post-process pass
+                    // owns dedup. Full must-haves list goes to every day;
+                    // satisfaction is computed after the fact.
+                    const r = await rankOneDayStream(day, [], intent.must_haves, isLastDay);
+                    return { day, raw: r.raw, source: r.source };
+                  } catch (e) {
+                    console.warn(
+                      `[stream.rank.parallel] day ${day.day_number} threw:`,
+                      (e as Error).message,
+                    );
+                    return { day, raw: null, source: "fallback" };
+                  }
+                },
+              );
+              console.log(
+                `[stream.rank] llm.rankDay.parallel.end total_ms=${Date.now() - parallelStart} ` +
+                `days=${skeleton.length}`,
+              );
+
+              // Phase 2 — Collision dedup per-leg. Earliest day_number
+              // wins; later days' duplicate slots are dropped (the dropped
+              // slot_indexes are eligible for fill-in below). Mirrors the
+              // sequential branch's "first day to claim a place_id keeps
+              // it" semantics (enforced there by the legSeen Set in
+              // hydrateAndEmit).
+              initialResults.sort((a, b) => a.day.day_number - b.day.day_number);
+              const claimedByLeg = new Map<number, Set<string>>();
+              const dedupedResults: ParallelDayResult[] = [];
+              for (const r of initialResults) {
+                const legIdx = r.day.destination_index;
+                let claimed = claimedByLeg.get(legIdx);
+                if (!claimed) { claimed = new Set(); claimedByLeg.set(legIdx, claimed); }
+                if (!r.raw) {
+                  dedupedResults.push({ day: r.day, raw: null, source: r.source });
+                  continue;
+                }
+                const acts = Array.isArray(r.raw.activities) ? r.raw.activities : [];
+                const kept: typeof acts = [];
+                for (const a of acts) {
+                  const pid = a?.place_id ?? null;
+                  if (pid && claimed.has(pid)) {
+                    dedupCollisions++;
+                    continue;
+                  }
+                  if (pid) claimed.add(pid);
+                  kept.push(a);
+                }
+                dedupedResults.push({
+                  day: r.day,
+                  raw: { ...r.raw, activities: kept },
+                  source: r.source,
+                });
+              }
+
+              // Phase 3 — Fill-in for thin days. minActivities matches the
+              // hydrateAndEmit thin-day detector
+              // (Math.max(2, floor(slots*0.5))) so the dedup-then-fill-in
+              // step targets exactly the days that would otherwise trip
+              // the [stream.rank] thin-day warning. Calls rankDay directly
+              // (no retry) — fill-in is best-effort; if it fails the day
+              // stays at its post-dedup state and the existing thin-day
+              // warning fires from hydrateAndEmit. Step name "fillInDay#N"
+              // produces `[timing] llm.fillInDay#N total_ms=...` via
+              // callClaudeHaiku's existing log line.
+              for (const entry of dedupedResults) {
+                if (!entry.raw) continue;
+                if (entry.day.transit) continue;
+                const minActivities = Math.max(2, Math.floor(entry.day.slots.length * 0.5));
+                const realActCount = entry.raw.activities.filter(
+                  (a) => a?.place_id || a?.is_event,
+                ).length;
+                if (realActCount >= minActivities) continue;
+                const remainingMs =
+                  PIPELINE_WALL_CLOCK_MS - (Date.now() - pipelineStartedAt) - PIPELINE_TIMEOUT_BUFFER_MS;
+                if (remainingMs <= 0) {
+                  console.warn(
+                    `[stream.rank.parallel] fill-in skipped (budget exhausted) ` +
+                    `day_number=${entry.day.day_number}`,
+                  );
+                  continue;
+                }
+                const legIdx = entry.day.destination_index;
+                const claimed = claimedByLeg.get(legIdx) ?? new Set<string>();
+                const avoidIds = Array.from(claimed);
+                const isLastDay = entry.day.day_number === skeleton[skeleton.length - 1].day_number;
+                const fillStep = `fillInDay#${entry.day.day_number}`;
+                const callStart = Date.now();
+                fillInInvocations++;
+                try {
+                  const unfulfilled = intent.must_haves.filter(
+                    (mh) => !satisfiedMustHavesStream.has(mh),
+                  );
+                  const fillRes = await rankDay(
+                    anthropicKey, intent, entry.day, legs, sharedContext,
+                    accomByLeg.get(legIdx) ?? null,
+                    avoidIds,
+                    unfulfilled,
+                    isLastDay,
+                    pipelineStartedAt,
+                    fillStep,
+                  );
+                  fillInTotalMs += Date.now() - callStart;
+                  if (fillRes.usage) {
+                    await logger.log({
+                      feature: "trip_builder_fill_in_day",
+                      model: HAIKU_MODEL,
+                      input_tokens: fillRes.usage.input_tokens,
+                      output_tokens: fillRes.usage.output_tokens,
+                      cost_usd: computeHaikuCost(fillRes.usage),
+                      cached: fillRes.usage.cache_read_input_tokens > 0,
+                    }).catch((e) =>
+                      console.error(`[${fillStep}] logger.log failed:`, (e as Error).message),
+                    );
+                  }
+                  const newActs = Array.isArray(fillRes.data?.activities)
+                    ? fillRes.data!.activities
+                    : [];
+                  if (newActs.length === 0) continue;
+                  // Merge new picks into the day. Keep existing kept
+                  // activities; only fill empty slot_indexes; paranoia
+                  // skip any place_id already claimed elsewhere (model
+                  // is usually obedient to avoidIds but we don't bet the
+                  // dedup contract on that).
+                  const filledSlots = new Set<number>(
+                    entry.raw.activities
+                      .map((a) => (typeof a?.slot_index === "number" ? a.slot_index : -1))
+                      .filter((i) => i >= 0),
+                  );
+                  for (const newAct of newActs) {
+                    if (!newAct) continue;
+                    const pid = newAct.place_id ?? null;
+                    if (pid && claimed.has(pid)) continue;
+                    if (typeof newAct.slot_index === "number" && filledSlots.has(newAct.slot_index)) continue;
+                    if (pid) claimed.add(pid);
+                    if (typeof newAct.slot_index === "number") filledSlots.add(newAct.slot_index);
+                    entry.raw.activities.push(newAct);
+                  }
+                } catch (e) {
+                  fillInTotalMs += Date.now() - callStart;
+                  console.warn(
+                    `[stream.rank.parallel] fill-in day=${entry.day.day_number} threw:`,
+                    (e as Error).message,
+                  );
+                }
+              }
+
+              // Phase 4 — Hydrate + emit in day_number order. SSE `day`
+              // events all flush here at once (vs sequential's
+              // progressive emission). Net UX is faster because the rank
+              // step finishes ~one max(day_latency) instead of
+              // sum(day_latency).
+              for (const entry of dedupedResults) {
+                if (entry.source === "fallback") fallbackDays++;
+                recordSatisfactionStream(entry.raw, entry.day.destination_index);
+                hydrateAndEmit(entry.raw, entry.day, entry.source, baselinesByLeg);
+              }
+
+              console.log(
+                `[stream.rank.parallel] summary days=${numDays} ` +
+                `dedup_collisions=${dedupCollisions} ` +
+                `fill_in_invocations=${fillInInvocations} ` +
+                `fill_in_total_ms=${fillInTotalMs} ` +
+                `max_concurrency=${PARALLEL_DAY_RANKING_MAX_CONCURRENCY}`,
+              );
+            } else if (sequentialRanking) {
               let budgetExhausted = false;
               for (let dayIdx = 0; dayIdx < skeleton.length; dayIdx++) {
                 const day = skeleton[dayIdx];
@@ -10693,9 +10968,12 @@ Deno.serve(async (req) => {
             }
             const totalKept = ranked_days.reduce((n, d) => n + d.activities.length, 0);
             console.log(
-              `[stream.rank] summary mode=${sequentialRanking ? "sequential" : "parallel"} ` +
+              `[stream.rank] summary mode=${rankModeLabel} ` +
               `days=${numDays} total_activities=${totalKept} dropped=${totalDropped} ` +
-              `fallback_days=${fallbackDays} thin_days=${thinDays}`,
+              `fallback_days=${fallbackDays} thin_days=${thinDays} ` +
+              `dedup_collisions=${dedupCollisions} ` +
+              `fill_in_invocations=${fillInInvocations} ` +
+              `fill_in_total_ms=${fillInTotalMs}`,
             );
 
             // ---- Metadata + accommodation ----
@@ -11023,6 +11301,14 @@ Deno.serve(async (req) => {
                 total_ms: durationMs, cache_hit: false, stream: true,
                 destination: intent.destination, num_days: numDays,
                 queries: queries.length, finalists: finalistIds.length,
+                mode: rankModeLabel,
+                days: numDays,
+                dropped: totalDropped,
+                fallback_days: fallbackDays,
+                thin_days: thinDays,
+                dedup_collisions: dedupCollisions,
+                fill_in_invocations: fillInInvocations,
+                fill_in_total_ms: fillInTotalMs,
                 stages: stageTimings,
               })}`,
             );
