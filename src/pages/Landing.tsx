@@ -91,7 +91,11 @@ export default function Landing() {
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop"
           alt="Tropical beach destination"
           className="absolute inset-0 w-full h-full object-cover"
+          width={1920}
+          height={1080}
           loading="eager"
+          fetchPriority="high"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 via-40% to-black/80" />
 
