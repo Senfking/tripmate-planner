@@ -18,6 +18,7 @@ const AnonTripGenerator = lazy(() =>
   import("@/components/trip-builder/AnonTripGenerator").then((m) => ({ default: m.AnonTripGenerator })),
 );
 import { ContextualSignupModal } from "@/components/auth/ContextualSignupModal";
+import { HomeSEO } from "@/components/seo/HomeSEO";
 import { isAnonRateLimited, markAnonRateLimited } from "@/lib/anonSession";
 
 // Scroll-reveal hook (ported from /landing-old). Keeps the dark-section
@@ -96,6 +97,7 @@ export default function PublicLanding() {
 
   return (
     <div className="bg-[#fafaf9] text-[#1a1a1a] min-h-dvh overflow-x-hidden">
+      <HomeSEO />
       <Hero onSubmit={handleSubmit} variant="public" />
 
       {/* Feature sections (part 1 of 3) */}
