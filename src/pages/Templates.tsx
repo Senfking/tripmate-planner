@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search, X } from "lucide-react";
 import { useTripTemplates, type TripTemplate } from "@/hooks/useTripTemplates";
 import { TemplateCard } from "@/components/templates/TemplateCard";
+import { TemplatesCollectionSEO } from "@/components/seo/TemplatesCollectionSEO";
 import { useCanonical } from "@/hooks/useCanonical";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -56,6 +57,7 @@ export default function Templates() {
 
   return (
     <div className="min-h-screen bg-background">
+      {data && data.length > 0 && <TemplatesCollectionSEO templates={data} />}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border px-5 py-4">
         <div className="max-w-[1200px] mx-auto flex items-center gap-3">
           <Link to="/" className="text-muted-foreground hover:text-foreground" aria-label="Back">
