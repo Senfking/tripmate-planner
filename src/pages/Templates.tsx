@@ -131,11 +131,16 @@ export default function Templates() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-            {filtered.map((c) => (
-              <TemplateCard key={c.slug} template={c} variant="grid" />
-            ))}
-          </div>
+          <section aria-labelledby="templates-grid-heading">
+            <h2 id="templates-grid-heading" className="sr-only">
+              {filter === "All" ? "All trip templates" : `${filter} trip templates`}
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+              {filtered.map((c) => (
+                <TemplateCard key={c.slug} template={c} variant="grid" />
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>
