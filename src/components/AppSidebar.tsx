@@ -53,6 +53,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end
+                        aria-label={item.title}
                         className={`relative flex items-center gap-2.5 rounded-none px-5 py-2.5 text-[14px] transition-colors ${
                           isActive
                             ? "text-primary bg-[rgba(13,148,136,0.08)] border-l-[3px] border-primary font-semibold"
