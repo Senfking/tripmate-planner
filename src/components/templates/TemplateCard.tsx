@@ -101,10 +101,10 @@ export function TemplateCard({
 
       {/* Title + chips bottom */}
       <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-        <h4 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
+        <h3 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
           {c.destination}
           <span className="ml-1.5 font-mono font-semibold text-white/85">· {c.duration_days}d</span>
-        </h4>
+        </h3>
 
         {/* Mobile: 1 chip */}
         <div className="mt-2 flex items-center gap-1.5 overflow-hidden sm:hidden">
