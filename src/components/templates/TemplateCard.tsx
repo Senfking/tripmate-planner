@@ -86,7 +86,7 @@ export function TemplateCard({
       {/* Inner wrapper isolates the transform from the rounded clip,
           eliminating the brief "sharp edge" flash on hover */}
       <div className="absolute inset-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] [backface-visibility:hidden]">
-        <OptimizedCardImage src={c.cover_image_url} alt={c.destination} />
+        <OptimizedCardImage src={c.cover_image_url} alt={`Trip to ${c.destination}`} />
         {/* Strong bottom-up gradient for legibility on any image */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
         {/* Subtle top vignette to balance + frame */}
@@ -101,10 +101,10 @@ export function TemplateCard({
 
       {/* Title + chips bottom */}
       <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-        <h4 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
+        <h3 className="text-[17px] font-bold leading-tight text-white drop-shadow-md sm:text-xl">
           {c.destination}
           <span className="ml-1.5 font-mono font-semibold text-white/85">· {c.duration_days}d</span>
-        </h4>
+        </h3>
 
         {/* Mobile: 1 chip */}
         <div className="mt-2 flex items-center gap-1.5 overflow-hidden sm:hidden">
