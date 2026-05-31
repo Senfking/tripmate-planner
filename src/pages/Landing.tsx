@@ -157,7 +157,7 @@ export default function Landing() {
         <div className="mx-auto max-w-md text-center">
           <Reveal>
             <h2 className="text-2xl sm:text-4xl font-bold text-[#1a1a1a] mb-3">Your next trip starts here</h2>
-            <p className="text-[15px] text-[#9ca3af] mb-10">Plan smarter. Travel better. No spreadsheets required.</p>
+            <p className="text-[15px] text-[#52525b] mb-10">Plan smarter. Travel better. No spreadsheets required.</p>
             <ShimmerButton onClick={openBuilder} className="w-full sm:w-auto sm:px-14 mx-auto rounded-2xl py-4 text-[16px]">
               Start planning
             </ShimmerButton>
@@ -167,7 +167,7 @@ export default function Landing() {
 
       {/* ─── FOOTER ─── */}
       <footer className="py-8 px-5 border-t border-[#e5e5e5]">
-        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#9ca3af]">
+        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#52525b]">
           <span className="font-bold tracking-[0.2em] uppercase text-[#1a1a1a] text-xs">Junto</span>
           <div className="flex items-center gap-6">
             <Link to="/privacy" className="hover:text-[#1a1a1a] transition-colors">Privacy</Link>
