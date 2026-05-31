@@ -476,6 +476,8 @@ export function Hero({
           "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1600&q=38&auto=format&fit=crop&fm=webp 1600w",
         ].join(", ")}
         sizes="100vw"
+        width={1600}
+        height={940}
         alt=""
         aria-hidden
         decoding="async"
