@@ -173,9 +173,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(result), { headers: JSON_HEADERS });
 
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
+    console.error("get-place-details error:", e);
+    return new Response(JSON.stringify({ error: "Internal error" }), {
       status: 500,
       headers: JSON_HEADERS,
     });
   }
+
 });

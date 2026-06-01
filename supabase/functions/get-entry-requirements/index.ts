@@ -881,8 +881,8 @@ Deno.serve(async (req) => {
         "This information is AI-generated and may be out of date or incomplete. Always verify entry requirements with the destination country's embassy or official immigration authority before travel.",
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Internal error";
-    console.error("[get-entry-requirements] error:", message);
-    return jsonResponse({ error: message }, 500);
+    console.error("[get-entry-requirements] error:", e instanceof Error ? e.message : e);
+    return jsonResponse({ error: "Internal error" }, 500);
   }
 });
+

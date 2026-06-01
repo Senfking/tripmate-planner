@@ -326,7 +326,7 @@ Return ONLY the JSON object, no other text.`,
     });
   } catch (err: any) {
     console.error("scan-receipt error:", err);
-    return new Response(JSON.stringify({ success: false, error: err?.message || "Internal error" }), {
+    return new Response(JSON.stringify({ success: false, error: "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
       .update({ title: "Deleted user", notes: null })
       .eq("payer_id", user.id);
     if (expensesScrubError) {
-      return new Response(JSON.stringify({ error: expensesScrubError.message }), {
+      console.error("delete-account expenses scrub error:", expensesScrubError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -104,7 +105,8 @@ Deno.serve(async (req) => {
       .eq("created_by", user.id)
       .is("trip_id", null);
     if (draftsDeleteError) {
-      return new Response(JSON.stringify({ error: draftsDeleteError.message }), {
+      console.error("delete-account drafts delete error:", draftsDeleteError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -124,7 +126,8 @@ Deno.serve(async (req) => {
       .update({ referred_by: null })
       .eq("referred_by", user.id);
     if (referredByClearError) {
-      return new Response(JSON.stringify({ error: referredByClearError.message }), {
+      console.error("delete-account referred_by clear error:", referredByClearError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -133,7 +136,8 @@ Deno.serve(async (req) => {
     // Delete the user
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) {
-      return new Response(JSON.stringify({ error: deleteError.message }), {
+      console.error("delete-account auth delete error:", deleteError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

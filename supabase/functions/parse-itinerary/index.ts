@@ -91,8 +91,10 @@ Deno.serve(async (req) => {
         .from("trip-attachments")
         .download(file_path);
       if (dlError || !fileData) {
-        return jsonResponse({ success: false, error: `Storage download failed: ${dlError?.message}` }, 500);
+        console.error("parse-itinerary storage download failed:", dlError);
+        return jsonResponse({ success: false, error: "Storage download failed" }, 500);
       }
+
 
       const arrayBuf = await fileData.arrayBuffer();
       const bytes = new Uint8Array(arrayBuf);
@@ -223,6 +225,6 @@ Rules:
     return jsonResponse({ success: true, items });
   } catch (e) {
     console.error("parse-itinerary error:", e);
-    return jsonResponse({ success: false, error: (e as Error).message || "Internal error" }, 500);
+    return jsonResponse({ success: false, error: "Internal error" }, 500);
   }
 });
