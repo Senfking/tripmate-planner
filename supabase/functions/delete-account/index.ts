@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
       .update({ title: "Deleted user", notes: null })
       .eq("payer_id", user.id);
     if (expensesScrubError) {
-      return new Response(JSON.stringify({ error: expensesScrubError.message }), {
+      console.error("delete-account expenses scrub error:", expensesScrubError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
