@@ -126,7 +126,8 @@ Deno.serve(async (req) => {
       .update({ referred_by: null })
       .eq("referred_by", user.id);
     if (referredByClearError) {
-      return new Response(JSON.stringify({ error: referredByClearError.message }), {
+      console.error("delete-account referred_by clear error:", referredByClearError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
