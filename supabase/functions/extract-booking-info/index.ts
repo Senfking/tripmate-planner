@@ -240,7 +240,7 @@ Return only valid JSON, no other text.`;
   } catch (e: any) {
     console.error("extract-booking-info error:", e);
     return new Response(
-      JSON.stringify({ success: false, error: e?.message || "Internal error" }),
+      JSON.stringify({ success: false, error: "Internal error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
