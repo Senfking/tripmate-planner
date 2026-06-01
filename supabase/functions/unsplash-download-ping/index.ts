@@ -41,6 +41,8 @@ Deno.serve(async (req) => {
     await r.text();
     return json({ ok: r.ok, status: r.status, photoId: body.photoId ?? null });
   } catch (e) {
-    return json({ error: String(e) }, 502);
+    console.error("unsplash-download-ping error:", e);
+    return json({ error: "Upstream request failed" }, 502);
   }
+
 });
