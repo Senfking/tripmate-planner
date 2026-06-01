@@ -2648,8 +2648,7 @@ Suggest DIFFERENT venues and events only.`;
       cached: false,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
     console.error("[concierge-suggest] === ERROR ===", err);
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: "Internal error" }, 500);
   }
 });
