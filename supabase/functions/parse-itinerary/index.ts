@@ -225,6 +225,6 @@ Rules:
     return jsonResponse({ success: true, items });
   } catch (e) {
     console.error("parse-itinerary error:", e);
-    return jsonResponse({ success: false, error: (e as Error).message || "Internal error" }, 500);
+    return jsonResponse({ success: false, error: "Internal error" }, 500);
   }
 });
