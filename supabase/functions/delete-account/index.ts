@@ -105,7 +105,8 @@ Deno.serve(async (req) => {
       .eq("created_by", user.id)
       .is("trip_id", null);
     if (draftsDeleteError) {
-      return new Response(JSON.stringify({ error: draftsDeleteError.message }), {
+      console.error("delete-account drafts delete error:", draftsDeleteError);
+      return new Response(JSON.stringify({ error: "Internal error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
