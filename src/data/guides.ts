@@ -490,6 +490,11 @@ export const GUIDES: Guide[] = [
           },
         },
         {
+          title: "Docs, boarding passes, and the 4am check-in",
+          body:
+            "The category nobody plans for and everybody needs at 4am at the gate. Hotel PDFs, flight tickets, visa stamps, rental car confirmations, travel insurance. If they live in one person's inbox, they don't exist for the group.\n\nThe minimum: a single shared folder (Google Drive, iCloud Drive, Dropbox — pick one, one) with one PDF per booking, named clearly: '2026-09-13 Easyjet LGW-OLB Lisa.pdf'. Sounds anal. Saves a marriage at the rental car desk.\n\nApple Wallet and Google Wallet handle boarding passes natively — make sure everyone has added theirs the night before, not in the security queue. For passport photos, vaccination records, and travel insurance numbers, a single shared note in Apple Notes or Google Keep works fine and is searchable offline.\n\nThe one thing worth paying for: a password manager with sharing (1Password Families, Bitwarden). Share the rental car account, the Airbnb login, and the Wi-Fi password once and never again.",
+        },
+        {
           title: "What to skip",
           body:
             "A short list of categories where the app you'd install is worse than just not having one.",
