@@ -435,8 +435,8 @@ export default function GuideGroupTrip() {
                   loading="lazy"
                 />
                 {/* Legibility scrim — strong on left where type sits, fading right */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0B2E2C]/85 via-[#0B2E2C]/45 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B2E2C]/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                 {/* Overlaid headline */}
                 <div className="absolute inset-0 flex items-center">
