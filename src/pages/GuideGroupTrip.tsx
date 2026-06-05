@@ -212,8 +212,8 @@ export default function GuideGroupTrip() {
 
   return (
     <div
-      className="min-h-dvh bg-[#f3efe6] text-[#161513]"
-      style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}
+      className="min-h-dvh bg-[#F0FDFA] text-[#134E4A]"
+      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       <Helmet>
         <title>{TITLE} | Junto</title>
@@ -241,33 +241,33 @@ export default function GuideGroupTrip() {
       {/* Reading progress bar */}
       <div className="fixed top-0 left-0 right-0 h-[3px] z-50 bg-transparent">
         <div
-          className="h-full bg-[#ff5b2e] transition-[width] duration-150 ease-out"
+          className="h-full bg-[#0D9488] transition-[width] duration-150 ease-out"
           style={{ width: `${progress * 100}%` }}
         />
       </div>
 
       {/* Masthead */}
-      <div className="border-b border-[#161513]/15">
+      <div className="border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
           <button
             type="button"
             onClick={back}
             className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase font-semibold hover:opacity-60 transition-opacity"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
           </button>
           <div
             className="text-[11px] tracking-[0.3em] uppercase font-semibold"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             Junto · Field Guide № 01
           </div>
           <Link
             to="/templates"
             className="hidden sm:inline-flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase font-semibold hover:opacity-60 transition-opacity"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             Index
             <ArrowUpRight className="h-3.5 w-3.5" />
@@ -276,11 +276,11 @@ export default function GuideGroupTrip() {
       </div>
 
       {/* HERO — editorial cover */}
-      <header className="border-b border-[#161513]/15">
+      <header className="border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-10">
           <div
             className="grid grid-cols-12 gap-x-5 sm:gap-x-8 text-[11px] tracking-[0.22em] uppercase font-semibold mb-8"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             <div className="col-span-6 sm:col-span-3">Issue · 06 / 2026</div>
             <div className="col-span-6 sm:col-span-3 text-right sm:text-left">8 Rules · 12 Min Read</div>
@@ -289,9 +289,9 @@ export default function GuideGroupTrip() {
           </div>
 
           <h1
-            className="font-light leading-[0.92] tracking-[-0.035em] text-[#161513]"
+            className="font-light leading-[0.92] tracking-[-0.035em] text-[#134E4A]"
             style={{
-              fontFamily: "'Fraunces', Georgia, serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: "clamp(48px, 11vw, 168px)",
               fontVariationSettings: "'opsz' 144, 'SOFT' 50",
             }}
@@ -300,33 +300,33 @@ export default function GuideGroupTrip() {
             <br />
             a <span style={{ fontStyle: "italic", fontWeight: 300 }}>group trip</span>
             <br />
-            that <span className="text-[#ff5b2e]">actually</span> happens.
+            that <span className="text-[#0D9488]">actually</span> happens.
           </h1>
 
           <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8 mt-10 sm:mt-14">
             <div className="col-span-12 sm:col-span-7 md:col-span-6">
-              <p className="text-[19px] sm:text-[22px] leading-[1.45] text-[#161513]/85 font-normal">
+              <p className="text-[19px] sm:text-[22px] leading-[1.45] text-[#134E4A]/85 font-normal">
                 Most group trips do not die at the airport. They die in week three of the WhatsApp thread,
                 when someone sends a poll that nobody answers, the dates slip again, and flights creep
                 past what anyone wanted to pay.
               </p>
             </div>
             <div className="hidden md:block col-span-1" />
-            <aside className="col-span-12 sm:col-span-5 md:col-span-5 mt-8 sm:mt-0 border-t sm:border-t-0 sm:border-l border-[#161513]/20 sm:pl-8 pt-6 sm:pt-2">
+            <aside className="col-span-12 sm:col-span-5 md:col-span-5 mt-8 sm:mt-0 border-t sm:border-t-0 sm:border-l border-[#134E4A]/20 sm:pl-8 pt-6 sm:pt-2">
               <div
-                className="text-[10px] tracking-[0.25em] uppercase font-semibold mb-3 text-[#161513]/60"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold mb-3 text-[#134E4A]/60"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 In this issue
               </div>
               <ol
                 className="space-y-1.5 text-[13px] tabular-nums"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 {STEPS.map((s, i) => (
                   <li key={s.title} className="flex gap-3">
-                    <span className="text-[#ff5b2e] font-semibold">{String(i + 1).padStart(2, "0")}</span>
-                    <span className="text-[#161513]/80">{s.title}</span>
+                    <span className="text-[#0D9488] font-semibold">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-[#134E4A]/80">{s.title}</span>
                   </li>
                 ))}
               </ol>
@@ -335,7 +335,7 @@ export default function GuideGroupTrip() {
         </div>
 
         {/* Full-bleed hero image with caption */}
-        <figure className="relative w-full overflow-hidden border-y border-[#161513]/15 bg-[#161513]">
+        <figure className="relative w-full overflow-hidden border-y border-[#134E4A]/15 bg-[#134E4A]">
           <div className="relative w-full aspect-[21/9] sm:aspect-[21/8]">
             <img
               src={HERO_IMG}
@@ -347,7 +347,7 @@ export default function GuideGroupTrip() {
           </div>
           <figcaption
             className="absolute bottom-0 left-0 right-0 px-5 sm:px-8 py-3 bg-gradient-to-t from-black/70 to-transparent text-[11px] tracking-[0.2em] uppercase font-semibold text-white/90"
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             Fig. 01 · Six friends. One trip. Zero unresolved polls.
           </figcaption>
@@ -355,26 +355,26 @@ export default function GuideGroupTrip() {
       </header>
 
       {/* INTRO — drop cap */}
-      <section className="border-b border-[#161513]/15">
+      <section className="border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-16 sm:py-24 grid grid-cols-12 gap-x-5 sm:gap-x-8">
           <div className="hidden md:block col-span-2">
             <div
-              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 sticky top-8"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#134E4A]/50 sticky top-8"
+              style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
             >
               § Opening
             </div>
           </div>
           <div className="col-span-12 md:col-span-8">
             <p
-              className="text-[20px] sm:text-[24px] leading-[1.45] text-[#161513] first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-[88px] first-letter:leading-[0.85] first-letter:font-light first-letter:text-[#ff5b2e]"
-              style={{ fontFamily: "'Fraunces', Georgia, serif", fontVariationSettings: "'opsz' 36, 'SOFT' 30" }}
+              className="text-[20px] sm:text-[24px] leading-[1.45] text-[#134E4A] first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-[88px] first-letter:leading-[0.85] first-letter:font-light first-letter:text-[#0D9488]"
+              style={{ fontFamily: "'Inter', system-ui, sans-serif", fontVariationSettings: "'opsz' 36, 'SOFT' 30" }}
             >
               The trips that actually happen share a pattern. Tight commitments. Named budgets.
               Anchor-only itineraries. Money settled in real time. Decisions made where the trip
               lives, not buried under 200 messages of memes and 'lol so true.'
             </p>
-            <p className="mt-8 text-[17px] leading-[1.65] text-[#161513]/80 max-w-[58ch]">
+            <p className="mt-8 text-[17px] leading-[1.65] text-[#134E4A]/80 max-w-[58ch]">
               This is that playbook. Eight rules, in order. The first three matter most. Steal what
               works, ignore what does not, and your next group trip will not be the one everyone
               politely stops talking about.
@@ -384,55 +384,55 @@ export default function GuideGroupTrip() {
       </section>
 
       {/* FAILURE CARDS — index-style */}
-      <section className="border-b border-[#161513]/15 bg-[#161513] text-[#f3efe6]">
+      <section className="border-b border-[#134E4A]/15 bg-[#134E4A] text-[#F0FDFA]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
           <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8 mb-12">
             <div className="col-span-12 md:col-span-4">
               <div
-                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#ff5b2e] mb-4"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#0D9488] mb-4"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Pre-mortem
               </div>
               <h2
                 className="font-light leading-[0.95] tracking-[-0.02em]"
                 style={{
-                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   fontSize: "clamp(36px, 5vw, 64px)",
                   fontVariationSettings: "'opsz' 96, 'SOFT' 40",
                 }}
               >
-                Five ways your trip will <em className="text-[#ff5b2e]" style={{ fontStyle: "italic" }}>quietly die</em>.
+                Five ways your trip will <em className="text-[#0D9488]" style={{ fontStyle: "italic" }}>quietly die</em>.
               </h2>
             </div>
             <div className="hidden md:block col-span-1" />
             <div className="col-span-12 md:col-span-7 mt-6 md:mt-3">
-              <p className="text-[16px] leading-[1.65] text-[#f3efe6]/70 max-w-[52ch]">
+              <p className="text-[16px] leading-[1.65] text-[#F0FDFA]/70 max-w-[52ch]">
                 If you have planned a group trip before, you have lived at least three of these.
                 If you have not, this is the unsubsidised education.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t border-[#f3efe6]/15">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t border-[#F0FDFA]/15">
             {FAILURES.map((f) => (
               <div
                 key={f.num}
-                className="border-b sm:border-r last:border-r-0 border-[#f3efe6]/15 px-1 sm:px-5 py-6 sm:py-8"
+                className="border-b sm:border-r last:border-r-0 border-[#F0FDFA]/15 px-1 sm:px-5 py-6 sm:py-8"
               >
                 <div
-                  className="text-[11px] tracking-[0.25em] uppercase font-semibold text-[#ff5b2e] mb-4 tabular-nums"
-                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  className="text-[11px] tracking-[0.25em] uppercase font-semibold text-[#0D9488] mb-4 tabular-nums"
+                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   No. {f.num}
                 </div>
                 <h3
                   className="text-[20px] leading-[1.15] mb-3 tracking-[-0.01em]"
-                  style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   {f.title}
                 </h3>
-                <p className="text-[14px] leading-[1.55] text-[#f3efe6]/70">{f.body}</p>
+                <p className="text-[14px] leading-[1.55] text-[#F0FDFA]/70">{f.body}</p>
               </div>
             ))}
           </div>
@@ -440,20 +440,20 @@ export default function GuideGroupTrip() {
       </section>
 
       {/* THE 8 RULES */}
-      <section className="border-b border-[#161513]/15">
+      <section className="border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 pt-20 sm:pt-28 pb-10">
           <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8 items-end">
             <div className="col-span-12 md:col-span-8">
               <div
-                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-4"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#134E4A]/50 mb-4"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Part Two · The rules
               </div>
               <h2
                 className="font-light leading-[0.92] tracking-[-0.03em]"
                 style={{
-                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   fontSize: "clamp(44px, 7vw, 96px)",
                   fontVariationSettings: "'opsz' 144, 'SOFT' 50",
                 }}
@@ -465,8 +465,8 @@ export default function GuideGroupTrip() {
             </div>
             <div className="col-span-12 md:col-span-4 mt-6 md:mt-0 md:pb-3">
               <p
-                className="text-[13px] tracking-[0.05em] text-[#161513]/70"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[13px] tracking-[0.05em] text-[#134E4A]/70"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Rules 01 → 03 are non-negotiable. The rest you can adapt. Skip any of the first three
                 and the trip is on borrowed time.
@@ -481,27 +481,27 @@ export default function GuideGroupTrip() {
             return (
               <article
                 key={s.title}
-                className="border-t border-[#161513]/15"
+                className="border-t border-[#134E4A]/15"
               >
                 <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-16 sm:py-24 grid grid-cols-12 gap-x-5 sm:gap-x-8">
                   {/* Big numeral column */}
                   <div className="col-span-12 md:col-span-3 mb-8 md:mb-0">
                     <div
-                      className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-2"
-                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                      className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#134E4A]/50 mb-2"
+                      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                     >
                       Rule
                     </div>
                     <div
-                      className="font-light leading-[0.85] text-[#161513] tabular-nums tracking-[-0.06em]"
+                      className="font-light leading-[0.85] text-[#134E4A] tabular-nums tracking-[-0.06em]"
                       style={{
-                        fontFamily: "'Fraunces', Georgia, serif",
+                        fontFamily: "'Inter', system-ui, sans-serif",
                         fontSize: "clamp(96px, 14vw, 220px)",
                         fontVariationSettings: "'opsz' 144, 'SOFT' 50",
                       }}
                     >
-                      <span className="text-[#161513]/15">0</span>
-                      <span className={i < 3 ? "text-[#ff5b2e]" : "text-[#161513]"}>{i + 1}</span>
+                      <span className="text-[#134E4A]/15">0</span>
+                      <span className={i < 3 ? "text-[#0D9488]" : "text-[#134E4A]"}>{i + 1}</span>
                     </div>
                   </div>
 
@@ -510,9 +510,9 @@ export default function GuideGroupTrip() {
                     {/* This layout block reads naturally; the order swap is a subtle rhythm break */}
                     <div className="md:max-w-[680px] md:ml-auto">
                       <h3
-                        className="font-light leading-[0.98] tracking-[-0.025em] text-[#161513]"
+                        className="font-light leading-[0.98] tracking-[-0.025em] text-[#134E4A]"
                         style={{
-                          fontFamily: "'Fraunces', Georgia, serif",
+                          fontFamily: "'Inter', system-ui, sans-serif",
                           fontSize: "clamp(36px, 4.5vw, 60px)",
                           fontVariationSettings: "'opsz' 96, 'SOFT' 40",
                         }}
@@ -520,14 +520,14 @@ export default function GuideGroupTrip() {
                         {s.title}.
                       </h3>
                       <p
-                        className="mt-5 text-[18px] sm:text-[20px] leading-[1.4] text-[#ff5b2e]"
-                        style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontVariationSettings: "'opsz' 48" }}
+                        className="mt-5 text-[18px] sm:text-[20px] leading-[1.4] text-[#0D9488]"
+                        style={{ fontFamily: "'Inter', system-ui, sans-serif", fontStyle: "italic", fontVariationSettings: "'opsz' 48" }}
                       >
                         {s.rule}
                       </p>
 
                       <figure className="mt-9 mb-9">
-                        <div className="relative w-full aspect-[3/2] overflow-hidden bg-[#e7e0d2]">
+                        <div className="relative w-full aspect-[3/2] overflow-hidden bg-[#CCFBF1]">
                           <img
                             src={s.image}
                             alt={s.alt}
@@ -536,25 +536,25 @@ export default function GuideGroupTrip() {
                           />
                         </div>
                         <figcaption
-                          className="mt-3 flex items-baseline gap-4 text-[11px] tracking-[0.2em] uppercase font-semibold text-[#161513]/60"
-                          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                          className="mt-3 flex items-baseline gap-4 text-[11px] tracking-[0.2em] uppercase font-semibold text-[#134E4A]/60"
+                          style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                         >
-                          <span className="text-[#ff5b2e]">Fig. {String(i + 2).padStart(2, "0")}</span>
-                          <span className="normal-case tracking-normal text-[13px] text-[#161513]/65" style={{ fontFamily: "'IBM Plex Sans', sans-serif", letterSpacing: 0, fontWeight: 400 }}>
+                          <span className="text-[#0D9488]">Fig. {String(i + 2).padStart(2, "0")}</span>
+                          <span className="normal-case tracking-normal text-[13px] text-[#134E4A]/65" style={{ fontFamily: "'IBM Plex Sans', sans-serif", letterSpacing: 0, fontWeight: 400 }}>
                             {s.caption}
                           </span>
                         </figcaption>
                       </figure>
 
-                      <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#161513]/85">{s.body}</p>
+                      <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#134E4A]/85">{s.body}</p>
 
                       <blockquote
-                        className="my-10 pl-6 border-l-2 border-[#ff5b2e]"
+                        className="my-10 pl-6 border-l-2 border-[#0D9488]"
                       >
                         <p
-                          className="text-[24px] sm:text-[30px] leading-[1.15] tracking-[-0.015em] text-[#161513]"
+                          className="text-[24px] sm:text-[30px] leading-[1.15] tracking-[-0.015em] text-[#134E4A]"
                           style={{
-                            fontFamily: "'Fraunces', Georgia, serif",
+                            fontFamily: "'Inter', system-ui, sans-serif",
                             fontVariationSettings: "'opsz' 72, 'SOFT' 40",
                           }}
                         >
@@ -562,14 +562,14 @@ export default function GuideGroupTrip() {
                         </p>
                       </blockquote>
 
-                      <div className="border-t border-[#161513]/15 pt-5">
+                      <div className="border-t border-[#134E4A]/15 pt-5">
                         <div
-                          className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-2"
-                          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                          className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#134E4A]/50 mb-2"
+                          style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                         >
                           Field note
                         </div>
-                        <p className="text-[15px] leading-[1.6] text-[#161513]/75">{s.example}</p>
+                        <p className="text-[15px] leading-[1.6] text-[#134E4A]/75">{s.example}</p>
                       </div>
                     </div>
                   </div>
@@ -581,20 +581,20 @@ export default function GuideGroupTrip() {
       </section>
 
       {/* CTA — heavy, full-bleed */}
-      <section className="bg-[#ff5b2e] text-[#161513] border-b border-[#161513]/15">
+      <section className="bg-[#0D9488] text-[#134E4A] border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
           <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8">
             <div className="col-span-12 md:col-span-7">
               <div
                 className="text-[11px] tracking-[0.28em] uppercase font-semibold mb-6"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Or, skip rules 04 → 08
               </div>
               <h2
                 className="font-light leading-[0.94] tracking-[-0.03em]"
                 style={{
-                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   fontSize: "clamp(40px, 6vw, 84px)",
                   fontVariationSettings: "'opsz' 144, 'SOFT' 50",
                 }}
@@ -602,7 +602,7 @@ export default function GuideGroupTrip() {
                 Let an AI build it. Let a product hold the group <em style={{ fontStyle: "italic" }}>together</em>.
               </h2>
             </div>
-            <div className="col-span-12 md:col-span-5 md:pl-8 md:border-l md:border-[#161513]/25 mt-10 md:mt-3">
+            <div className="col-span-12 md:col-span-5 md:pl-8 md:border-l md:border-[#134E4A]/25 mt-10 md:mt-3">
               <p className="text-[17px] leading-[1.6] mb-8 max-w-[40ch]">
                 Junto builds anchor-based itineraries in 30 seconds, reads receipts to settle expenses,
                 and keeps every decision on the actual plan. Free. No credit card. Your group joins
@@ -611,11 +611,11 @@ export default function GuideGroupTrip() {
               <div className="space-y-3">
                 <Link
                   to="/trips/new"
-                  className="group flex items-center justify-between w-full bg-[#161513] text-[#f3efe6] px-6 py-5 hover:bg-black transition-colors"
+                  className="group flex items-center justify-between w-full bg-[#134E4A] text-[#F0FDFA] px-6 py-5 hover:bg-black transition-colors"
                 >
                   <span
                     className="text-[14px] tracking-[0.15em] uppercase font-semibold"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                   >
                     Plan a group trip
                   </span>
@@ -623,11 +623,11 @@ export default function GuideGroupTrip() {
                 </Link>
                 <Link
                   to="/templates"
-                  className="group flex items-center justify-between w-full border border-[#161513] px-6 py-5 hover:bg-[#161513] hover:text-[#f3efe6] transition-colors"
+                  className="group flex items-center justify-between w-full border border-[#134E4A] px-6 py-5 hover:bg-[#134E4A] hover:text-[#F0FDFA] transition-colors"
                 >
                   <span
                     className="text-[14px] tracking-[0.15em] uppercase font-semibold"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                   >
                     Browse 16 trip ideas
                   </span>
@@ -640,32 +640,32 @@ export default function GuideGroupTrip() {
       </section>
 
       {/* CHECKLIST — telegram style */}
-      <section className="border-b border-[#161513]/15">
+      <section className="border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28 grid grid-cols-12 gap-x-5 sm:gap-x-8">
           <div className="col-span-12 md:col-span-4">
             <div
-              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-4"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#134E4A]/50 mb-4"
+              style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
             >
               Tear-out
             </div>
             <h2
               className="font-light leading-[0.95] tracking-[-0.02em]"
               style={{
-                fontFamily: "'Fraunces', Georgia, serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 fontSize: "clamp(36px, 4.5vw, 56px)",
                 fontVariationSettings: "'opsz' 96, 'SOFT' 40",
               }}
             >
               The <em style={{ fontStyle: "italic" }}>30-second</em> checklist.
             </h2>
-            <p className="mt-5 text-[15px] leading-[1.6] text-[#161513]/70 max-w-[34ch]">
+            <p className="mt-5 text-[15px] leading-[1.6] text-[#134E4A]/70 max-w-[34ch]">
               Eight lines. Print it. Pin it to the chat. If you can tick all eight, the trip is going
               to happen.
             </p>
           </div>
-          <div className="col-span-12 md:col-span-8 mt-10 md:mt-0 md:border-l md:border-[#161513]/20 md:pl-10">
-            <ol className="divide-y divide-[#161513]/15 border-y border-[#161513]/15">
+          <div className="col-span-12 md:col-span-8 mt-10 md:mt-0 md:border-l md:border-[#134E4A]/20 md:pl-10">
+            <ol className="divide-y divide-[#134E4A]/15 border-y border-[#134E4A]/15">
               {[
                 "Group is locked. No maybes.",
                 "Budget number is named, in writing.",
@@ -678,12 +678,12 @@ export default function GuideGroupTrip() {
               ].map((item, idx) => (
                 <li key={item} className="flex items-baseline gap-6 py-5">
                   <span
-                    className="flex-none text-[13px] tabular-nums font-semibold text-[#ff5b2e] tracking-[0.1em]"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                    className="flex-none text-[13px] tabular-nums font-semibold text-[#0D9488] tracking-[0.1em]"
+                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                   >
                     {String(idx + 1).padStart(2, "0")}
                   </span>
-                  <span className="text-[18px] sm:text-[20px] leading-[1.4] text-[#161513]" style={{ fontFamily: "'Fraunces', Georgia, serif", fontVariationSettings: "'opsz' 36" }}>
+                  <span className="text-[18px] sm:text-[20px] leading-[1.4] text-[#134E4A]" style={{ fontFamily: "'Inter', system-ui, sans-serif", fontVariationSettings: "'opsz' 36" }}>
                     {item}
                   </span>
                 </li>
@@ -694,19 +694,19 @@ export default function GuideGroupTrip() {
       </section>
 
       {/* FAQ */}
-      <section className="border-b border-[#161513]/15">
+      <section className="border-b border-[#134E4A]/15">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28 grid grid-cols-12 gap-x-5 sm:gap-x-8">
           <div className="col-span-12 md:col-span-4">
             <div
-              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-4 md:sticky md:top-8"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#134E4A]/50 mb-4 md:sticky md:top-8"
+              style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
             >
               Q & A
             </div>
             <h2
               className="font-light leading-[0.95] tracking-[-0.02em] md:sticky md:top-16"
               style={{
-                fontFamily: "'Fraunces', Georgia, serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 fontSize: "clamp(36px, 4.5vw, 60px)",
                 fontVariationSettings: "'opsz' 96, 'SOFT' 40",
               }}
@@ -715,30 +715,30 @@ export default function GuideGroupTrip() {
             </h2>
           </div>
           <div className="col-span-12 md:col-span-8 mt-10 md:mt-0">
-            <div className="divide-y divide-[#161513]/15 border-y border-[#161513]/15">
+            <div className="divide-y divide-[#134E4A]/15 border-y border-[#134E4A]/15">
               {FAQ.map((f, idx) => (
                 <details key={f.q} className="group py-7" open={idx === 0}>
                   <summary className="flex items-baseline gap-6 cursor-pointer list-none">
                     <span
-                      className="flex-none text-[12px] tabular-nums font-semibold text-[#ff5b2e]"
-                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                      className="flex-none text-[12px] tabular-nums font-semibold text-[#0D9488]"
+                      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                     >
                       {String(idx + 1).padStart(2, "0")}
                     </span>
                     <span
-                      className="flex-1 text-[22px] sm:text-[26px] leading-[1.2] tracking-[-0.015em] text-[#161513]"
-                      style={{ fontFamily: "'Fraunces', Georgia, serif", fontVariationSettings: "'opsz' 72, 'SOFT' 40" }}
+                      className="flex-1 text-[22px] sm:text-[26px] leading-[1.2] tracking-[-0.015em] text-[#134E4A]"
+                      style={{ fontFamily: "'Inter', system-ui, sans-serif", fontVariationSettings: "'opsz' 72, 'SOFT' 40" }}
                     >
                       {f.q}
                     </span>
                     <span
-                      className="flex-none text-[20px] text-[#161513]/60 group-open:rotate-45 transition-transform"
+                      className="flex-none text-[20px] text-[#134E4A]/60 group-open:rotate-45 transition-transform"
                       aria-hidden
                     >
                       +
                     </span>
                   </summary>
-                  <div className="mt-4 pl-[44px] text-[16px] leading-[1.65] text-[#161513]/80 max-w-[58ch]">
+                  <div className="mt-4 pl-[44px] text-[16px] leading-[1.65] text-[#134E4A]/80 max-w-[58ch]">
                     {f.a}
                   </div>
                 </details>
@@ -749,49 +749,49 @@ export default function GuideGroupTrip() {
       </section>
 
       {/* Colophon / outro */}
-      <footer className="bg-[#161513] text-[#f3efe6]">
+      <footer className="bg-[#134E4A] text-[#F0FDFA]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
           <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8">
             <div className="col-span-12 md:col-span-8">
               <div
-                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#ff5b2e] mb-4"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#0D9488] mb-4"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Up next
               </div>
               <h3
                 className="font-light leading-[0.95] tracking-[-0.025em]"
                 style={{
-                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   fontSize: "clamp(36px, 5vw, 64px)",
                   fontVariationSettings: "'opsz' 96, 'SOFT' 50",
                 }}
               >
-                Need somewhere <em style={{ fontStyle: "italic" }} className="text-[#ff5b2e]">to go</em>?
+                Need somewhere <em style={{ fontStyle: "italic" }} className="text-[#0D9488]">to go</em>?
               </h3>
-              <p className="mt-5 text-[17px] leading-[1.6] text-[#f3efe6]/70 max-w-[52ch]">
+              <p className="mt-5 text-[17px] leading-[1.6] text-[#F0FDFA]/70 max-w-[52ch]">
                 Sixteen curated group-trip itineraries. Bali, Tokyo, Tulum, Lisbon, Petra, Mexico City.
                 Filtered by vibe, season, and budget. Each one opens straight into a working plan.
               </p>
               <Link
                 to="/templates"
-                className="mt-8 inline-flex items-center gap-2 text-[13px] tracking-[0.18em] uppercase font-semibold text-[#f3efe6] border-b border-[#ff5b2e] pb-1 hover:text-[#ff5b2e] transition-colors"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="mt-8 inline-flex items-center gap-2 text-[13px] tracking-[0.18em] uppercase font-semibold text-[#F0FDFA] border-b border-[#0D9488] pb-1 hover:text-[#0D9488] transition-colors"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 See all trip ideas
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="col-span-12 md:col-span-4 mt-10 md:mt-0 md:border-l md:border-[#f3efe6]/20 md:pl-8">
+            <div className="col-span-12 md:col-span-4 mt-10 md:mt-0 md:border-l md:border-[#F0FDFA]/20 md:pl-8">
               <div
-                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#f3efe6]/50 mb-4"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#F0FDFA]/50 mb-4"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Colophon
               </div>
               <p
-                className="text-[13px] leading-[1.65] text-[#f3efe6]/60"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                className="text-[13px] leading-[1.65] text-[#F0FDFA]/60"
+                style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Set in Fraunces and IBM Plex.<br />
                 Written by people who have planned trips that worked, and many more that did not.<br />
