@@ -41,31 +41,35 @@ export default function Guides() {
         </script>
       </Helmet>
 
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-[#FAF8F4]/85 backdrop-blur border-b border-[#0B2E2C]/10">
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-10 lg:px-16 h-14 grid grid-cols-3 items-center">
-          <div className="flex items-center justify-start">
-            <span className="text-[13px] font-medium text-[#0B2E2C] whitespace-nowrap">
-              Field Guide
-            </span>
-          </div>
-          <Link
-            to="/"
-            className="justify-self-center text-[15px] sm:text-[17px] font-extrabold tracking-[0.32em] uppercase text-[#0B2E2C]"
-          >
-            Junto
-          </Link>
-          <div className="flex items-center justify-end">
-            <Link
-              to="/ref"
-              className="inline-flex items-center rounded-full px-4 py-1.5 text-[13px] font-semibold text-white whitespace-nowrap"
-              style={{ background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)" }}
-            >
-              Get started
-            </Link>
-          </div>
+      {/* Top bar — matches landing page header exactly */}
+      <div
+        className="fixed top-0 inset-x-0 z-50 grid grid-cols-3 items-center px-5 sm:px-10 lg:px-16"
+        style={{
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+          paddingBottom: 24,
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
+        }}
+      >
+        <div className="flex items-center justify-start">
+          <span className="text-[13px] font-medium text-white/85 whitespace-nowrap">
+            Field Guide
+          </span>
         </div>
-      </header>
+        <Link
+          to="/"
+          className="text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 text-center"
+        >
+          Junto
+        </Link>
+        <div className="flex items-center justify-end">
+          <Link
+            to="/ref"
+            className="rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-white/25 transition-colors whitespace-nowrap"
+          >
+            Get started
+          </Link>
+        </div>
+      </div>
 
       {/* Hero */}
       <section className="max-w-[1400px] mx-auto px-5 sm:px-10 pt-20 sm:pt-28 pb-16 sm:pb-20">
