@@ -426,7 +426,7 @@ export default function GuideGroupTrip() {
             className="scroll-mt-20 pt-14 sm:pt-20"
           >
             {/* Hero image with overlaid headline */}
-            <figure className="relative w-full overflow-hidden bg-[#0B2E2C]">
+            <figure className="relative w-full overflow-hidden bg-black">
               <div className="relative w-full aspect-[16/10] sm:aspect-[21/9] max-h-[640px]">
                 <img
                   src={s.image}
