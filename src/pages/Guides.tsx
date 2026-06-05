@@ -51,9 +51,13 @@ export default function Guides() {
         }}
       >
         <div className="flex items-center justify-start">
-          <span className="text-[13px] font-medium text-white/85 whitespace-nowrap">
-            Field Guide
-          </span>
+          <Link
+            to="/"
+            className="group inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[12px] sm:text-[13px] font-semibold text-white/90 backdrop-blur-md shadow-[0_4px_16px_-4px_rgba(0,0,0,0.4)] hover:bg-white/20 hover:text-white hover:border-white/40 transition-all whitespace-nowrap"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" strokeWidth={2.25} />
+            Back to homepage
+          </Link>
         </div>
         <Link
           to="/"
@@ -64,7 +68,7 @@ export default function Guides() {
         <div className="flex items-center justify-end">
           <Link
             to="/ref"
-            className="rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-white/25 transition-colors whitespace-nowrap"
+            className="rounded-full bg-[#0D9488] hover:bg-[#0B807A] px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-all whitespace-nowrap"
           >
             Get started
           </Link>
