@@ -246,33 +246,35 @@ export default function GuideGroupTrip() {
         />
       </div>
 
-      {/* Sticky header — white with subtle backdrop blur */}
-      <header
-        className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-5 sm:px-10 bg-white/90 backdrop-blur-xl border-b border-black/5"
+      {/* Header — identical to landing Hero overlay (white JUNTO + gradient CTA) */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-end px-5 sm:px-10 pointer-events-none"
         style={{
-          paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)",
-          paddingBottom: 14,
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+          paddingBottom: 24,
+          background:
+            "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
         }}
       >
         <Link
           to="/"
           aria-label="Junto home"
-          className="text-[17px] font-extrabold tracking-[0.28em] uppercase text-[#0B2E2C] hover:opacity-70 transition-opacity"
+          className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 18px)" }}
         >
           Junto
         </Link>
         <Link
           to="/ref"
-          className="group relative inline-flex items-center rounded-full px-4 py-1.5 text-[12px] sm:px-5 sm:py-2 sm:text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.55)] transition-transform hover:scale-[1.03] active:scale-95"
+          className="group pointer-events-auto relative inline-flex items-center rounded-full px-3.5 py-1.5 text-[12px] sm:px-5 sm:py-2 sm:text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-transform hover:scale-[1.03] active:scale-95"
           style={{
-            background:
-              "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
+            background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
           }}
         >
           <span className="absolute inset-0 rounded-full bg-gradient-to-r from-white/20 via-transparent to-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           <span className="relative">Get started</span>
         </Link>
-      </header>
+      </div>
 
 
 
@@ -421,29 +423,29 @@ export default function GuideGroupTrip() {
           <article
             key={s.title}
             id={`rule-${i + 1}`}
-            className="scroll-mt-20 pt-20 sm:pt-32"
+            className="scroll-mt-20 pt-14 sm:pt-20"
           >
             {/* Rule header — giant numeral in column */}
             <div className="max-w-[720px] mx-auto px-5 sm:px-8">
-              <div className="flex items-baseline gap-5 mb-2">
+              <div className="flex items-baseline gap-4 mb-1">
                 <span
                   className="font-medium tracking-[-0.05em] tabular-nums leading-none text-[#0D9488]"
-                  style={{ fontSize: "clamp(56px, 9vw, 128px)" }}
+                  style={{ fontSize: "clamp(44px, 6.5vw, 88px)" }}
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="font-mono text-[11px] tracking-[0.28em] uppercase text-[#0B2E2C]/40 pb-3">
+                <span className="font-mono text-[11px] tracking-[0.28em] uppercase text-[#0B2E2C]/40 pb-2">
                   / {s.tag}
                 </span>
               </div>
               <h3
                 className="font-medium tracking-[-0.03em] leading-[1.02] text-[#0B2E2C]"
-                style={{ fontSize: "clamp(32px, 4.4vw, 56px)" }}
+                style={{ fontSize: "clamp(28px, 3.6vw, 44px)" }}
               >
                 {s.title}.
               </h3>
               <p
-                className="mt-4 text-[20px] sm:text-[24px] leading-[1.35] italic font-light tracking-[-0.01em]"
+                className="mt-3 text-[17px] sm:text-[19px] leading-[1.4] italic font-light tracking-[-0.01em]"
                 style={{
                   background: GRADIENT,
                   WebkitBackgroundClip: "text",
@@ -456,7 +458,7 @@ export default function GuideGroupTrip() {
             </div>
 
             {/* Full-bleed image breaking the column */}
-            <figure className="mt-12 sm:mt-16">
+            <figure className="mt-6 sm:mt-8">
               <div className="relative w-full">
                 <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] max-h-[700px] overflow-hidden bg-[#0B2E2C]/5">
                   <img
