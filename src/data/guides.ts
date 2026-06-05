@@ -393,7 +393,7 @@ export const GUIDES: Guide[] = [
     longTitle: "The Best Apps for Group Travel in 2026 (Tested on Real Trips)",
     description:
       "An honest, opinionated tour of the apps that survive a real group trip: for splitting costs, voting on plans, sharing photos, and keeping the itinerary alive. With the three-app minimum stack.",
-    readTime: "10 min read",
+    readTime: "5 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1600&q=75&auto=format&fit=crop&fm=webp",
