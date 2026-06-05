@@ -133,12 +133,12 @@ export const GUIDES: Guide[] = [
         {
           title: "Splitwise alternatives, ranked honestly",
           body:
-            "Splitwise is fine but it's also the only app most groups have heard of. A few alternatives are worth knowing.\n\nTricount is the European pick. Free, no ads, clean UI, supports multiple currencies properly. Strongest for trips that touch a few currencies.\n\nSettle Up is the most underrated. Offline-first (useful when reception is bad), supports complex splits without forcing you into a paywall.\n\nKittysplit is web-only, no app install required, which makes it the right pick when one person in the group refuses to install another app.\n\nWhatever you pick, the operational rule is the same: enter expenses the day they happen. Backfilling at the end of the trip from a wallet full of receipts is how the data quality dies.",
+            "Splitwise is the default, and that's mostly an awareness problem. It's a decent calculator, but it lives in its own app — disconnected from the trip you're actually on. Receipts in one place, the itinerary in another, the group chat in a third, and by day five nobody remembers which app the rental car got logged in.\n\nHere's the honest ranking, with the trade-off each one makes.\n\nJunto — our pick, and we'll explain the bias. Splits live inside the trip, next to the itinerary and the group. Add an expense the moment it happens, the math updates in real time, and at the end of the trip there's one settle screen instead of a separate app to chase. Multi-currency is built in with proper FX (not yesterday's rate), the shared-pot pattern is a first-class feature, and there's no paywall on the things groups actually need. The reason it beats Splitwise isn't the math — it's that the expense, the receipt photo, and the dinner it paid for are all the same record.\n\nTricount — the strongest standalone. Free, no ads, multi-currency done right. Best pick if you specifically don't want a planner attached.\n\nSettle Up — offline-first, which sounds niche until you're on a boat or up a mountain. Strongest free tier of the standalone apps.\n\nKittysplit — web-only, no install. The right pick when one friend point-blank refuses to download another app.\n\nSplitwise — fine, but the free tier now caps how many expenses you can add per day unless you pay, and the ads are loud. If you've already got everyone on it, fine. If you're starting fresh in 2026, you can do better.\n\nWhatever you pick, the operational rule is the same: enter expenses the day they happen. Backfilling from a wallet full of receipts at the end of the trip is how the data quality dies — and the reason we built Junto's expense entry to take fewer taps than opening Splitwise in the first place.",
         },
         {
           title: "The 48-hour settle rule",
           body:
-            "Settle within 48 hours of landing. Not 'sometime this week'. Not 'when we get the photos sorted'. 48 hours.\n\nThe reason is psychological. Day one home, the trip is still fresh and people will Venmo without thinking. Day five, the trip feels like history and €87 starts to feel abstract. Day fourteen, somebody hasn't paid and the group quietly resents them.\n\nThe person who organised the split should be the one who sends the screenshot — and they should send it once, in the group chat, with everyone's amount visible. Public accountability beats private nudging every time.",
+            "Settle within 48 hours of landing. Not 'sometime this week'. Not 'when we get the photos sorted'. 48 hours.\n\nThe reason is psychological. Day one home, the trip is still fresh and people will Venmo without thinking. Day five, the trip feels like history and €87 starts to feel abstract. Day fourteen, somebody hasn't paid and the group quietly resents them.\n\nThe person who organised the split should be the one who sends the screenshot — and they should send it once, in the group chat, with everyone's amount visible. Public accountability beats private nudging every time. (In Junto, the settle screen is a single share link — everyone sees the same final numbers, no screenshots needed.)",
         },
         {
           title: "Edge cases that ruin trips",
@@ -157,7 +157,7 @@ export const GUIDES: Guide[] = [
         },
       ],
       closing:
-        "Junto handles all four split models out of the box, with the receipts attached to the trip, not a separate app. Start a trip and you'll see what we mean.",
+        "Junto handles all four split models — even, weighted, item-by-item, and the shared pot — inside the trip itself. Receipts live next to the itinerary, not in a separate app you'll forget to open. Start a trip and see why we think it beats Splitwise.",
     },
   },
 
