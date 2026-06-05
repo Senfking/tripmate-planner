@@ -289,8 +289,8 @@ export default function GuideGroupTrip() {
             fetchPriority="high"
           />
           {/* Refined gradient — top dark for nav legibility, bottom dark for type */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0B2E2C]/30 via-transparent to-[#0B2E2C]/85" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0B2E2C]/40 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/85" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
 
           <div className="absolute inset-0 flex flex-col justify-end">
             <div className="max-w-[1400px] mx-auto w-full px-5 sm:px-10 pb-16 sm:pb-24">
