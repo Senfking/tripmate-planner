@@ -425,59 +425,59 @@ export default function GuideGroupTrip() {
             id={`rule-${i + 1}`}
             className="scroll-mt-20 pt-14 sm:pt-20"
           >
-            {/* Rule header — giant numeral in column */}
-            <div className="max-w-[720px] mx-auto px-5 sm:px-8">
-              <div className="flex items-baseline gap-4 mb-1">
-                <span
-                  className="font-medium tracking-[-0.05em] tabular-nums leading-none text-[#0D9488]"
-                  style={{ fontSize: "clamp(44px, 6.5vw, 88px)" }}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="font-mono text-[11px] tracking-[0.28em] uppercase text-[#0B2E2C]/40 pb-2">
-                  / {s.tag}
-                </span>
-              </div>
-              <h3
-                className="font-medium tracking-[-0.03em] leading-[1.02] text-[#0B2E2C]"
-                style={{ fontSize: "clamp(28px, 3.6vw, 44px)" }}
-              >
-                {s.title}.
-              </h3>
-              <p
-                className="mt-3 text-[17px] sm:text-[19px] leading-[1.4] italic font-light tracking-[-0.01em]"
-                style={{
-                  background: GRADIENT,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                {s.rule}
-              </p>
-            </div>
+            {/* Hero image with overlaid headline */}
+            <figure className="relative w-full overflow-hidden bg-[#0B2E2C]">
+              <div className="relative w-full aspect-[16/10] sm:aspect-[21/9] max-h-[640px]">
+                <img
+                  src={s.image}
+                  alt={s.alt}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {/* Legibility scrim — strong on left where type sits, fading right */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0B2E2C]/85 via-[#0B2E2C]/45 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B2E2C]/60 via-transparent to-transparent" />
 
-            {/* Full-bleed image breaking the column */}
-            <figure className="mt-6 sm:mt-8">
-              <div className="relative w-full">
-                <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] max-h-[700px] overflow-hidden bg-[#0B2E2C]/5">
-                  <img
-                    src={s.image}
-                    alt={s.alt}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                {/* Overlaid headline */}
+                <div className="absolute inset-0 flex items-center">
+                  <div className="max-w-[1400px] mx-auto w-full px-5 sm:px-10">
+                    <div className="max-w-[720px]">
+                      <div className="flex items-baseline gap-4 mb-2">
+                        <span
+                          className="font-medium tracking-[-0.05em] tabular-nums leading-none text-[#5EEAD4]"
+                          style={{ fontSize: "clamp(44px, 6.5vw, 96px)" }}
+                        >
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="font-mono text-[11px] tracking-[0.28em] uppercase text-white/60 pb-2">
+                          / {s.tag}
+                        </span>
+                      </div>
+                      <h3
+                        className="font-medium tracking-[-0.03em] leading-[1.02] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.4)]"
+                        style={{ fontSize: "clamp(28px, 3.8vw, 52px)" }}
+                      >
+                        {s.title}.
+                      </h3>
+                      <p
+                        className="mt-4 text-[17px] sm:text-[20px] leading-[1.4] italic font-light tracking-[-0.01em] text-[#5EEAD4] drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                      >
+                        {s.rule}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <figcaption className="max-w-[1400px] mx-auto px-5 sm:px-10 mt-4 flex items-baseline justify-between gap-6">
-                  <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/45">
-                    Fig. {String(i + 1).padStart(2, "0")} — {s.tag}
-                  </span>
-                  <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/30">
-                    Rule {String(i + 1).padStart(2, "0")} / 08
-                  </span>
-                </figcaption>
               </div>
+              <figcaption className="max-w-[1400px] mx-auto px-5 sm:px-10 mt-4 flex items-baseline justify-between gap-6">
+                <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/45">
+                  Fig. {String(i + 1).padStart(2, "0")} — {s.tag}
+                </span>
+                <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/30">
+                  Rule {String(i + 1).padStart(2, "0")} / 08
+                </span>
+              </figcaption>
             </figure>
+
 
             {/* Body — narrow column */}
             <div className="max-w-[720px] mx-auto px-5 sm:px-8 mt-14 sm:mt-20">
