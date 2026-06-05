@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { GUIDES, CATEGORIES, guideUrl, type GuideCategory } from "@/data/guides";
 
 const SITE = "https://junto.pro";
