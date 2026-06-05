@@ -10,7 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronDown, Loader2, Map, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, Loader2, Map, Sparkles, Users } from "lucide-react";
 import { JuntoWordmark } from "./JuntoWordmark";
 import { SAMPLE_TRIPS } from "./sampleTrips";
 
