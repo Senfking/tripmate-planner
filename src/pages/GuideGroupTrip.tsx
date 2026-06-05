@@ -279,7 +279,7 @@ export default function GuideGroupTrip() {
 
 
       {/* HERO — full bleed cinematic image with overlaid type */}
-      <header className="relative w-full bg-[#0B2E2C] overflow-hidden">
+      <header className="relative w-full bg-black overflow-hidden">
         <div className="relative w-full h-[88vh] min-h-[640px] max-h-[920px]">
           <img
             src={HERO_IMG}
