@@ -393,6 +393,22 @@ export const GUIDES: Guide[] = [
             ],
           },
         },
+        {
+          title: "Villa and shared-bathroom logistics",
+          body:
+            "The thing nobody packs for: six adults sharing one or two bathrooms for a week. The fix is small, cheap, and saves the trip's mood by day three.",
+          list: {
+            kind: "bullet",
+            items: [
+              "A hanging toiletry bag with a hook. The shelf in the shared bathroom is not yours. Keep everything in your room and bring it in",
+              "Quick-dry microfiber towel. Useful for the beach, essential when you're the fifth person in line for a shower",
+              "Earplugs. The friend who snores will snore. The villa's walls are thinner than you think",
+              "A sleep mask. East-facing windows and 5am sunrise in summer are a brutal combination",
+              "Slip-on indoor shoes or thick socks. Tile floors at 7am are not a vibe",
+              "One small grocery run on arrival, agreed in the group: coffee, milk, bread, fruit, eggs, salt, oil, dish soap, paper towels, bin bags. Costs €30, saves three trips on day one",
+            ],
+          },
+        },
       ],
       closing:
         "Junto lets you assign the shared kit to specific people in the trip, with check-off and reminders. Start a trip and stop being the person who brought four adapters.",
