@@ -674,6 +674,9 @@ export default function GuideGroupTrip() {
         </div>
       </section>
 
+      {/* More from the Field Guide */}
+      <FieldGuideRail />
+
       {/* Footer / next up */}
       <footer className="bg-white border-t border-[#0B2E2C]/10">
         <div className="max-w-[1400px] mx-auto px-5 sm:px-10 py-20 sm:py-28">
