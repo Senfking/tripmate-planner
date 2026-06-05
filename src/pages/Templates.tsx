@@ -28,6 +28,7 @@ export default function Templates() {
   usePageMeta({
     title: "Trip Templates — Get Inspired | Junto",
     description: "Browse curated group trip templates for inspiration, then personalize one with AI in seconds. From weekend escapes to two-week adventures.",
+    path: "/templates",
   });
   const { data, isLoading } = useTripTemplates();
   const [searchParams] = useSearchParams();

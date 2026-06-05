@@ -10,6 +10,7 @@ const Terms = () => {
   usePageMeta({
     title: "Terms of Service — Junto",
     description: "The terms governing your use of Junto, the AI-powered group trip planner. Read our terms of service before signing up.",
+    path: "/terms",
   });
   return (
   <div className="min-h-dvh bg-background">

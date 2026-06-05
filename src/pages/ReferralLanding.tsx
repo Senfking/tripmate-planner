@@ -250,6 +250,7 @@ export default function ReferralLanding() {
   usePageMeta({
     title: "Plan Your Next Group Trip with Junto — Invite-Only Access",
     description: "A friend invited you to Junto: the AI group trip planner that handles ideas, votes, itineraries and expenses in one place. Claim your spot.",
+    path: "/ref",
   });
   const [params] = useSearchParams();
   const navigate = useNavigate();

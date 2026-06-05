@@ -37,6 +37,7 @@ export default function PublicTripBuilder() {
     title: "Plan a New Group Trip with Junto AI | Free Trip Planner",
     description:
       "Start planning your next group trip with Junto AI. Enter your destination, dates, and who's coming to get a personalized itinerary in seconds.",
+    path: "/trips/new",
   });
 
   const [pending, setPending] = useState<string | undefined>(() => {

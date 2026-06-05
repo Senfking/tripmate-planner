@@ -9,6 +9,7 @@ const Privacy = () => {
   usePageMeta({
     title: "Privacy Policy — Junto",
     description: "How Junto collects, uses, and protects your data when you plan group trips with AI. Read our full privacy policy.",
+    path: "/privacy",
   });
   return (
   <div className="min-h-dvh bg-background">
