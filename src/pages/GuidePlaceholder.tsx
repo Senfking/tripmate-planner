@@ -407,5 +407,3 @@ export default function GuidePlaceholder() {
   );
 }
 
-// Make sure unused imports stay tree-shaken-friendly.
-void GUIDES;
