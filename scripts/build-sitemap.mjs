@@ -25,6 +25,7 @@ const SUPABASE_ANON =
 const STATIC_URLS = [
   { loc: `${SITE}/`, changefreq: "weekly", priority: "1.0" },
   { loc: `${SITE}/templates`, changefreq: "weekly", priority: "0.9" },
+  { loc: `${SITE}/guides/how-to-plan-a-group-trip`, changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE}/ref`, changefreq: "monthly", priority: "0.6" },
   { loc: `${SITE}/privacy`, changefreq: "yearly", priority: "0.3" },
   { loc: `${SITE}/terms`, changefreq: "yearly", priority: "0.3" },
