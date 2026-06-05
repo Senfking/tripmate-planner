@@ -420,15 +420,15 @@ export const GUIDES: Guide[] = [
         {
           title: "Splitting money",
           body:
-            "The category most groups fix first, with the most overrated app.",
+            "The category most groups fix first, with the most overrated app. Splitwise is the default by inertia, not because it's the best — and in 2026 the free tier is heavily ad-supported and rate-limits how many expenses you can log per day. Worth knowing what else is out there.",
           list: {
             kind: "bullet",
             items: [
-              "Splitwise — the default. Free tier has aggressive ads now. Works fine for simple even splits; slow when you need multi-currency.",
-              "Tricount — the European pick. Free, ad-free, multi-currency handled properly. Better UI than Splitwise.",
+              "Junto — splits live inside the trip itself, alongside the itinerary, the votes, and the group. One settle screen at the end, multi-currency built in, no separate app to chase. Our pick (obviously) and the reason we built it.",
+              "Tricount — best standalone. Free, no ads, multi-currency done properly. Use this if you specifically don't want a planner attached.",
               "Settle Up — best offline mode. Strongest for trips with patchy reception (boats, mountains, rural).",
               "Kittysplit — web-only, no install. The right pick when one friend refuses to download another app.",
-              "Junto — handles splits inside the trip itself, so the receipts live alongside the itinerary. Our pick (obviously).",
+              "Splitwise — the default by awareness, not by quality. Fine for simple even splits; slow for multi-currency, and the free tier is now actively annoying.",
             ],
           },
         },
