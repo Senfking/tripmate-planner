@@ -5,9 +5,9 @@ import { GUIDES, CATEGORIES, guideUrl, type GuideCategory } from "@/data/guides"
 
 const SITE = "https://junto.pro";
 const URL = `${SITE}/guides`;
-const TITLE = "The Junto Field Guide — Honest writing about group travel";
+const TITLE = "The Junto Field Guide: Honest writing about group travel";
 const DESCRIPTION =
-  "A growing library of plain-spoken guides for planning trips with friends — splitting money, picking destinations, packing, and the apps that survive contact with a real group.";
+  "A growing library of plain-spoken guides for planning trips with friends. Splitting money, picking destinations, packing, and the apps that survive contact with a real group.";
 
 const ORDER: GuideCategory[] = ["planning", "money", "on-the-road"];
 
@@ -78,7 +78,7 @@ export default function Guides() {
           Honest writing about <span className="italic font-light text-[#0D9488]">group travel</span>.
         </h1>
         <p className="mt-8 max-w-[58ch] text-[17px] sm:text-[19px] leading-[1.6] text-[#0B2E2C]/70">
-          The stuff your group chat keeps re-litigating — budgets, destinations, who books what, who
+          The stuff your group chat keeps re-litigating. Budgets, destinations, who books what, who
           owes who, and the gear nobody remembered. Built from real trips. Updated when we learn
           something new.
         </p>

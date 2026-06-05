@@ -31,7 +31,7 @@ const STEPS: Step[] = [
     tag: "Commitment",
     title: "Kill the maybe tier",
     rule: "10 maybes are worth less than 4 yeses.",
-    body: "Send one message. 'Trip in Q3. Who is actually in?' Give people 48 hours. Then close the door. The friends who reply 'yeah maybe lol' are the same ones who drop out two weeks before flights and torch the deposit. You're not being mean — you're protecting the trip from death by indecision.",
+    body: "Send one message. 'Trip in Q3. Who is actually in?' Give people 48 hours. Then close the door. The friends who reply 'yeah maybe lol' are the same ones who drop out two weeks before flights and torch the deposit. You're not being mean, you're protecting the trip from death by indecision.",
     pull: "A locked group of four will out-travel an unlocked group of nine. Every single time.",
     example: "A 9-person Lisbon plan died because three maybes refused to commit. Flights kept climbing past €400. The group quietly stopped replying. A 4-person plan with the same dates would have booked in a week and cost €280.",
     image: "https://images.unsplash.com/photo-1496545672447-f699b503d270?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -81,7 +81,7 @@ const STEPS: Step[] = [
     tag: "Receipts",
     title: "Log it the day it happens",
     rule: "End-of-trip spreadsheets are a love language for resentment.",
-    body: "Nobody remembers who paid for the taxi on Tuesday by the time Friday rolls around. Snap the receipt the moment it lands. Tag who it was actually for — the vegetarian didn't have the €60 ribeye. Settle in one transfer at the end.",
+    body: "Nobody remembers who paid for the taxi on Tuesday by the time Friday rolls around. Snap the receipt the moment it lands. Tag who it was actually for, because the vegetarian didn't have the €60 ribeye. Settle in one transfer at the end.",
     pull: "If the math happens on the flight home, the friendship is already losing altitude.",
     example: "Junto reads the receipt, splits multi-currency on the fly, and shows live balances. A 14-day trip with six people and 80 expenses settles in two Revolut transfers. No spreadsheet. No 'wait, was that wine yours?'",
     image: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -91,7 +91,7 @@ const STEPS: Step[] = [
     tag: "Documents",
     title: "One home for the paperwork",
     rule: "If it lives in someone's inbox, it doesn't exist.",
-    body: "Hotel PDFs. Flight tickets. Visa stamps. Vaccination cards. Travel insurance. Passport expiry dates. One shared place that everyone can pull up at a check-in desk at 4am. Then run a passport-validity check eight weeks out — a passport that expires within six months of return will turn you away at immigration in most of Asia.",
+    body: "Hotel PDFs. Flight tickets. Visa stamps. Vaccination cards. Travel insurance. Passport expiry dates. One shared place that everyone can pull up at a check-in desk at 4am. Then run a passport-validity check eight weeks out. A passport that expires within six months of return will turn you away at immigration in most of Asia.",
     pull: "Most cancelled trips don't get cancelled by airlines. They get cancelled at the gate.",
     example: "A friend missed a Bali flight because his passport had 5 months and 27 days of validity. The airline refused boarding. Eight weeks of warning would have saved €600 and a ruined first day.",
     image: "https://images.unsplash.com/photo-1606768666853-403c90a981ad?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -344,7 +344,7 @@ export default function GuideGroupTrip() {
           >
             The trips that actually happen share a pattern. Tight commitments. Named budgets.
             Anchor-only itineraries. Money settled in real time. Decisions made where the trip
-            lives — not buried under 200 messages of memes and "lol so true."
+            lives, not buried under 200 messages of memes and "lol so true."
           </p>
           <p className="mt-8 text-[17px] leading-[1.7] text-[#0B2E2C]/70">
             This is that playbook. Eight rules, in order. The first three matter most. Steal what
@@ -376,7 +376,7 @@ export default function GuideGroupTrip() {
             <div className="col-span-12 md:col-span-5 mt-6 md:mt-auto">
               <p className="text-[16px] leading-[1.65] text-white/65 max-w-[44ch]">
                 If you've planned a group trip before, you've lived at least three of these.
-                If you haven't — this is the unsubsidised education.
+                If you haven't, this is the unsubsidised education.
               </p>
             </div>
           </div>
