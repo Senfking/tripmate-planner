@@ -246,23 +246,14 @@ export default function GuideGroupTrip() {
         />
       </div>
 
-      {/* Top nav */}
+      {/* Top nav — mirrors the landing hero header: centered Junto wordmark
+          on the left/center and a gradient "Get started" CTA on the right. */}
       <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-[#0B2E2C]/[0.06]">
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={back}
-            className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#0B2E2C]/60 hover:text-[#0D9488] transition-colors group"
-          >
-            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#0B2E2C]/[0.04] group-hover:bg-[#0D9488]/10 transition-colors">
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </span>
-            Back
-          </button>
-
+        <div className="relative max-w-[1400px] mx-auto px-5 sm:px-10 h-[68px] flex items-center justify-between">
           <Link
             to="/"
-            className="absolute left-1/2 -translate-x-1/2 text-[17px] font-extrabold tracking-[0.32em] uppercase"
+            aria-label="Junto home"
+            className="text-[19px] font-extrabold tracking-[0.32em] uppercase"
             style={{
               background: "linear-gradient(135deg, #0B2E2C 0%, #0D9488 100%)",
               WebkitBackgroundClip: "text",
@@ -274,15 +265,18 @@ export default function GuideGroupTrip() {
           </Link>
 
           <Link
-            to="/trips/new"
-            className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-semibold text-white rounded-full px-4 py-2 hover:opacity-90 transition-opacity shadow-sm"
-            style={{ background: GRADIENT }}
+            to="/ref"
+            className="group relative inline-flex items-center rounded-full px-3.5 py-1.5 text-[12px] sm:px-5 sm:py-2 sm:text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-transform hover:scale-[1.03] active:scale-95"
+            style={{
+              background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
+            }}
           >
-            Start a trip
-            <ArrowRight className="h-3.5 w-3.5" />
+            <span className="absolute inset-0 rounded-full bg-gradient-to-r from-white/20 via-transparent to-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <span className="relative">Get started</span>
           </Link>
         </div>
       </div>
+
 
       {/* HERO — full bleed cinematic image with overlaid type */}
       <header className="relative w-full bg-[#0B2E2C] overflow-hidden">
