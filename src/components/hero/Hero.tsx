@@ -508,9 +508,8 @@ export function Hero({
         >
           <Link
             to="/guides"
-            className="pointer-events-auto group inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[12px] sm:text-[13px] font-semibold text-white/90 backdrop-blur-md shadow-[0_4px_16px_-4px_rgba(0,0,0,0.4)] hover:bg-white/20 hover:text-white hover:border-white/40 transition-all whitespace-nowrap"
+            className="pointer-events-auto text-[13px] font-semibold text-white/85 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors whitespace-nowrap"
           >
-            <BookOpen className="w-3.5 h-3.5 transition-transform group-hover:-rotate-6" strokeWidth={2.25} />
             Field Guide
           </Link>
           <Link
