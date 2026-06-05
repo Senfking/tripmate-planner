@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
