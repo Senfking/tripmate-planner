@@ -65,7 +65,7 @@ export const GUIDES: Guide[] = [
     longTitle: "How to Plan a Group Trip (Without the 200-Message Group Chat)",
     description:
       "The honest playbook for planning a group trip with friends. 8 rules that actually work, the 5 reasons most group trips collapse, and the exact tools to skip the spreadsheet hell.",
-    readTime: "12 min read",
+    readTime: "9 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&q=75&auto=format&fit=crop&fm=webp",
