@@ -239,6 +239,26 @@ export const GUIDES: Guide[] = [
           },
         },
         {
+          title: "The kill-criteria pass",
+          body:
+            "Before the ranked vote, run the shortlist through five hard filters. If a destination fails any one of them, it's out. No discussion, no 'but it would be amazing in October'. Out.\n\nThese filters exist because group trips die in the details, not the dream. A place can be perfect on Instagram and impossible in practice, and you only find out three weeks in when someone realises their passport expires in four months.",
+          list: {
+            kind: "ordered",
+            items: [
+              "Passport validity. Most of Asia, the Middle East, and a lot of Latin America require six months past your return date. Anyone in the group inside that window kills the destination unless they're willing to renew on a rush fee.",
+              "Visa lead time. US ESTA is instant. Schengen for non-EU passports can be six to eight weeks. India e-visa is fine but needs a clean photo. Check the slowest passport in the group, not your own.",
+              "Season. 'Bali in February' sounds dreamy until you learn it's monsoon. Cross-check the destination against shoulder/peak/rainy season for your actual dates. Skyscanner's 'cheapest month' view tells you more than any travel blog.",
+              "Direct flight access. Two stops with a 9-hour layover at 4am is not a holiday, it's a sentence. If nobody in the group has a direct or one-stop option under 14 hours total, drop it.",
+              "Group accommodation. If you're six people, you need either two adjacent apartments or one villa. Check Airbnb supply for your exact dates before you fall in love with a place. Nothing kills momentum like discovering everywhere sleeps four.",
+            ],
+          },
+        },
+        {
+          title: "A worked example",
+          body:
+            "Six friends, late twenties, based across London, Berlin, and New York. Budget €1,400 a head all-in. Window: last two weeks of September. Group chat has been arguing since June.\n\nStep 1, vibe vote (Monday): four 'beach reset', one 'city break', one 'adventure'. Beach reset wins. The two outliers swallow it.\n\nStep 2, constraints (Tuesday): €1,400/head, Sep 13-21, max 12 hours of total flight time from NYC (the slowest origin).\n\nKill-criteria pass: Bali is out (flight time blows the cap), Tulum is in, Sardinia is in, Zanzibar is out (one passport at 5 months validity), Greece is in.\n\nStep 3, ranked vote (Wednesday): three picks, 24 hours.\n  • Tulum — 14 points\n  • Sardinia — 10 points (winner: lowest score)\n  • Greek islands — 12 points\n\nFlights booked Thursday. Villa booked Friday. Total elapsed time from 'let's plan something' to confirmation: five days. The same group spent eight weeks the year before and never left their group chat.",
+        },
+        {
           title: "Handling the holdout",
           body:
             "Every group has one person who refuses to commit until flights are booked. Don't fight it. Set a deadline ('flights book Sunday at 8pm') and book without them if they haven't engaged by then.\n\nThis sounds harsh. It isn't. It's protecting the trip from the person whose indecision would otherwise sink it. Nine times out of ten, they book within an hour of seeing the others have committed. The tenth time, the trip happens without them and they come to the next one.",
