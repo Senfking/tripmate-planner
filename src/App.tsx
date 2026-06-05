@@ -52,6 +52,7 @@ const PublicTripBuilder = lazy(() => import("./pages/PublicTripBuilder"));
 const AnonTripView = lazy(() => import("./pages/AnonTripView"));
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const GuideGroupTrip = lazy(() => import("./pages/GuideGroupTrip"));
 
 function PageLoader() {
   return (
@@ -213,6 +214,7 @@ function AppInner() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/templates" element={<Templates />} />
+            <Route path="/guides/how-to-plan-a-group-trip" element={<GuideGroupTrip />} />
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/templates/:slug" element={<TemplateDetail />} />
             <Route path="/templates/:slug/personalize" element={<TemplatePersonalize />} />
