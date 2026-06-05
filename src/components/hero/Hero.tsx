@@ -286,7 +286,7 @@ export function Hero({
       <p
         className={
           isApp
-            ? "text-sm text-gray-500 mb-3 text-left sm:text-center"
+            ? "text-sm text-gray-700 mb-3 text-left sm:text-center"
             : "text-sm text-white/80 mb-3 text-left sm:text-center drop-shadow-sm"
         }
       >
