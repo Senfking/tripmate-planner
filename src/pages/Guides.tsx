@@ -43,18 +43,22 @@ export default function Guides() {
 
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-[#FAF8F4]/85 backdrop-blur border-b border-[#0B2E2C]/10">
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-10 h-14 flex items-center justify-between">
-          <Link to="/" className="text-[15px] font-extrabold tracking-[0.32em] uppercase text-[#0B2E2C]">
+        <div className="max-w-[1400px] mx-auto px-5 sm:px-10 lg:px-16 h-14 grid grid-cols-3 items-center">
+          <div />
+          <Link
+            to="/"
+            className="justify-self-center text-[15px] sm:text-[17px] font-extrabold tracking-[0.32em] uppercase text-[#0B2E2C]"
+          >
             Junto
           </Link>
-          <nav className="flex items-center gap-6 text-[13px]">
-            <Link to="/templates" className="text-[#0B2E2C]/65 hover:text-[#0B2E2C] transition-colors">
+          <nav className="justify-self-end flex items-center gap-3 sm:gap-5 text-[13px]">
+            <Link to="/templates" className="hidden sm:inline-block font-medium text-[#0B2E2C]/65 hover:text-[#0B2E2C] transition-colors">
               Templates
             </Link>
-            <span className="font-medium text-[#0B2E2C]">Field Guide</span>
+            <span className="hidden sm:inline-block font-medium text-[#0B2E2C]">Field Guide</span>
             <Link
               to="/ref"
-              className="inline-flex items-center rounded-full px-4 py-1.5 text-[12px] font-semibold text-white"
+              className="inline-flex items-center rounded-full px-4 py-1.5 text-[12px] font-semibold text-white whitespace-nowrap"
               style={{ background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)" }}
             >
               Get started
