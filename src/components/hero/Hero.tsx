@@ -499,13 +499,19 @@ export function Hero({
 
       {typeof document !== "undefined" && createPortal(
         <div
-          className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-end px-5 sm:px-10 pointer-events-none"
+          className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-5 sm:px-10 pointer-events-none"
           style={{
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
             paddingBottom: 24,
             background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
           }}
         >
+          <Link
+            to="/guides"
+            className="pointer-events-auto text-[13px] font-semibold text-white/85 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors whitespace-nowrap"
+          >
+            Field Guide
+          </Link>
           <Link
             to="/"
             aria-label="Junto home"
