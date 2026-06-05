@@ -236,7 +236,7 @@ export function Hero({
           className={[
             "block w-full min-w-0 flex-1 resize-none bg-transparent",
             "pl-2 pr-0 sm:px-5 py-0 sm:py-2",
-            "text-[14px] sm:text-[13.5px] text-gray-500 placeholder:text-gray-500",
+            "text-[14px] sm:text-[13.5px] text-gray-700 placeholder:text-gray-700",
             "outline-none border-0",
             "leading-[1.4] sm:leading-[1.4] overflow-y-auto scrollbar-hide",
             "min-h-[48px] sm:min-h-[48px]",
@@ -286,7 +286,7 @@ export function Hero({
       <p
         className={
           isApp
-            ? "text-sm text-gray-500 mb-3 text-left sm:text-center"
+            ? "text-sm text-gray-700 mb-3 text-left sm:text-center"
             : "text-sm text-white/80 mb-3 text-left sm:text-center drop-shadow-sm"
         }
       >
