@@ -246,27 +246,40 @@ export default function GuideGroupTrip() {
         />
       </div>
 
-      {/* Top nav — minimal */}
+      {/* Top nav */}
       <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-[#0B2E2C]/[0.06]">
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
           <button
             type="button"
             onClick={back}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#0B2E2C]/60 hover:text-[#0D9488] transition-colors"
+            className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#0B2E2C]/60 hover:text-[#0D9488] transition-colors group"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#0B2E2C]/[0.04] group-hover:bg-[#0D9488]/10 transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </span>
             Back
           </button>
-          <span className="text-[12px] font-bold tracking-[0.32em] uppercase text-[#0B2E2C]">
+
+          <Link
+            to="/"
+            className="absolute left-1/2 -translate-x-1/2 text-[17px] font-extrabold tracking-[0.32em] uppercase"
+            style={{
+              background: "linear-gradient(135deg, #0B2E2C 0%, #0D9488 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
             Junto
-          </span>
+          </Link>
+
           <Link
             to="/trips/new"
-            className="hidden sm:inline-flex items-center gap-1.5 text-[12px] font-semibold text-white rounded-full px-3.5 py-1.5 hover:opacity-90 transition-opacity"
+            className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-semibold text-white rounded-full px-4 py-2 hover:opacity-90 transition-opacity shadow-sm"
             style={{ background: GRADIENT }}
           >
             Start a trip
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
