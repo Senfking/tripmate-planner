@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useCanonical } from "@/hooks/useCanonical";
+import { usePageMeta } from "@/hooks/usePageMeta";
 // useNavigate not needed at this layer — anon flow handles its own navigation.
 import { useAuth } from "@/contexts/AuthContext";
 import { Hero } from "@/components/hero/Hero";
