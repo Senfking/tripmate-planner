@@ -423,29 +423,29 @@ export default function GuideGroupTrip() {
           <article
             key={s.title}
             id={`rule-${i + 1}`}
-            className="scroll-mt-20 pt-20 sm:pt-32"
+            className="scroll-mt-20 pt-14 sm:pt-20"
           >
             {/* Rule header — giant numeral in column */}
             <div className="max-w-[720px] mx-auto px-5 sm:px-8">
-              <div className="flex items-baseline gap-5 mb-2">
+              <div className="flex items-baseline gap-4 mb-1">
                 <span
                   className="font-medium tracking-[-0.05em] tabular-nums leading-none text-[#0D9488]"
-                  style={{ fontSize: "clamp(56px, 9vw, 128px)" }}
+                  style={{ fontSize: "clamp(44px, 6.5vw, 88px)" }}
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="font-mono text-[11px] tracking-[0.28em] uppercase text-[#0B2E2C]/40 pb-3">
+                <span className="font-mono text-[11px] tracking-[0.28em] uppercase text-[#0B2E2C]/40 pb-2">
                   / {s.tag}
                 </span>
               </div>
               <h3
                 className="font-medium tracking-[-0.03em] leading-[1.02] text-[#0B2E2C]"
-                style={{ fontSize: "clamp(32px, 4.4vw, 56px)" }}
+                style={{ fontSize: "clamp(28px, 3.6vw, 44px)" }}
               >
                 {s.title}.
               </h3>
               <p
-                className="mt-4 text-[20px] sm:text-[24px] leading-[1.35] italic font-light tracking-[-0.01em]"
+                className="mt-3 text-[17px] sm:text-[19px] leading-[1.4] italic font-light tracking-[-0.01em]"
                 style={{
                   background: GRADIENT,
                   WebkitBackgroundClip: "text",
@@ -458,7 +458,7 @@ export default function GuideGroupTrip() {
             </div>
 
             {/* Full-bleed image breaking the column */}
-            <figure className="mt-12 sm:mt-16">
+            <figure className="mt-6 sm:mt-8">
               <div className="relative w-full">
                 <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] max-h-[700px] overflow-hidden bg-[#0B2E2C]/5">
                   <img
