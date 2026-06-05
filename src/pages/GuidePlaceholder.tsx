@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check } from "lucide-react";
 import { CATEGORIES, getGuide, getRelatedGuides, guideUrl } from "@/data/guides";
 
 const SITE = "https://junto.pro";
@@ -24,14 +24,13 @@ export default function GuidePlaceholder() {
   }, [slug]);
 
   if (!guide) return <Navigate to="/guides" replace />;
-  if (guide.status === "live") return <Navigate to={guideUrl(guide.slug)} replace />;
+  // Guide 001 has its own bespoke page; the route maps it before this component.
+  // Any other guide without article content shouldn't render this template.
+  if (!guide.article) return <Navigate to="/guides" replace />;
 
   const URL = `${SITE}${guideUrl(guide.slug)}`;
   const related = getRelatedGuides(guide.slug, 3);
-  const placeholder = guide.placeholder;
-
-  // Split heroTitle on the accent word so we can italicize that one word
-  // exactly like guide 001 does.
+  const { article } = guide;
   const accent = guide.heroAccent;
   const parts = guide.heroTitle.split(new RegExp(`\\b(${accent})\\b`));
 
@@ -58,6 +57,9 @@ export default function GuidePlaceholder() {
             description: guide.description,
             url: URL,
             image: guide.image,
+            datePublished: "2026-06-05",
+            author: { "@type": "Organization", name: "Junto" },
+            publisher: { "@type": "Organization", name: "Junto" },
             isPartOf: { "@type": "CollectionPage", url: `${SITE}/guides` },
           })}
         </script>
@@ -82,7 +84,7 @@ export default function GuidePlaceholder() {
         />
       </div>
 
-      {/* Header overlay — matches guide 001 exactly */}
+      {/* Header overlay */}
       <div
         className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-5 sm:px-10 pointer-events-none"
         style={{
@@ -117,7 +119,7 @@ export default function GuidePlaceholder() {
         </Link>
       </div>
 
-      {/* HERO — full-bleed cinematic, matching 001 */}
+      {/* HERO */}
       <header className="relative w-full bg-black overflow-hidden">
         <div className="relative w-full h-[88vh] min-h-[640px] max-h-[920px]">
           <img
@@ -136,10 +138,6 @@ export default function GuidePlaceholder() {
                 <span className="h-px w-10 bg-[#2DD4BF]" />
                 <span className="text-[11px] font-bold tracking-[0.32em] uppercase text-[#2DD4BF]">
                   Field Guide · {guide.number}
-                </span>
-                <span className="h-px w-6 bg-white/15" />
-                <span className="text-[11px] font-mono tracking-[0.28em] uppercase text-white/55">
-                  In the works
                 </span>
               </div>
               <h1
@@ -173,18 +171,16 @@ export default function GuidePlaceholder() {
         </div>
       </header>
 
-      {/* STANDFIRST — drop cap */}
+      {/* STANDFIRST */}
       <section className="bg-white">
         <div className="max-w-[720px] mx-auto px-5 sm:px-8 pt-24 sm:pt-32 pb-12">
-          <p
-            className="text-[20px] sm:text-[24px] leading-[1.5] text-[#0B2E2C] font-light tracking-[-0.005em] first-letter:float-left first-letter:mr-3 first-letter:text-[64px] first-letter:sm:text-[84px] first-letter:font-medium first-letter:leading-[0.85] first-letter:text-[#0D9488] first-letter:pt-2"
-          >
-            {placeholder?.standfirst}
+          <p className="text-[20px] sm:text-[24px] leading-[1.5] text-[#0B2E2C] font-light tracking-[-0.005em] first-letter:float-left first-letter:mr-3 first-letter:text-[64px] first-letter:sm:text-[84px] first-letter:font-medium first-letter:leading-[0.85] first-letter:text-[#0D9488] first-letter:pt-2">
+            {article.standfirst}
           </p>
         </div>
       </section>
 
-      {/* PULL QUOTE — full bleed band */}
+      {/* PULL QUOTE */}
       <section className="bg-[#0B2E2C] text-white">
         <div className="max-w-[1100px] mx-auto px-5 sm:px-10 py-24 sm:py-32 relative">
           <span
@@ -197,60 +193,92 @@ export default function GuidePlaceholder() {
             className="relative font-medium tracking-[-0.025em] leading-[1.1] max-w-[24ch]"
             style={{ fontSize: "clamp(28px, 4vw, 52px)" }}
           >
-            {placeholder?.pullQuote}
+            {article.pullQuote}
           </blockquote>
-          <div className="mt-10 flex items-center gap-3 text-[#2DD4BF]">
-            <span className="h-px w-10 bg-[#2DD4BF]" />
-            <span className="font-mono text-[11px] tracking-[0.3em] uppercase">
-              From the upcoming guide
-            </span>
-          </div>
         </div>
       </section>
 
-      {/* CHAPTERS — sticky side label + numbered editorial cards */}
+      {/* CHAPTERS */}
       <section className="bg-white">
         <div className="max-w-[1400px] mx-auto px-5 sm:px-10 py-24 sm:py-32 grid grid-cols-12 gap-x-8">
-          <div className="col-span-12 md:col-span-4">
+          <aside className="col-span-12 md:col-span-3">
             <div className="md:sticky md:top-24">
               <div className="flex items-center gap-3 mb-5">
                 <span className="h-px w-8 bg-[#0D9488]" />
                 <span className="font-mono text-[11px] tracking-[0.3em] uppercase text-[#0D9488]">
-                  Inside the guide
+                  Contents
                 </span>
               </div>
-              <h2
-                className="font-medium tracking-[-0.03em] leading-[1.02] text-[#0B2E2C] max-w-[14ch]"
-                style={{ fontSize: "clamp(30px, 4.2vw, 52px)" }}
-              >
-                Four <span className="italic font-light text-[#0D9488]">chapters</span>, no filler.
-              </h2>
-              <p className="mt-6 text-[15px] leading-[1.65] text-[#0B2E2C]/65 max-w-[36ch]">
-                A preview of what lands when this one ships. Written from real trips, edited for
-                people who actually have to plan one.
-              </p>
+              <ol className="space-y-3">
+                {article.chapters.map((c, i) => (
+                  <li key={c.title} className="flex items-baseline gap-3">
+                    <span className="flex-none font-mono text-[11px] tracking-[0.1em] tabular-nums text-[#0B2E2C]/40 pt-0.5">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <a
+                      href={`#ch-${i + 1}`}
+                      className="text-[14px] leading-[1.4] text-[#0B2E2C]/70 hover:text-[#0D9488] transition-colors"
+                    >
+                      {c.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
             </div>
-          </div>
+          </aside>
 
-          <div className="col-span-12 md:col-span-8 mt-12 md:mt-0">
+          <div className="col-span-12 md:col-span-9 mt-12 md:mt-0">
             <ol className="border-t border-[#0B2E2C]/10">
-              {placeholder?.chapters.map((c, i) => (
+              {article.chapters.map((c, i) => (
                 <li
                   key={c.title}
-                  className="grid grid-cols-12 gap-x-6 py-8 sm:py-10 border-b border-[#0B2E2C]/10"
+                  id={`ch-${i + 1}`}
+                  className="grid grid-cols-12 gap-x-6 py-12 sm:py-16 border-b border-[#0B2E2C]/10 scroll-mt-24"
                 >
-                  <div className="col-span-2 sm:col-span-1">
+                  <div className="col-span-12 sm:col-span-1">
                     <span className="block font-mono text-[12px] tracking-[0.1em] text-[#0D9488] tabular-nums">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                   </div>
-                  <div className="col-span-10 sm:col-span-11">
-                    <h3 className="text-[22px] sm:text-[28px] font-medium tracking-[-0.02em] leading-[1.15] text-[#0B2E2C]">
+                  <div className="col-span-12 sm:col-span-11">
+                    <h2 className="text-[26px] sm:text-[34px] font-medium tracking-[-0.022em] leading-[1.1] text-[#0B2E2C]">
                       {c.title}
-                    </h3>
-                    <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.7] text-[#0B2E2C]/70 max-w-[58ch]">
-                      {c.body}
-                    </p>
+                    </h2>
+                    <div className="mt-6 space-y-5 max-w-[64ch]">
+                      {c.body.split("\n\n").map((p, idx) => (
+                        <p
+                          key={idx}
+                          className="text-[16px] sm:text-[17px] leading-[1.7] text-[#0B2E2C]/80"
+                        >
+                          {p}
+                        </p>
+                      ))}
+                    </div>
+
+                    {c.list && (
+                      <ul className="mt-7 max-w-[64ch] border-t border-[#0B2E2C]/10">
+                        {c.list.items.map((item, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-baseline gap-5 border-b border-[#0B2E2C]/10 py-4"
+                          >
+                            {c.list!.kind === "ordered" ? (
+                              <span className="flex-none font-mono text-[12px] tracking-[0.1em] text-[#0D9488] tabular-nums pt-0.5 w-6">
+                                {String(idx + 1).padStart(2, "0")}
+                              </span>
+                            ) : (
+                              <Check
+                                className="flex-none h-4 w-4 text-[#0D9488] mt-1.5"
+                                strokeWidth={2.5}
+                              />
+                            )}
+                            <span className="text-[15px] sm:text-[16px] leading-[1.6] text-[#0B2E2C]/85">
+                              {item}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </li>
               ))}
@@ -259,14 +287,14 @@ export default function GuidePlaceholder() {
         </div>
       </section>
 
-      {/* CTA — editorial card on warm ground */}
+      {/* CTA */}
       <section className="bg-[#F8FAF9] border-t border-[#0B2E2C]/10">
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-10 py-24 sm:py-32 grid grid-cols-12 gap-x-8">
-          <div className="col-span-12 md:col-span-7">
+        <div className="max-w-[1400px] mx-auto px-5 sm:px-10 py-24 sm:py-28 grid grid-cols-12 gap-x-8">
+          <div className="col-span-12 md:col-span-8">
             <div className="flex items-center gap-3 mb-5">
               <span className="h-px w-8 bg-[#0D9488]" />
               <span className="font-mono text-[11px] tracking-[0.3em] uppercase text-[#0D9488]">
-                While you wait
+                The point
               </span>
             </div>
             <h2
@@ -276,7 +304,7 @@ export default function GuidePlaceholder() {
               The tool we wrote this <span className="italic font-light text-[#0D9488]">for</span>.
             </h2>
             <p className="mt-6 text-[16px] sm:text-[17px] leading-[1.65] text-[#0B2E2C]/70 max-w-[52ch]">
-              {placeholder?.closing}
+              {article.closing}
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
               <Link
@@ -295,46 +323,6 @@ export default function GuidePlaceholder() {
               </Link>
             </div>
           </div>
-
-          <aside className="col-span-12 md:col-span-5 mt-12 md:mt-0">
-            <div className="bg-white border border-[#0B2E2C]/10 p-8 sm:p-10 rounded-sm">
-              <div className="font-mono text-[11px] tracking-[0.3em] uppercase text-[#0D9488] mb-4">
-                Brief
-              </div>
-              <dl className="divide-y divide-[#0B2E2C]/10">
-                <div className="flex justify-between py-3 text-[13px]">
-                  <dt className="font-mono tracking-[0.15em] uppercase text-[#0B2E2C]/45">
-                    Number
-                  </dt>
-                  <dd className="font-mono tabular-nums text-[#0B2E2C]">{guide.number}</dd>
-                </div>
-                <div className="flex justify-between py-3 text-[13px]">
-                  <dt className="font-mono tracking-[0.15em] uppercase text-[#0B2E2C]/45">
-                    Category
-                  </dt>
-                  <dd className="text-[#0B2E2C]">{CATEGORIES[guide.category].label}</dd>
-                </div>
-                <div className="flex justify-between py-3 text-[13px]">
-                  <dt className="font-mono tracking-[0.15em] uppercase text-[#0B2E2C]/45">
-                    Length
-                  </dt>
-                  <dd className="text-[#0B2E2C]">{guide.readTime}</dd>
-                </div>
-                <div className="flex justify-between py-3 text-[13px]">
-                  <dt className="font-mono tracking-[0.15em] uppercase text-[#0B2E2C]/45">
-                    Status
-                  </dt>
-                  <dd className="text-[#0D9488] font-medium">In the works</dd>
-                </div>
-                <div className="flex justify-between py-3 text-[13px]">
-                  <dt className="font-mono tracking-[0.15em] uppercase text-[#0B2E2C]/45">
-                    Editor
-                  </dt>
-                  <dd className="text-[#0B2E2C]">Junto</dd>
-                </div>
-              </dl>
-            </div>
-          </aside>
         </div>
       </section>
 
@@ -384,7 +372,7 @@ export default function GuidePlaceholder() {
                     {g.title}
                   </h4>
                   <div className="mt-2 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#0B2E2C]/45">
-                    {g.status === "live" ? g.readTime : "Coming soon"}
+                    {g.readTime}
                   </div>
                 </Link>
               </li>
@@ -393,11 +381,11 @@ export default function GuidePlaceholder() {
         </div>
       </section>
 
-      {/* Footer — matches 001 */}
+      {/* Footer */}
       <footer className="bg-white border-t border-[#0B2E2C]/10">
         <div className="max-w-[1400px] mx-auto px-5 sm:px-10 py-12 flex flex-wrap items-center justify-between gap-4 font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/40">
           <span>Junto Field Guide · {guide.number}</span>
-          <span>{placeholder ? "Drafting now" : guide.publishedAt}</span>
+          <span>Published {guide.publishedAt}</span>
           <Link to="/" className="hover:text-[#0D9488] transition-colors">
             junto.pro →
           </Link>
@@ -406,4 +394,3 @@ export default function GuidePlaceholder() {
     </div>
   );
 }
-
