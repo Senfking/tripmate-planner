@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useSmartBack } from "@/hooks/useSmartBack";
 
@@ -10,137 +11,151 @@ const DESCRIPTION =
   "The honest playbook for planning a group trip with friends. 8 rules that actually work, the 5 reasons most group trips collapse, and the exact tools to skip the spreadsheet hell.";
 
 const HERO_IMG =
-  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600&q=70&auto=format&fit=crop&fm=webp";
-const IMG_DATES =
-  "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_BUDGET =
-  "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_DESTINATION =
-  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_ANCHORS =
-  "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_BOOKING =
-  "https://images.unsplash.com/photo-1551918120-9739cb430c6d?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_EXPENSES =
-  "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_DOCS =
-  "https://images.unsplash.com/photo-1452421822248-d4c2b47f0c81?w=1200&q=65&auto=format&fit=crop&fm=webp";
-const IMG_DECISIONS =
-  "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1200&q=65&auto=format&fit=crop&fm=webp";
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1800&q=72&auto=format&fit=crop&fm=webp";
 
 type Step = {
   title: string;
   rule: string;
   body: string;
+  pull: string;
   example: string;
   image: string;
   alt: string;
+  caption: string;
 };
 
 const STEPS: Step[] = [
   {
-    title: "Kill the 'maybe' tier",
-    rule: "10 maybes < 4 yeses.",
-    body: "Send one message: 'Trip in Q3, who's actually in?' Give people 48 hours, then close the door. The friends who reply 'yeah maybe lol' are the same ones who drop out two weeks before flights and torch the deposit.",
-    example: "Real example: a 9-person Lisbon plan died because three 'maybes' refused to commit to dates, so flights kept climbing past €400 until everyone gave up. A 4-person plan with the same dates would have booked in a week.",
-    image: IMG_DATES,
-    alt: "A traveler flipping through a paper calendar planning trip dates",
+    title: "Kill the maybe tier",
+    rule: "10 maybes are worth less than 4 yeses.",
+    body: "Send one message. 'Trip in Q3. Who is actually in?' Give people 48 hours. Then close the door. The friends who reply 'yeah maybe lol' are the same ones who drop out two weeks before flights and torch the deposit. You are not being mean. You are protecting the trip from death by indecision.",
+    pull: "A locked group of four will out-travel an unlocked group of nine every single time.",
+    example: "A 9-person Lisbon plan died because three maybes refused to commit to dates. Flights kept climbing past €400. The group quietly stopped replying. A 4-person plan with the same dates would have booked in a week and cost €280.",
+    image: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "A paper calendar opened to a planning month, pen resting across the page",
+    caption: "Pick a fortnight. Stop renegotiating it.",
   },
   {
     title: "Say the budget number out loud",
-    rule: "One number, all-in, before anything else.",
-    body: "Don't say 'mid-range.' Say '€900 per person for the week, flights and Airbnb included.' This is the single highest-leverage move in group travel. It filters destinations, accommodation tiers, and activities in one sentence, and it surfaces the awkward gap between the friend on a startup salary and the friend whose parents are paying.",
-    example: "The split that breaks groups: Person A is picturing €40 hostels and €15 dinners. Person B is picturing a private villa and a tasting menu. Both think they agreed to 'a chill week away.' Name the number on day one.",
-    image: IMG_BUDGET,
-    alt: "Euro and dollar banknotes spread out on a wooden table",
+    rule: "One number. All in. Before anything else.",
+    body: "Do not say 'mid-range.' Say €900 per person, flights and accommodation included, for the week. This is the single highest-leverage move in group travel. It filters destinations, hotels, and activities in one sentence. More importantly, it surfaces the awkward gap between the friend on a startup salary and the friend whose parents are paying.",
+    pull: "Mid-range is not a budget. It is a polite way of avoiding the conversation.",
+    example: "Person A pictures €40 hostels and €15 dinners. Person B pictures a private villa and a tasting menu. Both think they agreed to 'a chill week away.' They have not agreed to anything. Name the number on day one.",
+    image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "Mixed Euro banknotes fanned out on a dark wooden table",
+    caption: "The number is the contract. Write it down.",
   },
   {
-    title: "Vote on the vibe before the place",
+    title: "Vote the vibe before the place",
     rule: "Beach reset, city break, adventure, or wedding side-trip. Pick one.",
-    body: "Destination debates ('Bali vs Tulum vs Lisbon') never end because people are arguing about different trips. Vote the vibe first, then shortlist 2 to 3 destinations that fit. Single transferable vote, 24 hours, winner takes it. No revisits, no 'but what about Croatia.'",
-    example: "A vibe-first group picks 'beach + nightlife, July, €1k cap' and lands on Ibiza in a day. A destination-first group is still negotiating in week three.",
-    image: IMG_DESTINATION,
-    alt: "Friends looking at a world map planning a destination together",
+    body: "Bali vs Tulum vs Lisbon never ends because people are arguing about different trips. Vote the vibe first, then shortlist two or three destinations that fit. Single transferable vote. 24 hours. Winner takes it. No revisits. No 'but what about Croatia.'",
+    pull: "Destination-first groups argue for weeks. Vibe-first groups book on Tuesday.",
+    example: "A vibe-first group picks 'beach plus nightlife, July, €1k cap' and lands on Ibiza in a day. A destination-first group is still pasting Tulum Instagram reels in week three.",
+    image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "Overhead view of a worn world map with a compass and notebook",
+    caption: "Agree on the feeling. The pin drops itself.",
   },
   {
     title: "Anchors, not schedules",
     rule: "One anchor per day. The rest is air.",
-    body: "Over-planning is why group travel feels like a school trip. For each day pick exactly one anchor: a dinner reservation, a hike, a beach club, a museum slot. Everything else is decided that morning over coffee. Anchors create momentum without trapping anyone who wakes up hungover.",
-    example: "Day 3 in Mexico City: anchor = 8pm reservation at Pujol. That's the whole plan. People split off for markets, naps, walks, and reconverge at 7. Nobody is herding twelve adults through Coyoacán in 35°C heat.",
-    image: IMG_ANCHORS,
-    alt: "A group of friends having dinner together at a long candlelit table",
+    body: "Over-planning is why group travel feels like a school trip. For each day pick exactly one anchor. A dinner reservation. A hike. A beach club. A museum slot. Everything else is decided that morning over coffee. Anchors create momentum without trapping the friend who wakes up hungover.",
+    pull: "Twelve adults cannot be herded through Coyoacán in 35°C heat. Stop trying.",
+    example: "Day 3 in Mexico City. Anchor: 8pm reservation at Pujol. That is the whole plan. People split off for markets, naps, walks, and reconverge at 7. Everyone is happy. Nobody filed a complaint.",
+    image: "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "A long candlelit dinner table outdoors with friends mid-conversation",
+    caption: "One anchor a day is enough to feel like a trip.",
   },
   {
     title: "One person books, everyone pays",
     rule: "Group bookings: one card. Flights: your problem.",
-    body: "Accommodation, the big group dinner, the boat day. These go on one person's card and they get paid back same week. Flights are personal because seat prefs, loyalty miles, and departure cities all differ. Don't try to coordinate 6 separate flight bookings on one Zoom call. It is a void.",
-    example: "The booker gets a 2% credit card kickback and the gratitude of the group. Set this expectation early so nobody feels they're being volunteered.",
-    image: IMG_BOOKING,
-    alt: "A laptop screen showing a hotel booking confirmation page",
+    body: "Accommodation, the big group dinner, the boat day. These go on one person's card and they get paid back the same week. Flights are personal because seat prefs, loyalty miles, and departure cities all differ. Do not try to coordinate six separate flight bookings on one Zoom call. It is a void.",
+    pull: "The booker gets a 2% kickback and the gratitude of the group. That is the trade.",
+    example: "Set the expectation early so nobody feels they have been volunteered. Rotate the booker between trips if you travel often. The first transfer back happens within seven days, no exceptions.",
+    image: "https://images.unsplash.com/photo-1551918120-9739cb430c6d?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "Laptop screen showing a hotel reservation confirmation",
+    caption: "Centralised booking. Distributed payment.",
   },
   {
     title: "Log every receipt the day it happens",
     rule: "End-of-trip spreadsheets are a love language for resentment.",
-    body: "Nobody remembers who paid for the taxi on Tuesday by the time Friday rolls around. Snap the receipt the moment it lands, tag who it was for (not always 'everyone', the vegetarian didn't have the €60 ribeye), settle in one transfer at the end.",
-    example: "Junto reads the receipt, splits multi-currency, and shows live balances. A 14-day trip with 6 people and 80 expenses gets settled in two Revolut transfers. No spreadsheet, no arguments about whether wine counts.",
-    image: IMG_EXPENSES,
-    alt: "A close-up of a restaurant receipt and credit card on a wooden table",
+    body: "Nobody remembers who paid for the taxi on Tuesday by the time Friday rolls around. Snap the receipt the moment it lands. Tag who it was for, because the vegetarian did not have the €60 ribeye. Settle in one transfer at the end.",
+    pull: "If the math happens on the flight home, the friendship is already losing altitude.",
+    example: "Junto reads the receipt, splits multi-currency on the fly, and shows live balances. A 14-day trip with six people and 80 expenses settles in two Revolut transfers. No spreadsheet. No 'wait, was that wine yours?'",
+    image: "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "Close-up of a restaurant receipt next to a credit card on dark wood",
+    caption: "Receipt in. Tag the people. Move on.",
   },
   {
-    title: "One home for confirmations, passports, visas",
-    rule: "If it's in someone's inbox, it doesn't exist.",
-    body: "Hotel PDFs, flight tickets, visa stamps, vaccination cards, travel insurance, passport expiry dates. Put them in one shared place that everyone can pull up at a check-in desk at 4am. Then run a passport-validity check 8 weeks out: a passport that expires within 6 months of return will turn you away at immigration in most of Asia.",
-    example: "A friend missed a Bali flight because his passport had 5 months and 27 days of validity. The airline refused boarding at the gate. Eight weeks of warning would have saved €600 and a ruined first day.",
-    image: IMG_DOCS,
-    alt: "A passport, boarding pass, and travel notebook on a wooden surface",
+    title: "One home for docs, passports, visas",
+    rule: "If it lives in someone's inbox, it does not exist.",
+    body: "Hotel PDFs. Flight tickets. Visa stamps. Vaccination cards. Travel insurance. Passport expiry dates. One shared place that everyone can pull up at a check-in desk at 4am. Then run a passport-validity check eight weeks out. A passport that expires within six months of return will turn you away at immigration in most of Asia.",
+    pull: "Most cancelled trips do not get cancelled by airlines. They get cancelled at the gate.",
+    example: "A friend missed a Bali flight because his passport had 5 months and 27 days of validity. The airline refused boarding. Eight weeks of warning would have saved €600 and a ruined first day.",
+    image: "https://images.unsplash.com/photo-1452421822248-d4c2b47f0c81?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "A passport, boarding pass, and a small leather notebook on a wooden surface",
+    caption: "One folder. Everyone has the link.",
   },
   {
-    title: "Decisions live on the plan, not in WhatsApp",
-    rule: "If you're voting in chat, you've already lost the thread.",
-    body: "When a comment about a restaurant lives 47 messages above the actual restaurant card, the group is now coordinating two parallel realities. Keep comments, reactions, and votes attached to the actual itinerary item. The plan is the source of truth, not the chat.",
-    example: "Watch how fast a 200-message thread collapses to 12 once decisions sit on the venue card. Everyone can see what was decided, who weighed in, and what changed.",
-    image: IMG_DECISIONS,
-    alt: "Friends laughing while looking at a phone together planning",
+    title: "Decisions live on the plan, not in the chat",
+    rule: "If you are voting in WhatsApp, you have already lost the thread.",
+    body: "When a comment about a restaurant lives 47 messages above the actual restaurant card, the group is coordinating two parallel realities. Keep comments, reactions, and votes attached to the actual itinerary item. The plan is the source of truth. The chat is for jokes.",
+    pull: "A 200-message thread collapses to 12 once decisions sit on the venue card.",
+    example: "Everyone can see what was decided, who weighed in, what changed, and when. Nobody re-litigates the museum on day three because they 'missed that part' of the thread.",
+    image: "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1400&q=70&auto=format&fit=crop&fm=webp",
+    alt: "Friends laughing while looking at a single phone screen together",
+    caption: "Move the decision to where the decision lives.",
   },
 ];
 
-const FAILURES: { title: string; body: string }[] = [
-  { title: "Nobody commits to dates", body: "Three people stay 'maybe' for four weeks. Flight prices double. Group quietly disbands." },
-  { title: "Budget never gets named", body: "Two people are planning hostels, two are planning a villa. Surfaces during the Airbnb scroll. Argument follows." },
-  { title: "Itinerary becomes a school trip", body: "Someone over-plans. Day 3 has 7 activities. Half the group fakes a stomach bug to skip the museum." },
-  { title: "Money never settles", body: "End-of-trip spreadsheet takes 3 weeks. Two people never pay back. Resentment compounds into next year." },
-  { title: "Decisions live in 4 places", body: "WhatsApp, Notion, Google Doc, Instagram DMs. Nobody knows what was actually agreed. Someone double-books." },
+const FAILURES: { num: string; title: string; body: string }[] = [
+  { num: "01", title: "Nobody commits to dates", body: "Three people stay 'maybe' for four weeks. Flight prices double. The group quietly disbands." },
+  { num: "02", title: "Budget never gets named", body: "Two people are planning hostels. Two are planning a villa. Surfaces during the Airbnb scroll. Argument follows." },
+  { num: "03", title: "Itinerary becomes a school trip", body: "Someone over-plans. Day 3 has seven activities. Half the group fakes a stomach bug to skip the museum." },
+  { num: "04", title: "Money never settles", body: "End-of-trip spreadsheet takes three weeks. Two people never pay back. Resentment compounds into next year." },
+  { num: "05", title: "Decisions live in four places", body: "WhatsApp, Notion, Google Doc, Instagram DMs. Nobody knows what was actually agreed. Someone double-books." },
 ];
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "How far in advance should we start planning a group trip?",
-    a: "Long weekend: 6 to 8 weeks. Week-long international trip: 3 to 6 months. The constraint isn't planning time, it's flight prices and time-off requests. Anything past 6 months and people forget they agreed.",
+    a: "Long weekend: 6 to 8 weeks. Week-long international: 3 to 6 months. The constraint is not planning time, it is flight prices and time-off requests. Anything past 6 months and people forget they agreed.",
   },
   {
-    q: "What's the ideal group size for a trip?",
-    a: "Four to six is the sweet spot. One Airbnb, one dinner reservation, one taxi. Above eight you start needing sub-groups, two cars, and a spreadsheet just to feed everyone. Above twelve you're running a wedding, not a trip.",
+    q: "What is the ideal group size?",
+    a: "Four to six is the sweet spot. One Airbnb, one dinner reservation, one taxi. Above eight you need sub-groups, two cars, and a spreadsheet to feed everyone. Above twelve you are running a wedding, not a trip.",
   },
   {
-    q: "How do you split group travel expenses fairly?",
-    a: "Log every shared expense the day it happens, tag who it was actually for (not always 'everyone'), and settle at the end with one transfer per person. Tools like Junto read receipts with AI, handle multi-currency, and show live balances so nobody is doing math in a hostel.",
+    q: "How do you split group expenses fairly?",
+    a: "Log every shared expense the day it happens. Tag who it was actually for (not always 'everyone'). Settle at the end with one transfer per person. Tools like Junto read receipts with AI, handle multi-currency, and show live balances so nobody is doing math in a hostel.",
   },
   {
     q: "What if people disagree about the destination?",
-    a: "Don't debate, vote. Shortlist 2 to 3 options that all fit the agreed vibe and budget. One vote each. 24-hour deadline. Winner takes it. Endless pros-and-cons threads end in a trip that never gets booked.",
+    a: "Do not debate. Vote. Shortlist 2 to 3 options that all fit the agreed vibe and budget. One vote each. 24-hour deadline. Winner takes it. Endless pros-and-cons threads end in a trip that never gets booked.",
   },
   {
     q: "Should one person be the trip organizer?",
-    a: "Someone has to drive momentum, but they shouldn't make every decision. The organizer kicks things off and pushes deadlines. The group votes, comments, and books in parallel. Otherwise the organizer burns out by week two and the trip dies in their inbox.",
+    a: "Someone has to drive momentum. They should not make every decision. The organizer kicks things off and pushes deadlines. The group votes, comments, and books in parallel. Otherwise the organizer burns out by week two and the trip dies in their inbox.",
   },
   {
-    q: "What should we do about flights with people coming from different cities?",
-    a: "Don't try to book together. Agree the arrival window (e.g. 'land by 6pm Friday'), share booking confirmations in one place, and meet at the accommodation. Trying to coordinate 6 flights from 4 cities is the fastest way to delay a trip by a month.",
+    q: "What about flights from different cities?",
+    a: "Do not try to book together. Agree the arrival window ('land by 6pm Friday'), share booking confirmations in one place, and meet at the accommodation. Trying to coordinate six flights from four cities is the fastest way to delay a trip by a month.",
   },
 ];
 
 export default function GuideGroupTrip() {
   const back = useSmartBack("/");
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const doc = document.documentElement;
+      const total = doc.scrollHeight - doc.clientHeight;
+      setProgress(total > 0 ? Math.min(1, doc.scrollTop / total) : 0);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const article = {
     "@context": "https://schema.org",
@@ -196,7 +211,10 @@ export default function GuideGroupTrip() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#fafaf9] text-[#1a1a1a]">
+    <div
+      className="min-h-dvh bg-[#f3efe6] text-[#161513]"
+      style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}
+    >
       <Helmet>
         <title>{TITLE} | Junto</title>
         <meta name="description" content={DESCRIPTION} />
@@ -220,180 +238,569 @@ export default function GuideGroupTrip() {
         <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>
       </Helmet>
 
-      {/* Hero */}
-      <header className="relative w-full h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden">
-        <img
-          src={HERO_IMG}
-          alt="A group of friends standing on a coastal cliff at sunset, planning their next trip"
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="eager"
-          fetchPriority="high"
+      {/* Reading progress bar */}
+      <div className="fixed top-0 left-0 right-0 h-[3px] z-50 bg-transparent">
+        <div
+          className="h-full bg-[#ff5b2e] transition-[width] duration-150 ease-out"
+          style={{ width: `${progress * 100}%` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/75" />
-        <div className="relative z-10 max-w-[860px] mx-auto h-full flex flex-col justify-end px-6 md:px-10 pb-14">
+      </div>
+
+      {/* Masthead */}
+      <div className="border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
           <button
             type="button"
             onClick={back}
-            className="self-start inline-flex items-center gap-1.5 text-sm text-white/80 hover:text-white transition-colors mb-6 backdrop-blur-sm bg-white/10 rounded-full px-3 py-1.5"
+            className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase font-semibold hover:opacity-60 transition-opacity"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             Back
           </button>
-          <span className="block font-bold text-white/90" style={{ fontSize: 13, letterSpacing: "0.22em" }}>
-            THE GROUP TRIP PLAYBOOK
-          </span>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mt-3 leading-[1.05] tracking-tight">
-            How to plan a group trip without the 200-message group chat.
-          </h1>
-          <p className="text-lg text-white/85 mt-5 max-w-[640px] leading-relaxed">
-            8 rules from people who've planned trips that actually happened (and watched the ones that didn't).
-          </p>
+          <div
+            className="text-[11px] tracking-[0.3em] uppercase font-semibold"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            Junto · Field Guide № 01
+          </div>
+          <Link
+            to="/templates"
+            className="hidden sm:inline-flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase font-semibold hover:opacity-60 transition-opacity"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            Index
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
+      </div>
+
+      {/* HERO — editorial cover */}
+      <header className="border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-10">
+          <div
+            className="grid grid-cols-12 gap-x-5 sm:gap-x-8 text-[11px] tracking-[0.22em] uppercase font-semibold mb-8"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            <div className="col-span-6 sm:col-span-3">Issue · 06 / 2026</div>
+            <div className="col-span-6 sm:col-span-3 text-right sm:text-left">8 Rules · 12 Min Read</div>
+            <div className="hidden sm:block col-span-3">By the Junto desk</div>
+            <div className="hidden sm:block col-span-3 text-right">Filed under: Group Travel</div>
+          </div>
+
+          <h1
+            className="font-light leading-[0.92] tracking-[-0.035em] text-[#161513]"
+            style={{
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontSize: "clamp(48px, 11vw, 168px)",
+              fontVariationSettings: "'opsz' 144, 'SOFT' 50",
+            }}
+          >
+            How to plan
+            <br />
+            a <span style={{ fontStyle: "italic", fontWeight: 300 }}>group trip</span>
+            <br />
+            that <span className="text-[#ff5b2e]">actually</span> happens.
+          </h1>
+
+          <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8 mt-10 sm:mt-14">
+            <div className="col-span-12 sm:col-span-7 md:col-span-6">
+              <p className="text-[19px] sm:text-[22px] leading-[1.45] text-[#161513]/85 font-normal">
+                Most group trips do not die at the airport. They die in week three of the WhatsApp thread,
+                when someone sends a poll that nobody answers, the dates slip again, and flights creep
+                past what anyone wanted to pay.
+              </p>
+            </div>
+            <div className="hidden md:block col-span-1" />
+            <aside className="col-span-12 sm:col-span-5 md:col-span-5 mt-8 sm:mt-0 border-t sm:border-t-0 sm:border-l border-[#161513]/20 sm:pl-8 pt-6 sm:pt-2">
+              <div
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold mb-3 text-[#161513]/60"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                In this issue
+              </div>
+              <ol
+                className="space-y-1.5 text-[13px] tabular-nums"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                {STEPS.map((s, i) => (
+                  <li key={s.title} className="flex gap-3">
+                    <span className="text-[#ff5b2e] font-semibold">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-[#161513]/80">{s.title}</span>
+                  </li>
+                ))}
+              </ol>
+            </aside>
+          </div>
+        </div>
+
+        {/* Full-bleed hero image with caption */}
+        <figure className="relative w-full overflow-hidden border-y border-[#161513]/15 bg-[#161513]">
+          <div className="relative w-full aspect-[21/9] sm:aspect-[21/8]">
+            <img
+              src={HERO_IMG}
+              alt="A group of friends standing on a coastal cliff at sunset, looking out over the sea"
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+              fetchPriority="high"
+            />
+          </div>
+          <figcaption
+            className="absolute bottom-0 left-0 right-0 px-5 sm:px-8 py-3 bg-gradient-to-t from-black/70 to-transparent text-[11px] tracking-[0.2em] uppercase font-semibold text-white/90"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            Fig. 01 · Six friends. One trip. Zero unresolved polls.
+          </figcaption>
+        </figure>
       </header>
 
-      <article className="max-w-[760px] mx-auto px-6 md:px-8 pt-16 pb-24">
-        {/* Intro */}
-        <p className="text-xl text-foreground/85 leading-relaxed mb-10 font-medium">
-          Most group trips don't die at the airport. They die in week 3 of the WhatsApp thread, when someone sends a poll that nobody answers, the dates slip again, and flights creep past what anyone wanted to pay.
-        </p>
-        <p className="text-base text-foreground/75 leading-relaxed mb-14">
-          The trips that actually happen share a pattern. Tight commitments, named budgets, anchor-only itineraries, money settled in real time. This is the playbook. Steal what works, ignore what doesn't, and your next group trip won't be the one everyone politely stops talking about.
-        </p>
-
-        {/* Why most group trips fail */}
-        <section className="mb-16 rounded-2xl bg-white border border-[#e5e5e5] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-foreground mb-5 flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#fee2e2] text-[#b91c1c]">
-              <X className="h-4 w-4" />
-            </span>
-            The 5 reasons most group trips collapse
-          </h2>
-          <ul className="space-y-3">
-            {FAILURES.map((f) => (
-              <li key={f.title} className="flex gap-3">
-                <span className="flex-none mt-2 w-1.5 h-1.5 rounded-full bg-[#b91c1c]" />
-                <p className="text-foreground/85 leading-relaxed">
-                  <span className="font-semibold text-foreground">{f.title}.</span> {f.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Steps */}
-        <h2 className="text-3xl font-bold text-foreground mb-2">The 8 rules</h2>
-        <p className="text-foreground/70 mb-12">In order. The first three matter most.</p>
-
-        <div className="space-y-20">
-          {STEPS.map((s, i) => (
-            <section key={s.title}>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="flex-none w-10 h-10 rounded-full bg-[#0D9488] text-white text-base font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <span className="text-xs font-bold tracking-[0.18em] text-[#0D9488] uppercase">Rule {i + 1}</span>
-              </div>
-              <h3 className="text-2xl sm:text-[28px] font-bold text-foreground mb-3 leading-tight">{s.title}</h3>
-              <p className="text-lg font-semibold text-[#0D9488] mb-5 italic">{s.rule}</p>
-
-              <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-6 bg-muted">
-                <img
-                  src={s.image}
-                  alt={s.alt}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-
-              <p className="text-foreground/85 leading-relaxed mb-5">{s.body}</p>
-
-              <div className="border-l-2 border-[#0D9488] pl-4 py-1 bg-[#F0FDFA] rounded-r-md">
-                <p className="text-sm font-bold text-[#064E4E] mb-1 tracking-wide uppercase">Real talk</p>
-                <p className="text-foreground/80 leading-relaxed">{s.example}</p>
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="mt-20 mb-16 rounded-3xl bg-[#0D9488] text-white px-7 sm:px-10 py-10 relative overflow-hidden">
-          <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative">
-            <span className="inline-block text-xs font-bold tracking-[0.22em] text-white/80 mb-3">
-              SKIP RULES 4 THROUGH 8
-            </span>
-            <h3 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight">
-              Let an AI plan it, an AI split the bill, and a real product hold the group together.
-            </h3>
-            <p className="text-white/90 mb-7 leading-relaxed max-w-[560px]">
-              Junto builds anchor-based itineraries in 30 seconds, reads receipts to settle expenses, and keeps every decision on the actual plan. Free, no credit card, your group can join from a link.
+      {/* INTRO — drop cap */}
+      <section className="border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-16 sm:py-24 grid grid-cols-12 gap-x-5 sm:gap-x-8">
+          <div className="hidden md:block col-span-2">
+            <div
+              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 sticky top-8"
+              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            >
+              § Opening
+            </div>
+          </div>
+          <div className="col-span-12 md:col-span-8">
+            <p
+              className="text-[20px] sm:text-[24px] leading-[1.45] text-[#161513] first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-[88px] first-letter:leading-[0.85] first-letter:font-light first-letter:text-[#ff5b2e]"
+              style={{ fontFamily: "'Fraunces', Georgia, serif", fontVariationSettings: "'opsz' 36, 'SOFT' 30" }}
+            >
+              The trips that actually happen share a pattern. Tight commitments. Named budgets.
+              Anchor-only itineraries. Money settled in real time. Decisions made where the trip
+              lives, not buried under 200 messages of memes and 'lol so true.'
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/trips/new"
-                className="inline-flex items-center gap-1.5 bg-white text-[#0D9488] font-semibold rounded-full px-6 py-3 hover:bg-white/90 transition-colors"
+            <p className="mt-8 text-[17px] leading-[1.65] text-[#161513]/80 max-w-[58ch]">
+              This is that playbook. Eight rules, in order. The first three matter most. Steal what
+              works, ignore what does not, and your next group trip will not be the one everyone
+              politely stops talking about.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* FAILURE CARDS — index-style */}
+      <section className="border-b border-[#161513]/15 bg-[#161513] text-[#f3efe6]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+          <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8 mb-12">
+            <div className="col-span-12 md:col-span-4">
+              <div
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#ff5b2e] mb-4"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
               >
-                Plan a group trip <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/templates"
-                className="inline-flex items-center gap-1.5 bg-white/15 text-white font-semibold rounded-full px-6 py-3 hover:bg-white/25 transition-colors backdrop-blur-sm"
+                Pre-mortem
+              </div>
+              <h2
+                className="font-light leading-[0.95] tracking-[-0.02em]"
+                style={{
+                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontSize: "clamp(36px, 5vw, 64px)",
+                  fontVariationSettings: "'opsz' 96, 'SOFT' 40",
+                }}
               >
-                Browse trip templates
-              </Link>
+                Five ways your trip will <em className="text-[#ff5b2e]" style={{ fontStyle: "italic" }}>quietly die</em>.
+              </h2>
+            </div>
+            <div className="hidden md:block col-span-1" />
+            <div className="col-span-12 md:col-span-7 mt-6 md:mt-3">
+              <p className="text-[16px] leading-[1.65] text-[#f3efe6]/70 max-w-[52ch]">
+                If you have planned a group trip before, you have lived at least three of these.
+                If you have not, this is the unsubsidised education.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t border-[#f3efe6]/15">
+            {FAILURES.map((f) => (
+              <div
+                key={f.num}
+                className="border-b sm:border-r last:border-r-0 border-[#f3efe6]/15 px-1 sm:px-5 py-6 sm:py-8"
+              >
+                <div
+                  className="text-[11px] tracking-[0.25em] uppercase font-semibold text-[#ff5b2e] mb-4 tabular-nums"
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                >
+                  No. {f.num}
+                </div>
+                <h3
+                  className="text-[20px] leading-[1.15] mb-3 tracking-[-0.01em]"
+                  style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+                >
+                  {f.title}
+                </h3>
+                <p className="text-[14px] leading-[1.55] text-[#f3efe6]/70">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* THE 8 RULES */}
+      <section className="border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 pt-20 sm:pt-28 pb-10">
+          <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8 items-end">
+            <div className="col-span-12 md:col-span-8">
+              <div
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-4"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Part Two · The rules
+              </div>
+              <h2
+                className="font-light leading-[0.92] tracking-[-0.03em]"
+                style={{
+                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontSize: "clamp(44px, 7vw, 96px)",
+                  fontVariationSettings: "'opsz' 144, 'SOFT' 50",
+                }}
+              >
+                Eight rules,
+                <br />
+                in <em style={{ fontStyle: "italic" }}>order</em>.
+              </h2>
+            </div>
+            <div className="col-span-12 md:col-span-4 mt-6 md:mt-0 md:pb-3">
+              <p
+                className="text-[13px] tracking-[0.05em] text-[#161513]/70"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Rules 01 → 03 are non-negotiable. The rest you can adapt. Skip any of the first three
+                and the trip is on borrowed time.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Quick checklist */}
-        <section className="mb-20 rounded-2xl bg-white border border-[#e5e5e5] p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-foreground mb-5">The 30-second checklist</h2>
-          <ul className="space-y-3">
-            {[
-              "Group is locked. No maybes.",
-              "Budget number is named, in writing.",
-              "Vibe is agreed. Destination shortlist is 3 max.",
-              "Each day has 1 anchor. The rest is air.",
-              "One person books group items. Flights are personal.",
-              "Every receipt is logged the day it happens.",
-              "Docs, confirmations, and passport dates are in one shared place.",
-              "Decisions live on the plan, not in chat.",
-            ].map((item) => (
-              <li key={item} className="flex gap-3 items-start">
-                <span className="flex-none mt-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#0D9488] text-white">
-                  <Check className="h-3 w-3" strokeWidth={3} />
-                </span>
-                <span className="text-foreground/85">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div>
+          {STEPS.map((s, i) => {
+            const isEven = i % 2 === 0;
+            return (
+              <article
+                key={s.title}
+                className="border-t border-[#161513]/15"
+              >
+                <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-16 sm:py-24 grid grid-cols-12 gap-x-5 sm:gap-x-8">
+                  {/* Big numeral column */}
+                  <div className="col-span-12 md:col-span-3 mb-8 md:mb-0">
+                    <div
+                      className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-2"
+                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                    >
+                      Rule
+                    </div>
+                    <div
+                      className="font-light leading-[0.85] text-[#161513] tabular-nums tracking-[-0.06em]"
+                      style={{
+                        fontFamily: "'Fraunces', Georgia, serif",
+                        fontSize: "clamp(96px, 14vw, 220px)",
+                        fontVariationSettings: "'opsz' 144, 'SOFT' 50",
+                      }}
+                    >
+                      <span className="text-[#161513]/15">0</span>
+                      <span className={i < 3 ? "text-[#ff5b2e]" : "text-[#161513]"}>{i + 1}</span>
+                    </div>
+                  </div>
 
-        {/* FAQ */}
-        <h2 className="text-3xl font-bold text-foreground mb-8">Frequently asked questions</h2>
-        <div className="space-y-7 mb-16">
-          {FAQ.map((f) => (
-            <div key={f.q} className="border-b border-[#e5e5e5] pb-7 last:border-none">
-              <h3 className="text-lg font-bold text-foreground mb-2">{f.q}</h3>
-              <p className="text-foreground/80 leading-relaxed">{f.a}</p>
+                  {/* Content column */}
+                  <div className={`col-span-12 md:col-span-9 ${isEven ? "" : "md:order-first md:col-start-1 md:col-span-9 md:row-start-1"}`}>
+                    {/* This layout block reads naturally; the order swap is a subtle rhythm break */}
+                    <div className="md:max-w-[680px] md:ml-auto">
+                      <h3
+                        className="font-light leading-[0.98] tracking-[-0.025em] text-[#161513]"
+                        style={{
+                          fontFamily: "'Fraunces', Georgia, serif",
+                          fontSize: "clamp(36px, 4.5vw, 60px)",
+                          fontVariationSettings: "'opsz' 96, 'SOFT' 40",
+                        }}
+                      >
+                        {s.title}.
+                      </h3>
+                      <p
+                        className="mt-5 text-[18px] sm:text-[20px] leading-[1.4] text-[#ff5b2e]"
+                        style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontVariationSettings: "'opsz' 48" }}
+                      >
+                        {s.rule}
+                      </p>
+
+                      <figure className="mt-9 mb-9">
+                        <div className="relative w-full aspect-[3/2] overflow-hidden bg-[#e7e0d2]">
+                          <img
+                            src={s.image}
+                            alt={s.alt}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                        <figcaption
+                          className="mt-3 flex items-baseline gap-4 text-[11px] tracking-[0.2em] uppercase font-semibold text-[#161513]/60"
+                          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                          <span className="text-[#ff5b2e]">Fig. {String(i + 2).padStart(2, "0")}</span>
+                          <span className="normal-case tracking-normal text-[13px] text-[#161513]/65" style={{ fontFamily: "'IBM Plex Sans', sans-serif", letterSpacing: 0, fontWeight: 400 }}>
+                            {s.caption}
+                          </span>
+                        </figcaption>
+                      </figure>
+
+                      <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#161513]/85">{s.body}</p>
+
+                      <blockquote
+                        className="my-10 pl-6 border-l-2 border-[#ff5b2e]"
+                      >
+                        <p
+                          className="text-[24px] sm:text-[30px] leading-[1.15] tracking-[-0.015em] text-[#161513]"
+                          style={{
+                            fontFamily: "'Fraunces', Georgia, serif",
+                            fontVariationSettings: "'opsz' 72, 'SOFT' 40",
+                          }}
+                        >
+                          &ldquo;{s.pull}&rdquo;
+                        </p>
+                      </blockquote>
+
+                      <div className="border-t border-[#161513]/15 pt-5">
+                        <div
+                          className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-2"
+                          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                          Field note
+                        </div>
+                        <p className="text-[15px] leading-[1.6] text-[#161513]/75">{s.example}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* CTA — heavy, full-bleed */}
+      <section className="bg-[#ff5b2e] text-[#161513] border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+          <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8">
+            <div className="col-span-12 md:col-span-7">
+              <div
+                className="text-[11px] tracking-[0.28em] uppercase font-semibold mb-6"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Or, skip rules 04 → 08
+              </div>
+              <h2
+                className="font-light leading-[0.94] tracking-[-0.03em]"
+                style={{
+                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontSize: "clamp(40px, 6vw, 84px)",
+                  fontVariationSettings: "'opsz' 144, 'SOFT' 50",
+                }}
+              >
+                Let an AI build it. Let a product hold the group <em style={{ fontStyle: "italic" }}>together</em>.
+              </h2>
             </div>
-          ))}
+            <div className="col-span-12 md:col-span-5 md:pl-8 md:border-l md:border-[#161513]/25 mt-10 md:mt-3">
+              <p className="text-[17px] leading-[1.6] mb-8 max-w-[40ch]">
+                Junto builds anchor-based itineraries in 30 seconds, reads receipts to settle expenses,
+                and keeps every decision on the actual plan. Free. No credit card. Your group joins
+                from a link.
+              </p>
+              <div className="space-y-3">
+                <Link
+                  to="/trips/new"
+                  className="group flex items-center justify-between w-full bg-[#161513] text-[#f3efe6] px-6 py-5 hover:bg-black transition-colors"
+                >
+                  <span
+                    className="text-[14px] tracking-[0.15em] uppercase font-semibold"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    Plan a group trip
+                  </span>
+                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link
+                  to="/templates"
+                  className="group flex items-center justify-between w-full border border-[#161513] px-6 py-5 hover:bg-[#161513] hover:text-[#f3efe6] transition-colors"
+                >
+                  <span
+                    className="text-[14px] tracking-[0.15em] uppercase font-semibold"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    Browse 16 trip ideas
+                  </span>
+                  <ArrowUpRight className="h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
 
-        {/* Outro */}
-        <div className="border-t border-[#e5e5e5] pt-10">
-          <h2 className="text-xl font-bold text-foreground mb-3">Need destination ideas?</h2>
-          <p className="text-muted-foreground mb-5">
-            Browse 16 curated group-trip itineraries. Bali, Tokyo, Tulum, Lisbon, Petra, Mexico City. By vibe, season, and budget.
-          </p>
-          <Link
-            to="/templates"
-            className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-[#0D9488] hover:text-[#064E4E] transition-colors"
-          >
-            See all trip ideas <ArrowRight className="h-4 w-4" />
-          </Link>
+      {/* CHECKLIST — telegram style */}
+      <section className="border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28 grid grid-cols-12 gap-x-5 sm:gap-x-8">
+          <div className="col-span-12 md:col-span-4">
+            <div
+              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-4"
+              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            >
+              Tear-out
+            </div>
+            <h2
+              className="font-light leading-[0.95] tracking-[-0.02em]"
+              style={{
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontSize: "clamp(36px, 4.5vw, 56px)",
+                fontVariationSettings: "'opsz' 96, 'SOFT' 40",
+              }}
+            >
+              The <em style={{ fontStyle: "italic" }}>30-second</em> checklist.
+            </h2>
+            <p className="mt-5 text-[15px] leading-[1.6] text-[#161513]/70 max-w-[34ch]">
+              Eight lines. Print it. Pin it to the chat. If you can tick all eight, the trip is going
+              to happen.
+            </p>
+          </div>
+          <div className="col-span-12 md:col-span-8 mt-10 md:mt-0 md:border-l md:border-[#161513]/20 md:pl-10">
+            <ol className="divide-y divide-[#161513]/15 border-y border-[#161513]/15">
+              {[
+                "Group is locked. No maybes.",
+                "Budget number is named, in writing.",
+                "Vibe is agreed. Destination shortlist is 3 max.",
+                "Each day has one anchor. The rest is air.",
+                "One person books group items. Flights are personal.",
+                "Every receipt is logged the day it happens.",
+                "Docs, confirmations, and passport dates live in one shared place.",
+                "Decisions live on the plan, not in the chat.",
+              ].map((item, idx) => (
+                <li key={item} className="flex items-baseline gap-6 py-5">
+                  <span
+                    className="flex-none text-[13px] tabular-nums font-semibold text-[#ff5b2e] tracking-[0.1em]"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+                  <span className="text-[18px] sm:text-[20px] leading-[1.4] text-[#161513]" style={{ fontFamily: "'Fraunces', Georgia, serif", fontVariationSettings: "'opsz' 36" }}>
+                    {item}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
-      </article>
+      </section>
+
+      {/* FAQ */}
+      <section className="border-b border-[#161513]/15">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28 grid grid-cols-12 gap-x-5 sm:gap-x-8">
+          <div className="col-span-12 md:col-span-4">
+            <div
+              className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#161513]/50 mb-4 md:sticky md:top-8"
+              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            >
+              Q & A
+            </div>
+            <h2
+              className="font-light leading-[0.95] tracking-[-0.02em] md:sticky md:top-16"
+              style={{
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontSize: "clamp(36px, 4.5vw, 60px)",
+                fontVariationSettings: "'opsz' 96, 'SOFT' 40",
+              }}
+            >
+              Things people keep <em style={{ fontStyle: "italic" }}>emailing</em> us about.
+            </h2>
+          </div>
+          <div className="col-span-12 md:col-span-8 mt-10 md:mt-0">
+            <div className="divide-y divide-[#161513]/15 border-y border-[#161513]/15">
+              {FAQ.map((f, idx) => (
+                <details key={f.q} className="group py-7" open={idx === 0}>
+                  <summary className="flex items-baseline gap-6 cursor-pointer list-none">
+                    <span
+                      className="flex-none text-[12px] tabular-nums font-semibold text-[#ff5b2e]"
+                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                    >
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      className="flex-1 text-[22px] sm:text-[26px] leading-[1.2] tracking-[-0.015em] text-[#161513]"
+                      style={{ fontFamily: "'Fraunces', Georgia, serif", fontVariationSettings: "'opsz' 72, 'SOFT' 40" }}
+                    >
+                      {f.q}
+                    </span>
+                    <span
+                      className="flex-none text-[20px] text-[#161513]/60 group-open:rotate-45 transition-transform"
+                      aria-hidden
+                    >
+                      +
+                    </span>
+                  </summary>
+                  <div className="mt-4 pl-[44px] text-[16px] leading-[1.65] text-[#161513]/80 max-w-[58ch]">
+                    {f.a}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Colophon / outro */}
+      <footer className="bg-[#161513] text-[#f3efe6]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+          <div className="grid grid-cols-12 gap-x-5 sm:gap-x-8">
+            <div className="col-span-12 md:col-span-8">
+              <div
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#ff5b2e] mb-4"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Up next
+              </div>
+              <h3
+                className="font-light leading-[0.95] tracking-[-0.025em]"
+                style={{
+                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontSize: "clamp(36px, 5vw, 64px)",
+                  fontVariationSettings: "'opsz' 96, 'SOFT' 50",
+                }}
+              >
+                Need somewhere <em style={{ fontStyle: "italic" }} className="text-[#ff5b2e]">to go</em>?
+              </h3>
+              <p className="mt-5 text-[17px] leading-[1.6] text-[#f3efe6]/70 max-w-[52ch]">
+                Sixteen curated group-trip itineraries. Bali, Tokyo, Tulum, Lisbon, Petra, Mexico City.
+                Filtered by vibe, season, and budget. Each one opens straight into a working plan.
+              </p>
+              <Link
+                to="/templates"
+                className="mt-8 inline-flex items-center gap-2 text-[13px] tracking-[0.18em] uppercase font-semibold text-[#f3efe6] border-b border-[#ff5b2e] pb-1 hover:text-[#ff5b2e] transition-colors"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                See all trip ideas
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="col-span-12 md:col-span-4 mt-10 md:mt-0 md:border-l md:border-[#f3efe6]/20 md:pl-8">
+              <div
+                className="text-[10px] tracking-[0.25em] uppercase font-semibold text-[#f3efe6]/50 mb-4"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Colophon
+              </div>
+              <p
+                className="text-[13px] leading-[1.65] text-[#f3efe6]/60"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Set in Fraunces and IBM Plex.<br />
+                Written by people who have planned trips that worked, and many more that did not.<br />
+                Published by Junto, June 2026.
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
