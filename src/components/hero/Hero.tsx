@@ -8,10 +8,9 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, ChevronDown, Loader2, Map, Sparkles, Users } from "lucide-react";
-import { JuntoWordmark } from "./JuntoWordmark";
+import { useNavigate } from "react-router-dom";
+import { ArrowRight, ChevronDown, Loader2, Map, Sparkles, Users } from "lucide-react";
+import { PublicHeroHeader } from "./PublicHeroHeader";
 import { SAMPLE_TRIPS } from "./sampleTrips";
 
 type Variant = "public" | "app";
@@ -497,42 +496,7 @@ export function Hero({
         aria-hidden
       />
 
-      {typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-5 sm:px-10 pointer-events-none"
-          style={{
-            paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
-            paddingBottom: 24,
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
-          }}
-        >
-          <Link
-            to="/guides"
-            className="pointer-events-auto text-[13px] font-semibold text-white/85 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors whitespace-nowrap"
-          >
-            Field Guide
-          </Link>
-          <Link
-            to="/"
-            aria-label="Junto home"
-            className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
-            style={{ top: "calc(env(safe-area-inset-top, 0px) + 18px)" }}
-          >
-            Junto
-          </Link>
-          <Link
-            to="/ref"
-            className="group pointer-events-auto relative inline-flex items-center rounded-full px-3.5 py-1.5 text-[12px] sm:px-5 sm:py-2 sm:text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(13,148,136,0.65)] transition-transform hover:scale-[1.03] active:scale-95"
-            style={{
-              background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)",
-            }}
-          >
-            <span className="absolute inset-0 rounded-full bg-gradient-to-r from-white/20 via-transparent to-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <span className="relative">Get started</span>
-          </Link>
-        </div>,
-        document.body
-      )}
+      <PublicHeroHeader leftLabel="Field Guide" leftTo="/guides" />
 
       <div
         className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-end px-6 sm:px-8 pt-32 sm:pt-40 pb-14 sm:pb-20 text-center"
