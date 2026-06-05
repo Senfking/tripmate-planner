@@ -248,7 +248,7 @@ export default function GuideGroupTrip() {
 
       {/* Header — identical to landing Hero overlay (white JUNTO + gradient CTA) */}
       <div
-        className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-end px-5 sm:px-10 pointer-events-none"
+        className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-5 sm:px-10 pointer-events-none"
         style={{
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
           paddingBottom: 24,
