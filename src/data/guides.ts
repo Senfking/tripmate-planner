@@ -87,7 +87,7 @@ export const GUIDES: Guide[] = [
     longTitle: "How to Split Expenses on a Group Trip Without Losing Friends",
     description:
       "Four ways to split group-trip costs: even, weighted, item-by-item, and the shared pot. When each one works, the apps worth using, and the one habit that keeps the math (and the friendships) clean.",
-    readTime: "9 min read",
+    readTime: "6 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1600&q=75&auto=format&fit=crop&fm=webp",
