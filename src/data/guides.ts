@@ -263,7 +263,7 @@ export const GUIDES: Guide[] = [
     longTitle: "The Group Trip Packing List (Beach, City, Weekend Away)",
     description:
       "A real, tested packing list for trips with friends: the shared kit somebody needs to own, the personal essentials nobody packs until day two, and trip-specific add-ons for beach, city, and weekend trips.",
-    readTime: "8 min read",
+    readTime: "5 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?w=1600&q=75&auto=format&fit=crop&fm=webp",
