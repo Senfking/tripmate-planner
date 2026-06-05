@@ -173,7 +173,7 @@ export const GUIDES: Guide[] = [
     longTitle: "How to Choose Where to Travel With Friends (and Actually Decide)",
     description:
       "Bali vs Tulum vs Lisbon ends nowhere because everyone's voting on different trips. A three-step framework (vibe, constraints, ranked vote) to lock a destination in 48 hours, plus the best places to travel with friends in 2026.",
-    readTime: "10 min read",
+    readTime: "5 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600&q=75&auto=format&fit=crop&fm=webp",
