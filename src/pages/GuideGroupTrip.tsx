@@ -426,7 +426,7 @@ export default function GuideGroupTrip() {
             className="scroll-mt-20 pt-14 sm:pt-20"
           >
             {/* Hero image with overlaid headline */}
-            <figure className="relative w-full overflow-hidden bg-black">
+            <figure className="relative w-full overflow-hidden">
               <div className="relative w-full aspect-[16/10] sm:aspect-[21/9] max-h-[640px]">
                 <img
                   src={s.image}
@@ -468,14 +468,6 @@ export default function GuideGroupTrip() {
                   </div>
                 </div>
               </div>
-              <figcaption className="max-w-[1400px] mx-auto px-5 sm:px-10 mt-4 flex items-baseline justify-between gap-6">
-                <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/45">
-                  Fig. {String(i + 1).padStart(2, "0")} — {s.tag}
-                </span>
-                <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#0B2E2C]/30">
-                  Rule {String(i + 1).padStart(2, "0")} / 08
-                </span>
-              </figcaption>
             </figure>
 
 
