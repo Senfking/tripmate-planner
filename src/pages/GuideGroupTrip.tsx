@@ -540,7 +540,7 @@ export default function GuideGroupTrip() {
                           style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
                         >
                           <span className="text-[#0D9488]">Fig. {String(i + 2).padStart(2, "0")}</span>
-                          <span className="normal-case tracking-normal text-[13px] text-[#134E4A]/65" style={{ fontFamily: "'IBM Plex Sans', sans-serif", letterSpacing: 0, fontWeight: 400 }}>
+                          <span className="normal-case tracking-normal text-[13px] text-[#134E4A]/65" style={{ fontFamily: "'Inter', system-ui, sans-serif", letterSpacing: 0, fontWeight: 400 }}>
                             {s.caption}
                           </span>
                         </figcaption>
@@ -793,7 +793,7 @@ export default function GuideGroupTrip() {
                 className="text-[13px] leading-[1.65] text-[#F0FDFA]/60"
                 style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
-                Set in Fraunces and IBM Plex.<br />
+                Set in Inter. Built in Junto.<br />
                 Written by people who have planned trips that worked, and many more that did not.<br />
                 Published by Junto, June 2026.
               </p>
