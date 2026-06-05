@@ -170,7 +170,7 @@ export default function PublicLanding() {
             Junto
           </span>
           <div className="flex items-center gap-6 justify-self-end">
-            <Link to="/guides/how-to-plan-a-group-trip" className="hover:text-[#1a1a1a] transition-colors">Guides</Link>
+            <Link to="/guides" className="hover:text-[#1a1a1a] transition-colors">Field Guide</Link>
             <Link to="/privacy" className="hover:text-[#1a1a1a] transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-[#1a1a1a] transition-colors">Terms</Link>
           </div>
