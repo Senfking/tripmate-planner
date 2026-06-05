@@ -257,6 +257,13 @@ export default function GuideGroupTrip() {
         }}
       >
         <Link
+          to="/guides"
+          className="pointer-events-auto inline-flex items-center gap-1.5 text-[11px] sm:text-[12px] font-mono tracking-[0.22em] uppercase text-white/75 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Field Guide
+        </Link>
+        <Link
           to="/"
           aria-label="Junto home"
           className="pointer-events-auto absolute left-1/2 -translate-x-1/2 text-[19px] font-extrabold tracking-[0.32em] uppercase text-white/80 hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors"
