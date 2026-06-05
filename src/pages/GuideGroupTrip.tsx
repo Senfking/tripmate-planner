@@ -214,7 +214,7 @@ export default function GuideGroupTrip() {
   };
 
   return (
-    <div className="min-h-dvh bg-white text-[#0B2E2C] antialiased selection:bg-[#0D9488]/20">
+    <div className="relative min-h-dvh bg-white text-[#0B2E2C] antialiased selection:bg-[#0D9488]/20">
       <Helmet>
         <title>{TITLE} | Junto</title>
         <meta name="description" content={DESCRIPTION} />
