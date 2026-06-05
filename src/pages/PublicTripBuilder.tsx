@@ -32,6 +32,13 @@ export default function PublicTripBuilder() {
   // navigate removed; anon flow handles its own routing.
   const { user } = useAuth();
 
+  useCanonical("/trips/new");
+  usePageMeta({
+    title: "Plan a New Group Trip with Junto AI | Free Trip Planner",
+    description:
+      "Start planning your next group trip with Junto AI. Enter your destination, dates, and who's coming to get a personalized itinerary in seconds.",
+  });
+
   const [pending, setPending] = useState<string | undefined>(() => {
     return consumePendingPrompt() ?? undefined;
   });
