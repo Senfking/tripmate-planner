@@ -295,8 +295,8 @@ export default function GuideGroupTrip() {
           <div className="absolute inset-0 flex flex-col justify-end">
             <div className="max-w-[1400px] mx-auto w-full px-5 sm:px-10 pb-16 sm:pb-24">
               <div className="flex items-center gap-3 mb-8">
-                <span className="h-px w-10 bg-[#5EEAD4]" />
-                <span className="text-[11px] font-bold tracking-[0.32em] uppercase text-[#5EEAD4]">
+                <span className="h-px w-10 bg-[#2DD4BF]" />
+                <span className="text-[11px] font-bold tracking-[0.32em] uppercase text-[#2DD4BF]">
                   Field Guide · 001
                 </span>
               </div>
@@ -305,7 +305,7 @@ export default function GuideGroupTrip() {
                 style={{ fontSize: "clamp(44px, 8vw, 112px)" }}
               >
                 How to plan a group trip that{" "}
-                <span className="italic font-light text-[#5EEAD4]">actually</span> happens.
+                <span className="italic font-light text-[#2DD4BF]">actually</span> happens.
               </h1>
               <div className="mt-10 flex flex-wrap items-end justify-between gap-6">
                 <p className="text-[16px] sm:text-[18px] leading-[1.55] text-white/75 max-w-[54ch]">
@@ -352,8 +352,8 @@ export default function GuideGroupTrip() {
           <div className="grid grid-cols-12 gap-x-8 mb-14">
             <div className="col-span-12 md:col-span-6">
               <div className="flex items-center gap-3 mb-5">
-                <span className="h-px w-8 bg-[#5EEAD4]" />
-                <span className="text-[11px] font-bold tracking-[0.3em] uppercase text-[#5EEAD4]">
+                <span className="h-px w-8 bg-[#2DD4BF]" />
+                <span className="text-[11px] font-bold tracking-[0.3em] uppercase text-[#2DD4BF]">
                   The pre-mortem
                 </span>
               </div>
@@ -380,7 +380,7 @@ export default function GuideGroupTrip() {
                 className="grid grid-cols-12 gap-x-8 border-b border-white/10 py-7 sm:py-9 group hover:bg-white/[0.02] transition-colors"
               >
                 <div className="col-span-2 md:col-span-1">
-                  <span className="font-mono text-[13px] tracking-[0.1em] text-[#5EEAD4] tabular-nums">
+                  <span className="font-mono text-[13px] tracking-[0.1em] text-[#2DD4BF] tabular-nums">
                     {f.num}
                   </span>
                 </div>
@@ -444,7 +444,7 @@ export default function GuideGroupTrip() {
                     <div className="max-w-[720px]">
                       <div className="flex items-baseline gap-4 mb-2">
                         <span
-                          className="font-medium tracking-[-0.05em] tabular-nums leading-none text-[#5EEAD4]"
+                          className="font-medium tracking-[-0.05em] tabular-nums leading-none text-[#2DD4BF]"
                           style={{ fontSize: "clamp(44px, 6.5vw, 96px)" }}
                         >
                           {String(i + 1).padStart(2, "0")}
@@ -460,7 +460,7 @@ export default function GuideGroupTrip() {
                         {s.title}.
                       </h3>
                       <p
-                        className="mt-4 text-[17px] sm:text-[20px] leading-[1.4] italic font-light tracking-[-0.01em] text-[#5EEAD4] drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                        className="mt-4 text-[17px] sm:text-[20px] leading-[1.4] italic font-light tracking-[-0.01em] text-[#2DD4BF] drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
                       >
                         {s.rule}
                       </p>
@@ -530,8 +530,8 @@ export default function GuideGroupTrip() {
             <div className="relative grid grid-cols-12 gap-x-8 px-7 sm:px-16 py-16 sm:py-24 items-center">
               <div className="col-span-12 lg:col-span-7">
                 <div className="flex items-center gap-3 mb-6">
-                  <span className="h-px w-8 bg-[#5EEAD4]" />
-                  <span className="font-mono text-[11px] tracking-[0.3em] uppercase text-[#5EEAD4]">
+                  <span className="h-px w-8 bg-[#2DD4BF]" />
+                  <span className="font-mono text-[11px] tracking-[0.3em] uppercase text-[#2DD4BF]">
                     Or skip rules 4 → 8
                   </span>
                 </div>
@@ -540,7 +540,7 @@ export default function GuideGroupTrip() {
                   style={{ fontSize: "clamp(34px, 4.8vw, 60px)" }}
                 >
                   Let Junto build the plan, split the bill, and hold the group{" "}
-                  <span className="italic font-light text-[#5EEAD4]">together</span>.
+                  <span className="italic font-light text-[#2DD4BF]">together</span>.
                 </h2>
                 <p className="mt-6 text-[16px] sm:text-[17px] leading-[1.65] text-white/70 max-w-[52ch]">
                   AI-built itineraries in 30 seconds. Receipt-scanning expenses. Every decision
@@ -550,7 +550,7 @@ export default function GuideGroupTrip() {
               <div className="col-span-12 lg:col-span-5 mt-10 lg:mt-0 lg:pl-10 flex flex-col gap-3">
                 <Link
                   to="/trips/new"
-                  className="group flex items-center justify-between gap-3 rounded-2xl bg-white text-[#0B2E2C] px-6 py-5 font-semibold text-[15px] hover:bg-[#5EEAD4] transition-colors"
+                  className="group flex items-center justify-between gap-3 rounded-2xl bg-white text-[#0B2E2C] px-6 py-5 font-semibold text-[15px] hover:bg-[#2DD4BF] transition-colors"
                 >
                   <span className="inline-flex items-center gap-2.5">
                     <Sparkles className="h-4 w-4 text-[#0D9488]" />
