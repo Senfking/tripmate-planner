@@ -44,26 +44,26 @@ export default function Guides() {
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-[#FAF8F4]/85 backdrop-blur border-b border-[#0B2E2C]/10">
         <div className="max-w-[1400px] mx-auto px-5 sm:px-10 lg:px-16 h-14 grid grid-cols-3 items-center">
-          <div />
+          <div className="flex items-center justify-start">
+            <span className="text-[13px] font-medium text-[#0B2E2C] whitespace-nowrap">
+              Field Guide
+            </span>
+          </div>
           <Link
             to="/"
             className="justify-self-center text-[15px] sm:text-[17px] font-extrabold tracking-[0.32em] uppercase text-[#0B2E2C]"
           >
             Junto
           </Link>
-          <nav className="justify-self-end flex items-center gap-3 sm:gap-5 text-[13px]">
-            <Link to="/templates" className="hidden sm:inline-block font-medium text-[#0B2E2C]/65 hover:text-[#0B2E2C] transition-colors">
-              Templates
-            </Link>
-            <span className="hidden sm:inline-block font-medium text-[#0B2E2C]">Field Guide</span>
+          <div className="flex items-center justify-end">
             <Link
               to="/ref"
-              className="inline-flex items-center rounded-full px-4 py-1.5 text-[12px] font-semibold text-white whitespace-nowrap"
+              className="inline-flex items-center rounded-full px-4 py-1.5 text-[13px] font-semibold text-white whitespace-nowrap"
               style={{ background: "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)" }}
             >
               Get started
             </Link>
-          </nav>
+          </div>
         </div>
       </header>
 
