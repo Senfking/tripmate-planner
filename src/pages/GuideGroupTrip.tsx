@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Sparkles, Check } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useSmartBack } from "@/hooks/useSmartBack";
+import { CATEGORIES, getRelatedGuides, guideUrl } from "@/data/guides";
 
 const SITE = "https://junto.pro";
 const URL = `${SITE}/guides/how-to-plan-a-group-trip`;
@@ -721,3 +722,64 @@ export default function GuideGroupTrip() {
     </div>
   );
 }
+
+function FieldGuideRail() {
+  const related = getRelatedGuides("how-to-plan-a-group-trip", 3);
+  if (!related.length) return null;
+  return (
+    <section className="bg-white border-t border-[#0B2E2C]/10">
+      <div className="max-w-[1400px] mx-auto px-5 sm:px-10 py-20 sm:py-24">
+        <div className="flex items-end justify-between gap-6 mb-10">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="h-px w-8 bg-[#0D9488]" />
+              <span className="font-mono text-[11px] tracking-[0.3em] uppercase text-[#0D9488]">
+                More from the Field Guide
+              </span>
+            </div>
+            <h3
+              className="font-medium tracking-[-0.025em] leading-[1.05] text-[#0B2E2C] max-w-[22ch]"
+              style={{ fontSize: "clamp(26px, 3.6vw, 42px)" }}
+            >
+              Keep the planning <span className="italic font-light text-[#0D9488]">honest</span>.
+            </h3>
+          </div>
+          <Link
+            to="/guides"
+            className="hidden sm:inline-flex items-center gap-2 text-[13px] font-semibold text-[#0B2E2C] border-b-2 border-[#0D9488] pb-1 hover:text-[#0D9488] transition-colors"
+          >
+            All guides
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <ul className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {related.map((g) => (
+            <li key={g.slug}>
+              <Link to={guideUrl(g.slug)} className="group block">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-black mb-4">
+                  <img
+                    src={g.image}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 group-hover:scale-[1.03] transition-all duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 font-mono text-[10px] tracking-[0.25em] uppercase text-white/85">
+                    {CATEGORIES[g.category].label} · {g.number}
+                  </div>
+                </div>
+                <h4 className="text-[18px] font-medium tracking-[-0.015em] leading-[1.25] text-[#0B2E2C] group-hover:text-[#0D9488] transition-colors">
+                  {g.title}
+                </h4>
+                <div className="mt-2 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#0B2E2C]/45">
+                  {g.status === "live" ? g.readTime : "Coming soon"}
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
