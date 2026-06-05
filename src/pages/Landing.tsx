@@ -125,7 +125,7 @@ export default function Landing() {
           <div className="mt-5 sm:mt-8 rounded-[1.5rem] sm:rounded-[1.75rem] p-4 sm:p-6 text-left backdrop-blur-xl mx-auto max-w-lg shadow-[0_8px_60px_-20px_rgba(0,0,0,0.25)]"
             style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(24px) saturate(1.4)" }}>
             <div className="flex items-center gap-2.5 bg-white/95 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)]">
-              <Search className="h-[18px] w-[18px] text-gray-400 shrink-0" />
+              <Search className="h-[18px] w-[18px] text-gray-600 shrink-0" />
               <RotatingPlaceholder
                 value={searchValue}
                 onChange={setSearchValue}
