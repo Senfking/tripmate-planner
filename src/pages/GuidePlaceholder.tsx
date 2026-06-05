@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import { GUIDES, CATEGORIES, getGuide, getRelatedGuides, guideUrl } from "@/data/guides";
+import { CATEGORIES, getGuide, getRelatedGuides, guideUrl } from "@/data/guides";
 
 const SITE = "https://junto.pro";
 const GRADIENT = "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)";
