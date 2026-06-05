@@ -323,7 +323,7 @@ export default function GuideGroupTrip() {
                 <div className="flex items-center gap-6 text-[11px] font-mono tracking-[0.18em] uppercase text-white/55">
                   <span>8 rules</span>
                   <span className="w-px h-3 bg-white/20" />
-                  <span>12 min read</span>
+                  <span>9 min read</span>
                   <span className="w-px h-3 bg-white/20" />
                   <span>By Junto</span>
                 </div>

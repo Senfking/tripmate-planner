@@ -65,7 +65,7 @@ export const GUIDES: Guide[] = [
     longTitle: "How to Plan a Group Trip (Without the 200-Message Group Chat)",
     description:
       "The honest playbook for planning a group trip with friends. 8 rules that actually work, the 5 reasons most group trips collapse, and the exact tools to skip the spreadsheet hell.",
-    readTime: "12 min read",
+    readTime: "9 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -87,7 +87,7 @@ export const GUIDES: Guide[] = [
     longTitle: "How to Split Expenses on a Group Trip Without Losing Friends",
     description:
       "Four ways to split group-trip costs: even, weighted, item-by-item, and the shared pot. When each one works, the apps worth using, and the one habit that keeps the math (and the friendships) clean.",
-    readTime: "9 min read",
+    readTime: "6 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -173,7 +173,7 @@ export const GUIDES: Guide[] = [
     longTitle: "How to Choose Where to Travel With Friends (and Actually Decide)",
     description:
       "Bali vs Tulum vs Lisbon ends nowhere because everyone's voting on different trips. A three-step framework (vibe, constraints, ranked vote) to lock a destination in 48 hours, plus the best places to travel with friends in 2026.",
-    readTime: "10 min read",
+    readTime: "5 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -239,6 +239,26 @@ export const GUIDES: Guide[] = [
           },
         },
         {
+          title: "The kill-criteria pass",
+          body:
+            "Before the ranked vote, run the shortlist through five hard filters. If a destination fails any one of them, it's out. No discussion, no 'but it would be amazing in October'. Out.\n\nThese filters exist because group trips die in the details, not the dream. A place can be perfect on Instagram and impossible in practice, and you only find out three weeks in when someone realises their passport expires in four months.",
+          list: {
+            kind: "ordered",
+            items: [
+              "Passport validity. Most of Asia, the Middle East, and a lot of Latin America require six months past your return date. Anyone in the group inside that window kills the destination unless they're willing to renew on a rush fee.",
+              "Visa lead time. US ESTA is instant. Schengen for non-EU passports can be six to eight weeks. India e-visa is fine but needs a clean photo. Check the slowest passport in the group, not your own.",
+              "Season. 'Bali in February' sounds dreamy until you learn it's monsoon. Cross-check the destination against shoulder/peak/rainy season for your actual dates. Skyscanner's 'cheapest month' view tells you more than any travel blog.",
+              "Direct flight access. Two stops with a 9-hour layover at 4am is not a holiday, it's a sentence. If nobody in the group has a direct or one-stop option under 14 hours total, drop it.",
+              "Group accommodation. If you're six people, you need either two adjacent apartments or one villa. Check Airbnb supply for your exact dates before you fall in love with a place. Nothing kills momentum like discovering everywhere sleeps four.",
+            ],
+          },
+        },
+        {
+          title: "A worked example",
+          body:
+            "Six friends, late twenties, based across London, Berlin, and New York. Budget €1,400 a head all-in. Window: last two weeks of September. Group chat has been arguing since June.\n\nStep 1, vibe vote (Monday): four 'beach reset', one 'city break', one 'adventure'. Beach reset wins. The two outliers swallow it.\n\nStep 2, constraints (Tuesday): €1,400/head, Sep 13-21, max 12 hours of total flight time from NYC (the slowest origin).\n\nKill-criteria pass: Bali is out (flight time blows the cap), Tulum is in, Sardinia is in, Zanzibar is out (one passport at 5 months validity), Greece is in.\n\nStep 3, ranked vote (Wednesday): three picks, 24 hours.\n  • Tulum — 14 points\n  • Sardinia — 10 points (winner: lowest score)\n  • Greek islands — 12 points\n\nFlights booked Thursday. Villa booked Friday. Total elapsed time from 'let's plan something' to confirmation: five days. The same group spent eight weeks the year before and never left their group chat.",
+        },
+        {
           title: "Handling the holdout",
           body:
             "Every group has one person who refuses to commit until flights are booked. Don't fight it. Set a deadline ('flights book Sunday at 8pm') and book without them if they haven't engaged by then.\n\nThis sounds harsh. It isn't. It's protecting the trip from the person whose indecision would otherwise sink it. Nine times out of ten, they book within an hour of seeing the others have committed. The tenth time, the trip happens without them and they come to the next one.",
@@ -263,7 +283,7 @@ export const GUIDES: Guide[] = [
     longTitle: "The Group Trip Packing List (Beach, City, Weekend Away)",
     description:
       "A real, tested packing list for trips with friends: the shared kit somebody needs to own, the personal essentials nobody packs until day two, and trip-specific add-ons for beach, city, and weekend trips.",
-    readTime: "8 min read",
+    readTime: "5 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -373,6 +393,22 @@ export const GUIDES: Guide[] = [
             ],
           },
         },
+        {
+          title: "Villa and shared-bathroom logistics",
+          body:
+            "The thing nobody packs for: six adults sharing one or two bathrooms for a week. The fix is small, cheap, and saves the trip's mood by day three.",
+          list: {
+            kind: "bullet",
+            items: [
+              "A hanging toiletry bag with a hook. The shelf in the shared bathroom is not yours. Keep everything in your room and bring it in",
+              "Quick-dry microfiber towel. Useful for the beach, essential when you're the fifth person in line for a shower",
+              "Earplugs. The friend who snores will snore. The villa's walls are thinner than you think",
+              "A sleep mask. East-facing windows and 5am sunrise in summer are a brutal combination",
+              "Slip-on indoor shoes or thick socks. Tile floors at 7am are not a vibe",
+              "One small grocery run on arrival, agreed in the group: coffee, milk, bread, fruit, eggs, salt, oil, dish soap, paper towels, bin bags. Costs €30, saves three trips on day one",
+            ],
+          },
+        },
       ],
       closing:
         "Junto lets you assign the shared kit to specific people in the trip, with check-off and reminders. Start a trip and stop being the person who brought four adapters.",
@@ -393,7 +429,7 @@ export const GUIDES: Guide[] = [
     longTitle: "The Best Apps for Group Travel in 2026 (Tested on Real Trips)",
     description:
       "An honest, opinionated tour of the apps that survive a real group trip: for splitting costs, voting on plans, sharing photos, and keeping the itinerary alive. With the three-app minimum stack.",
-    readTime: "10 min read",
+    readTime: "5 min read",
     status: "live",
     image:
       "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1600&q=75&auto=format&fit=crop&fm=webp",
@@ -452,6 +488,11 @@ export const GUIDES: Guide[] = [
               "One shared photo album. Google Photos works everywhere, iCloud if you're all on iPhone",
             ],
           },
+        },
+        {
+          title: "Docs, boarding passes, and the 4am check-in",
+          body:
+            "The category nobody plans for and everybody needs at 4am at the gate. Hotel PDFs, flight tickets, visa stamps, rental car confirmations, travel insurance. If they live in one person's inbox, they don't exist for the group.\n\nThe minimum: a single shared folder (Google Drive, iCloud Drive, Dropbox — pick one, one) with one PDF per booking, named clearly: '2026-09-13 Easyjet LGW-OLB Lisa.pdf'. Sounds anal. Saves a marriage at the rental car desk.\n\nApple Wallet and Google Wallet handle boarding passes natively — make sure everyone has added theirs the night before, not in the security queue. For passport photos, vaccination records, and travel insurance numbers, a single shared note in Apple Notes or Google Keep works fine and is searchable offline.\n\nThe one thing worth paying for: a password manager with sharing (1Password Families, Bitwarden). Share the rental car account, the Airbnb login, and the Wi-Fi password once and never again.",
         },
         {
           title: "What to skip",
