@@ -9442,7 +9442,7 @@ Deno.serve(async (req) => {
     // Protects against a runaway prompt/loop burning the daily budget.
     // Admin bypass: skip rate limit entirely for the admin user so dev/testing
     // isn't blocked by the per-user hourly cap.
-    const ADMIN_USER_ID = "1d5b21fe-f74c-429b-8d9d-938a4f295013";
+    const ADMIN_USER_ID = Deno.env.get("ADMIN_USER_ID") ?? "";
     const rateLimit = Number.parseInt(Deno.env.get("RATE_LIMIT_TRIPS_PER_HOUR") ?? "", 10);
     const effectiveRateLimit = Number.isFinite(rateLimit) && rateLimit > 0 ? rateLimit : DEFAULT_RATE_LIMIT_PER_HOUR;
     const wantsStream = (req.headers.get("accept") ?? "").toLowerCase().includes("text/event-stream");
