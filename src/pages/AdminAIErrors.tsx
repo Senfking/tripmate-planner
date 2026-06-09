@@ -75,7 +75,7 @@ export default function AdminAIErrors() {
       </div>
     );
   }
-  if (!user || user.id !== ADMIN_USER_ID) return <Navigate to="/" replace />;
+  if (!user || !isAdminUser(user.id)) return <Navigate to="/" replace />;
 
   const rows = (data || []) as ErrorRow[];
 
