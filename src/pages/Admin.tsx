@@ -18,7 +18,7 @@ import { C, AdminModule, AdminNavContext } from "@/components/admin-dashboard/sh
 import { useAdminNotificationsRealtime } from "@/hooks/useAdminQuery";
 import { Loader2, Menu } from "lucide-react";
 
-const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID || "1d5b21fe-f74c-429b-8d9d-938a4f295013";
+import { isAdminUser } from "@/lib/admin";
 
 const MODULE_MAP: Record<AdminModule, React.FC> = {
   dashboard: DashboardOverview,
