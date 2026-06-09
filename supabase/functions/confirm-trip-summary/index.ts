@@ -172,8 +172,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ summary });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Internal error";
-    console.error("confirm-trip-summary error:", message);
-    return jsonResponse({ success: false, error: message }, 500);
+    console.error("confirm-trip-summary error:", e);
+    return jsonResponse({ success: false, error: "Internal error" }, 500);
   }
 });
