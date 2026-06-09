@@ -4,8 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdminData } from "@/hooks/useAdminQuery";
 import { C, mono, sans, AdminSkeleton, EmptyState, StatusPill, Card } from "@/components/admin-dashboard/shared";
 import { Loader2 } from "lucide-react";
-
-const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID || "1d5b21fe-f74c-429b-8d9d-938a4f295013";
+import { isAdminUser } from "@/lib/admin";
 
 interface ErrorRow {
   id: string;
