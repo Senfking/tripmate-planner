@@ -5,7 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Simple in-memory rate limiter: max 10 requests per IP per minute
+// Simple in-memory rate limiter: max 5 requests per IP per minute.
+// In-memory only; combined with a reduced response payload (no inviter
+// display name) so enumeration yields minimal PII.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(ip: string): boolean {
@@ -16,7 +18,7 @@ function isRateLimited(ip: string): boolean {
     return false;
   }
   entry.count++;
-  return entry.count > 10;
+  return entry.count > 5;
 }
 
 Deno.serve(async (req) => {
