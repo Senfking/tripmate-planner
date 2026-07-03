@@ -94,22 +94,16 @@ Deno.serve(async (req) => {
       .eq("id", tripId!)
       .single();
 
-    // Fetch inviter profile if available
-    let inviterName = "Someone";
-    if (createdBy) {
-      const { data: inviter } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", createdBy)
-        .single();
-      inviterName = inviter?.display_name ?? "Someone";
-    }
-
+    // Intentionally do NOT expose the inviter's display name to unauthenticated
+    // callers — this endpoint is anonymously reachable and returning member
+    // names would enable enumeration of trip participants. The frontend shows
+    // a generic "Someone invited you" until the user signs in.
+    void createdBy;
     return new Response(
       JSON.stringify({
         trip_name: trip?.name ?? "a trip",
         trip_emoji: trip?.emoji ?? "✈️",
-        inviter_name: inviterName,
+        inviter_name: "Someone",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
