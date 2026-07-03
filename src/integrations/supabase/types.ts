@@ -1127,6 +1127,21 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       poll_options: {
         Row: {
           end_date: string | null
@@ -2068,6 +2083,7 @@ export type Database = {
         }[]
       }
       get_vibe_respondent_count: { Args: { _trip_id: string }; Returns: number }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_trip_admin_or_owner: {
         Args: { _trip_id: string; _user_id: string }
         Returns: boolean
