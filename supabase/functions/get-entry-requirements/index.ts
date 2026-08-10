@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 // get-entry-requirements
 //
 // MVP visa / entry requirements lookup. LLM-only for now (Anthropic Haiku 4.5
@@ -319,7 +320,7 @@ async function fetchEntryRequirementsLLM(
     `- Purpose: ${params.purpose}\n\n` +
     `Respond by calling the report_entry_requirements tool. Hedge every claim. Use confidence: "low" if you are unsure.`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": apiKey,
@@ -775,7 +776,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
 
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
       return jsonResponse({ error: "Supabase env not configured" }, 500);

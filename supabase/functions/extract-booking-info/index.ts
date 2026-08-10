@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkTripMembership } from "./authz.ts";
 import { checkAndIncrement, rateLimitResponse } from "../_shared/rateLimit.ts";
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!anthropicKey) {
       return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
         status: 500,
@@ -151,7 +152,7 @@ BOOKING TYPE CLASSIFICATION RULES (apply in order):
 IMPORTANT for flights: The flight_date field is critical and must NEVER be null if there is any date visible in the document. Search the entire document for dates — headers, footers, itinerary sections, booking details. Also set check_in to the same date for flights. If there's a return flight date, set check_out to that date.
 Return only valid JSON, no other text.`;
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const anthropicRes = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

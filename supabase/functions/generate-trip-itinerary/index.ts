@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 // generate-trip-itinerary — source-of-truth pipeline (Places-first, Claude Haiku ranker)
 //
 // Pipeline (non-alternatives_mode):
@@ -1168,7 +1169,7 @@ async function callClaudeHaiku<T = Record<string, unknown>>(
   try {
     let res: Response;
     try {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
+      res = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "x-api-key": apiKey,
@@ -3318,7 +3319,7 @@ async function generateStatusMessages(
   const timeoutId = setTimeout(() => controller.abort(), STATUS_MESSAGES_TIMEOUT_MS);
   const callStart = Date.now();
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
@@ -9398,7 +9399,7 @@ Deno.serve(async (req) => {
     };
 
     // ---- Required env ----
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     const googleKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
     const viatorMcid = Deno.env.get("VIATOR_MCID") ?? "";
     const gygPid = Deno.env.get("GETYOURGUIDE_PARTNER_ID") ?? "";

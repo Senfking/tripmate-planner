@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkTripMembership } from "./authz.ts";
 
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
     let ai_type: string | null = null;
     let ai_description: string | null = null;
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (anthropicKey) {
       try {
         const prompt = `Extract booking information from this travel link. Use all available signals:
@@ -207,7 +208,7 @@ For booking.com URLs, the URL params often contain checkin/checkout dates, city 
 
 Return only valid JSON, no other text.`;
 
-        const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+        const aiRes = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

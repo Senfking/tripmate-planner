@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 // =============================================================================
 // curate-template-highlights — admin-only, one-shot backfill that fills the
 // trip_templates.curated_highlights jsonb column.
@@ -258,7 +259,7 @@ async function describeHighlight(
     `Editorial summary (may be empty): ${summary}\n\n` +
     `Write the description now. Output only the sentence.`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": anthropicKey,
@@ -474,7 +475,7 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const adminUserId = Deno.env.get("ADMIN_USER_ID");
   const placesKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
-  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
 
   if (!supabaseUrl || !anonKey || !serviceKey || !adminUserId) {
     return err("Server is missing Supabase secrets", 500);
