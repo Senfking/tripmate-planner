@@ -15,6 +15,7 @@ import { trackEvent } from "@/lib/analytics";
 import { pushError } from "@/lib/errorBuffer";
 import { captureSupabaseFailure } from "@/lib/sentry";
 import ScrollToTop from "@/components/ScrollToTop";
+import ActivityTracker from "@/components/ActivityTracker";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded (critical path)
