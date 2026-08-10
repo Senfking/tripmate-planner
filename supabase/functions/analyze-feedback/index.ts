@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { FeedbackAnalysisSchema } from "../_shared/schemas/feedback-analysis.ts";
@@ -62,14 +63,14 @@ serve(async (req) => {
         });
       }
 
-      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      const ANTHROPIC_API_KEY = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
       if (!ANTHROPIC_API_KEY) {
         return new Response(JSON.stringify({ hint: null, is_app_screenshot: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const imgResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      const imgResponse = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "x-api-key": ANTHROPIC_API_KEY,
@@ -223,7 +224,7 @@ Return ONLY valid JSON with no other text:
       });
     }
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    const ANTHROPIC_API_KEY = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!ANTHROPIC_API_KEY) {
       console.error("ANTHROPIC_API_KEY not set");
       return new Response(JSON.stringify({ user_message: null }), {
@@ -254,7 +255,7 @@ Return ONLY valid JSON with no other text:
   "user_message": "string (Talk like a chill 20-something texting a friend. Rules: Mention Oliver (the founder) by name. NEVER use em dashes or long dashes, use commas or periods instead. No corporate speak. Max 2 sentences. For bugs: acknowledge it casually, say Oliver's on it. For suggestions: be real about whether it's a cool idea. Keep it warm but not cringe. Never say the word 'feedback'. One emoji max, only if it feels natural.)"
 }`;
 
-    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiResponse = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": ANTHROPIC_API_KEY,

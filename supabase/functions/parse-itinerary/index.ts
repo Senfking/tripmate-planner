@@ -1,3 +1,4 @@
+import { anthropicCompatFetch } from "../_shared/aiGateway.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isUrlAllowedForFetch } from "./url-guard.ts";
 
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const anthropicKey = (Deno.env.get("ANTHROPIC_API_KEY") || Deno.env.get("LOVABLE_API_KEY"));
     if (!anthropicKey) {
       return jsonResponse({ success: false, error: "ANTHROPIC_API_KEY not configured" }, 500);
     }
@@ -170,7 +171,7 @@ Rules:
 
     contentBlocks.push({ type: "text", text: extractionPrompt });
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const anthropicRes = await anthropicCompatFetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
