@@ -225,6 +225,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
       {/* Tab content */}
       {tab === "profile" && <ProfileTab data={data} />}
       {tab === "activity" && <ActivityTab data={data} />}
+      {tab === "behavior" && <BehaviorTab userId={userId} />}
       {tab === "trips" && <TripsTab data={data} />}
       {tab === "engagement" && <EngagementTab data={data} />}
 
