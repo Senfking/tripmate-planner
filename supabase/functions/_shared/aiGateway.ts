@@ -106,7 +106,13 @@ export async function anthropicCompatFetch(
     model: mapModel(body.model),
     messages,
   };
-  if (typeof body.max_tokens === "number") payload.max_tokens = body.max_tokens;
+  // Gemini spends part of the output budget on internal reasoning tokens, so
+  // give the same headroom Claude had for visible text.
+  if (typeof body.max_tokens === "number") {
+    payload.max_tokens = body.max_tokens + 2048;
+  }
+  payload.reasoning = { effort: "low" };
+
   if (typeof body.temperature === "number") payload.temperature = body.temperature;
 
   // Anthropic tool-use -> OpenAI function calling
