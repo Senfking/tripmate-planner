@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://dwtbqomfleihcvkfoopm.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "junto",
+      "version": "0.1.0",
+      "title": "Junto"
+    },
+    "tools": [
+      {
+        "name": "list_trips",
+        "title": "List trips",
+        "description": "List the trips the signed-in Junto user is a member of, with dates and destination.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_trip",
+        "title": "Get trip details",
+        "description": "Get one trip with its members, itinerary items and ideas. Use the trip id from list_trips.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "trip_id": {
+              "type": "string",
+              "description": "Trip UUID."
+            }
+          },
+          "required": [
+            "trip_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_expenses",
+        "title": "List trip expenses",
+        "description": "List expenses recorded on a trip, most recent first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "trip_id": {
+              "type": "string",
+              "description": "Trip UUID."
+            }
+          },
+          "required": [
+            "trip_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_expense",
+        "title": "Add an expense",
+        "description": "Record a new expense on a trip, paid by the signed-in user.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "trip_id": {
+              "type": "string",
+              "description": "Trip UUID."
+            },
+            "title": {
+              "type": "string",
+              "description": "What the expense was for."
+            },
+            "amount": {
+              "type": "number",
+              "description": "Amount in the given currency."
+            },
+            "currency": {
+              "type": "string",
+              "description": "ISO 4217 currency code, e.g. EUR."
+            },
+            "incurred_on": {
+              "type": "string",
+              "description": "ISO date (YYYY-MM-DD). Defaults to today."
+            },
+            "category": {
+              "type": "string",
+              "description": "Optional category, e.g. food, transport, stay."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Optional notes."
+            }
+          },
+          "required": [
+            "trip_id",
+            "title",
+            "amount",
+            "currency"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_itinerary_item",
+        "title": "Add an itinerary item",
+        "description": "Add an activity to a trip's day-by-day itinerary.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "trip_id": {
+              "type": "string",
+              "description": "Trip UUID."
+            },
+            "day_date": {
+              "type": "string",
+              "description": "ISO date (YYYY-MM-DD) for the day this happens."
+            },
+            "title": {
+              "type": "string",
+              "description": "Short activity title."
+            },
+            "start_time": {
+              "type": "string",
+              "description": "Optional 24h start time, HH:MM."
+            },
+            "end_time": {
+              "type": "string",
+              "description": "Optional 24h end time, HH:MM."
+            },
+            "location_text": {
+              "type": "string",
+              "description": "Optional venue or address."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Optional notes."
+            }
+          },
+          "required": [
+            "trip_id",
+            "day_date",
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_idea",
+        "title": "Add a trip idea",
+        "description": "Add a suggestion to a trip's idea board for the group to consider.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "trip_id": {
+              "type": "string",
+              "description": "Trip UUID."
+            },
+            "title": {
+              "type": "string",
+              "description": "The idea, e.g. 'Sunset kayak in Cala Llombards'."
+            },
+            "category": {
+              "type": "string",
+              "description": "Optional category, e.g. food, activity, stay."
+            }
+          },
+          "required": [
+            "trip_id",
+            "title"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
