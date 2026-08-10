@@ -156,7 +156,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
   const notesMutation = useAdminMutation("profile_update_notes");
   const [notes, setNotes] = useState("");
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState<"profile" | "activity" | "trips" | "engagement">("profile");
+  const [tab, setTab] = useState<"profile" | "activity" | "behavior" | "trips" | "engagement">("profile");
 
   React.useEffect(() => {
     if (data?.profile?.admin_notes) setNotes(data.profile.admin_notes);
