@@ -38,6 +38,7 @@ const JoinByCode = lazy(() => import("./pages/JoinByCode"));
 const ShareView = lazy(() => import("./pages/ShareView"));
 const AnonItineraryView = lazy(() => import("./pages/AnonItineraryView"));
 const ReferralLanding = lazy(() => import("./pages/ReferralLanding"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -215,7 +216,9 @@ function AppInner() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/ref" element={<ReferralLanding />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/privacy" element={<Privacy />} />
+
             <Route path="/terms" element={<Terms />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/guides" element={<Guides />} />

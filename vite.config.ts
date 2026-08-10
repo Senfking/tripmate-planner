@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { build as viteBuild } from "vite";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import fs from "fs";
 
 const buildTimestamp = Date.now().toString(36);
@@ -92,6 +93,7 @@ export default defineConfig(({ mode }) => {
       react(),
       mode === "development" && componentTagger(),
       serviceWorkerPlugin(),
+      mcpPlugin(),
       enableSentryUpload &&
         sentryVitePlugin({
           authToken: sentryAuthToken,
