@@ -216,7 +216,9 @@ function AppInner() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/ref" element={<ReferralLanding />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/privacy" element={<Privacy />} />
+
             <Route path="/terms" element={<Terms />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/guides" element={<Guides />} />
