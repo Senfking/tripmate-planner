@@ -184,6 +184,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "profile", label: "Profile" },
     { key: "activity", label: "Activity" },
+    { key: "behavior", label: "Behavior" },
     { key: "trips", label: "Trips" },
     { key: "engagement", label: "Engage" },
   ];
