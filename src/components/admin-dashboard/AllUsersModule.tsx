@@ -156,7 +156,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
   const notesMutation = useAdminMutation("profile_update_notes");
   const [notes, setNotes] = useState("");
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState<"profile" | "activity" | "trips" | "engagement">("profile");
+  const [tab, setTab] = useState<"profile" | "activity" | "behavior" | "trips" | "engagement">("profile");
 
   React.useEffect(() => {
     if (data?.profile?.admin_notes) setNotes(data.profile.admin_notes);
@@ -184,6 +184,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "profile", label: "Profile" },
     { key: "activity", label: "Activity" },
+    { key: "behavior", label: "Behavior" },
     { key: "trips", label: "Trips" },
     { key: "engagement", label: "Engage" },
   ];
@@ -224,6 +225,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
       {/* Tab content */}
       {tab === "profile" && <ProfileTab data={data} />}
       {tab === "activity" && <ActivityTab data={data} />}
+      {tab === "behavior" && <BehaviorTab userId={userId} />}
       {tab === "trips" && <TripsTab data={data} />}
       {tab === "engagement" && <EngagementTab data={data} />}
 
@@ -288,6 +290,83 @@ function ActivityTab({ data }: { data: any }) {
     </>
   );
 }
+
+function fmtMinutes(min: number) {
+  if (!min) return "0m";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function BehaviorTab({ userId }: { userId: string }) {
+  const { data, isLoading } = useAdminData("user_behavior", { user_id: userId });
+
+  if (isLoading) return <AdminSkeleton rows={6} />;
+
+  const s = data?.summary || {};
+  const routes: { route: string; seconds: number; views: number }[] = data?.top_routes || [];
+  const actions: { event: string; count: number }[] = data?.actions || [];
+  const timeline: { event: string; route: string | null; at: string }[] = data?.timeline || [];
+  const maxSeconds = Math.max(1, ...routes.map((r) => r.seconds));
+
+  return (
+    <>
+      <SectionHeader>Time on Platform</SectionHeader>
+      <Detail label="Total time" value={fmtMinutes(s.total_minutes || 0)} />
+      <Detail label="Last 30 days" value={fmtMinutes(s.minutes_last_30d || 0)} />
+      <Detail label="Last 7 days" value={fmtMinutes(s.minutes_last_7d || 0)} />
+      <Detail label="Sessions" value={`${s.sessions ?? 0} (${s.sessions_last_30d ?? 0} in 30d)`} />
+      <Detail label="Avg session" value={fmtMinutes(s.avg_session_minutes || 0)} />
+      <Detail label="Page views" value={s.page_views ?? 0} />
+      <Detail label="First seen" value={s.first_seen ? new Date(s.first_seen).toLocaleDateString() : "-"} />
+      <Detail label="Last seen" value={s.last_seen ? new Date(s.last_seen).toLocaleString() : "-"} />
+
+      <SectionHeader>Where They Spent It</SectionHeader>
+      {routes.length === 0 ? (
+        <div style={{ fontFamily: sans, fontSize: 12, color: C.muted, padding: "4px 0" }}>
+          No page data yet
+        </div>
+      ) : (
+        routes.map((r) => (
+          <div key={r.route} style={{ padding: "5px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span style={{ fontFamily: mono, fontSize: 11, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.route}</span>
+              <span style={{ fontFamily: mono, fontSize: 11, color: C.muted, flexShrink: 0 }}>
+                {fmtMinutes(Math.round(r.seconds / 60))} · {r.views} views
+              </span>
+            </div>
+            <div style={{ height: 3, background: C.border, borderRadius: 2, marginTop: 3 }}>
+              <div style={{ height: 3, width: `${Math.round((r.seconds / maxSeconds) * 100)}%`, background: C.tealLight, borderRadius: 2 }} />
+            </div>
+          </div>
+        ))
+      )}
+
+      <SectionHeader>What They Did</SectionHeader>
+      {actions.length === 0 ? (
+        <div style={{ fontFamily: sans, fontSize: 12, color: C.muted, padding: "4px 0" }}>No tracked actions</div>
+      ) : (
+        actions.map((a) => <Detail key={a.event} label={a.event.replace(/_/g, " ")} value={a.count} />)
+      )}
+
+      <SectionHeader>Recent Actions</SectionHeader>
+      {timeline.length === 0 ? (
+        <div style={{ fontFamily: sans, fontSize: 12, color: C.muted, padding: "4px 0" }}>Nothing yet</div>
+      ) : (
+        timeline.map((t, i) => (
+          <div key={`${t.at}-${i}`} style={{ padding: "5px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontFamily: sans, fontSize: 12, color: C.text }}>{t.event.replace(/_/g, " ")}</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: C.muted }}>
+              {new Date(t.at).toLocaleString()}{t.route ? ` · ${t.route}` : ""}
+            </div>
+          </div>
+        ))
+      )}
+    </>
+  );
+}
+
+
 
 function TripsTab({ data }: { data: any }) {
   const trips = data.trips || [];
