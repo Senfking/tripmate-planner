@@ -595,6 +595,123 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Behavioural detail for one user: time on platform, where they spent
+      // it, and a raw action timeline. Backed by `page_view` / `session_ping`
+      // events emitted by the client ActivityTracker (1 ping = 60s visible).
+      case "user_behavior": {
+        const { user_id } = params;
+        if (!user_id) return err("user_id required");
+
+        const { data: events, error: evErr } = await db
+          .from("analytics_events")
+          .select("event_name, properties, created_at")
+          .eq("user_id", user_id)
+          .order("created_at", { ascending: false })
+          .limit(5000);
+        if (evErr) return err(evErr.message);
+
+        const rows = events || [];
+        const now = Date.now();
+        const DAY = 86400000;
+
+        const sessions = new Set<string>();
+        const sessionsLast30 = new Set<string>();
+        const secondsByRoute: Record<string, number> = {};
+        const viewsByRoute: Record<string, number> = {};
+        const secondsByDay: Record<string, number> = {};
+        const actionCounts: Record<string, number> = {};
+        let totalSeconds = 0;
+        let seconds30 = 0;
+        let seconds7 = 0;
+        let pageViews = 0;
+        let firstSeen: string | null = null;
+        let lastSeen: string | null = null;
+        const timeline: { event: string; route: string | null; at: string }[] = [];
+
+        for (const r of rows as any[]) {
+          const props = (r.properties || {}) as Record<string, unknown>;
+          const route = typeof props.route === "string" ? props.route : null;
+          const sid = typeof props.session_id === "string" ? props.session_id : null;
+          const ts = new Date(r.created_at).getTime();
+          const ageDays = (now - ts) / DAY;
+
+          if (!lastSeen || r.created_at > lastSeen) lastSeen = r.created_at;
+          if (!firstSeen || r.created_at < firstSeen) firstSeen = r.created_at;
+          if (sid) {
+            sessions.add(sid);
+            if (ageDays <= 30) sessionsLast30.add(sid);
+          }
+
+          if (r.event_name === "session_ping") {
+            const secs = typeof props.seconds === "number" ? props.seconds : 60;
+            totalSeconds += secs;
+            if (ageDays <= 30) seconds30 += secs;
+            if (ageDays <= 7) seconds7 += secs;
+            if (route) secondsByRoute[route] = (secondsByRoute[route] || 0) + secs;
+            const day = r.created_at.slice(0, 10);
+            secondsByDay[day] = (secondsByDay[day] || 0) + secs;
+            continue;
+          }
+
+          if (r.event_name === "page_view") {
+            pageViews++;
+            if (route) viewsByRoute[route] = (viewsByRoute[route] || 0) + 1;
+            continue;
+          }
+
+          // Meaningful product actions (errors excluded from the timeline)
+          if (r.event_name !== "app_error" && r.event_name !== "supabase_op_error") {
+            actionCounts[r.event_name] = (actionCounts[r.event_name] || 0) + 1;
+            if (timeline.length < 60) {
+              timeline.push({ event: r.event_name, route, at: r.created_at });
+            }
+          }
+        }
+
+        const topRoutes = Object.entries(secondsByRoute)
+          .map(([route, seconds]) => ({ route, seconds, views: viewsByRoute[route] || 0 }))
+          .sort((a, b) => b.seconds - a.seconds)
+          .slice(0, 12);
+
+        // Routes visited but never accumulating a full minute still matter
+        for (const [route, views] of Object.entries(viewsByRoute)) {
+          if (topRoutes.length >= 12) break;
+          if (!topRoutes.some((r) => r.route === route)) {
+            topRoutes.push({ route, seconds: 0, views });
+          }
+        }
+
+        const daily = Object.entries(secondsByDay)
+          .map(([day, seconds]) => ({ day, minutes: Math.round(seconds / 60) }))
+          .sort((a, b) => (a.day < b.day ? 1 : -1))
+          .slice(0, 30);
+
+        const sessionCount = sessions.size;
+
+        return json({
+          summary: {
+            total_minutes: Math.round(totalSeconds / 60),
+            minutes_last_30d: Math.round(seconds30 / 60),
+            minutes_last_7d: Math.round(seconds7 / 60),
+            sessions: sessionCount,
+            sessions_last_30d: sessionsLast30.size,
+            avg_session_minutes: sessionCount > 0 ? Math.round(totalSeconds / 60 / sessionCount) : 0,
+            page_views: pageViews,
+            first_seen: firstSeen,
+            last_seen: lastSeen,
+            tracked_events: rows.length,
+          },
+          top_routes: topRoutes,
+          actions: Object.entries(actionCounts)
+            .map(([event, count]) => ({ event, count }))
+            .sort((a, b) => b.count - a.count),
+          daily,
+          timeline,
+        });
+      }
+
+
+
       case "retention_activation": {
         const [totalUsers, usersWithTrips, usersWithExpenses, usersWithItinerary] = await Promise.all([
           db.from("profiles").select("id", { count: "exact", head: true }),
