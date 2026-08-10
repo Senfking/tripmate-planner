@@ -197,6 +197,7 @@ function AppInner() {
       <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>
+          <ActivityTracker />
           <ExchangeRatePrefetch />
           <ErrorBoundaryWithUser>
           <Suspense fallback={<PageLoader />}>
