@@ -531,7 +531,7 @@ export const GUIDES: Guide[] = [
     readTime: "7 min read",
     status: "live",
     image:
-      "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600&q=75&auto=format&fit=crop&fm=webp",
+      "https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=1600&q=75&auto=format&fit=crop&fm=webp",
     imageAlt: "Travellers waiting in a wide airport terminal at dawn",
     publishedAt: "August 2026",
     article: {
