@@ -513,6 +513,102 @@ export const GUIDES: Guide[] = [
         "Junto is the planner part of that minimum stack: itinerary, votes, splits, photos, all in one place that doesn't expire after the trip. Start a trip and see if it sticks.",
     },
   },
+
+  // -------------------------------------------------------------------------
+  // 006 — Europe's new border rules
+  // -------------------------------------------------------------------------
+  {
+    slug: "ees-etias-uk-eta-group-travel-2026",
+    number: "006",
+    category: "on-the-road",
+    tag: "Borders",
+    title: "Europe's new border rules, explained for groups",
+    heroTitle: "Six friends, one border queue, three new systems.",
+    heroAccent: "three",
+    longTitle: "EES, ETIAS and the UK ETA in 2026: What Group Travellers Need to Know",
+    description:
+      "Europe's biometric Entry/Exit System is live, ETIAS is coming, and the UK now wants an ETA from most visitors. What each one is, who needs it, and how to get a group of six through the airport without one person holding everyone up.",
+    readTime: "7 min read",
+    status: "live",
+    image:
+      "https://images.unsplash.com/photo-1530521954074-e64f6810b32d?w=1600&q=75&auto=format&fit=crop&fm=webp",
+    imageAlt: "Travellers waiting in a wide airport terminal at dawn",
+    publishedAt: "August 2026",
+    article: {
+      standfirst:
+        "Border admin used to be one line on the packing list: check the passport hasn't expired. That is no longer enough. Europe is midway through the biggest change to its external border in a generation, the UK has added its own pre-travel permission, and the practical effect on a group trip is simple: the slowest person in your group is now the whole group's arrival time.",
+      pullQuote:
+        "Nobody plans for the border. Then one friend gets pulled aside for fingerprints and the villa check-in slips by two hours.",
+      chapters: [
+        {
+          title: "What actually changed",
+          body:
+            "Three separate systems, often confused, doing three different jobs. Understanding which applies to you takes about ninety seconds and saves a genuinely bad morning.\n\nThe short version: EES records you at the border, ETIAS is permission to travel before you leave, and the UK ETA is the same idea for Britain. They stack. Being fine on one says nothing about the others.",
+          list: {
+            kind: "ordered",
+            items: [
+              "EES (Entry/Exit System). The EU's biometric border register for non-EU travellers. Fingerprints and a facial image on first crossing, replacing the passport stamp. Rolled out progressively across Schengen border posts from late 2025 into 2026",
+              "ETIAS. A pre-travel authorisation for visa-exempt non-EU nationals visiting Schengen. Applied for online, low fee, valid for multiple trips over several years. Scheduled to follow EES rather than run alongside it, so check its status before you rely on this article's timing",
+              "UK ETA. Electronic Travel Authorisation, required for most visa-exempt visitors to the UK including EU citizens. Applied for through the official UK ETA app or gov.uk, valid for multiple visits over two years",
+            ],
+          },
+        },
+        {
+          title: "Who in your group needs what",
+          body:
+            "Mixed-passport groups are where this gets messy, and most friend groups are mixed now. Run the list once, in the group chat, the week you book.\n\nEU or Schengen passport travelling inside Schengen: nothing new. You are unaffected by EES and ETIAS. If the trip includes the UK, you very likely need an ETA.\n\nUK, US, Canadian, Australian, and other visa-exempt passports entering Schengen: EES applies at the border, and ETIAS applies once it is in force. You still have the 90-days-in-any-180 limit, and EES makes that limit far easier for border staff to enforce because the count is now automatic.\n\nDual nationals: travel on one passport consistently for the whole trip. Entering on one and leaving on the other is how you end up with a mismatched record and a long conversation at departures.\n\nResidence permit holders and family members of EU citizens: usually exempt from EES registration, but bring the card, not a photo of it.",
+        },
+        {
+          title: "The 90/180 rule now has teeth",
+          body:
+            "This is the part that catches people who have been travelling to Europe casually for years. Non-EU visitors can spend 90 days in any rolling 180-day period in the Schengen area. That rule is old. What is new is that a computer is counting.\n\nBefore EES, the count depended on a human reading ink stamps. In practice, plenty of overstays went unnoticed. With a biometric record on entry and exit, the count is exact and it follows you.\n\nThe practical implication for group trips: if someone in your group has been doing repeated European trips, a remote-work stint, or a long summer, they may be closer to their 90 days than they think. Have them add it up before booking, not at the gate. Ski week in January, long weekend in April, two weeks in August, and a Christmas trip is more days than most people expect.",
+        },
+        {
+          title: "How EES changes the actual arrival",
+          body:
+            "The first crossing under EES takes longer than the old stamp. You give fingerprints and a facial image, and the record is created. Subsequent crossings are faster because the biometrics already exist and the gate verifies against them.\n\nThat first-time cost is the whole story for groups. Six people at a kiosk, one of whom has a scratched-up passport chip or a fingerprint the reader refuses to accept, is a real half hour. Ports and ferry terminals have felt this more than airports, which is worth knowing if you are driving to France or taking a ferry to Spain or Italy.\n\nWhat helps in practice:",
+          list: {
+            kind: "bullet",
+            items: [
+              "Assume a slower first arrival. Do not book the 90-minute connection or the tight rental car pickup on the way in",
+              "Tell your group to travel together through the border, not scattered across the terminal. If one person gets held, everyone knows",
+              "Land in daylight hours where you can. Understaffed early-morning and late-night shifts are where queues balloon",
+              "Give the villa or hotel a realistic arrival window, plus an hour. Late self-check-in fees are avoidable",
+              "Keep the return leg in mind too. Exit is now a recorded event, not a wave-through",
+            ],
+          },
+        },
+        {
+          title: "Get the paperwork done as a group, not individually",
+          body:
+            "Every travel authorisation scheme has the same failure mode: five people do it in week one, the sixth does it the night before and hits a manual review. Applications are usually approved quickly, but a minority get pulled for extra checks that take days.\n\nMake it one shared task with one deadline, four weeks out. Then verify it, because 'yeah I did it' is not evidence.",
+          list: {
+            kind: "ordered",
+            items: [
+              "Check every passport's expiry against the trip dates, plus the destination's validity buffer. Many countries want three or six months beyond your return date",
+              "Confirm blank pages. Some borders still want them",
+              "Apply for the UK ETA if the itinerary touches Britain, including a layover where you pass through immigration",
+              "Apply for ETIAS once it is required for your nationality, and use only the official EU site. Copycat sites charge several times the real fee for the same form",
+              "Everyone posts a screenshot of their approval in the group. One person keeps a copy of all of them",
+              "Check travel insurance covers the whole group and the actual activities, not just the flights",
+            ],
+          },
+        },
+        {
+          title: "The scam layer nobody warns you about",
+          body:
+            "New rules create a market for confusion. Search for ETIAS or UK ETA and the paid results are full of intermediaries that reformat the government form and charge a large multiple of the official fee. They are not always illegal, but you are paying twenty or thirty euros for nothing.\n\nTwo rules keep you clean. Apply only through the official government domain or the official app, and never through a link in an ad or an email. And be suspicious of anything asking for payment in a currency that is not the scheme's stated fee currency.\n\nSame logic applies to the wave of 'visa check' messages that arrive by SMS before big travel weekends. No border authority texts you a payment link.",
+        },
+        {
+          title: "Put it in the trip, not in someone's head",
+          body:
+            "The failure here is never knowledge. Somebody in the group always reads the news. The failure is that the knowledge lives in one person's head and never becomes a task with a name and a date on it.\n\nJunto keeps passport and entry requirements attached to the trip itself: each traveller's nationality and passport, what their document situation means for the destination, and a shared checklist the whole group can see. Nobody has to chase six people individually, and nobody arrives at the airport discovering that their passport expires seven weeks after the return flight.\n\nThe rules will keep moving through 2026 and beyond. Check the official source for your nationality close to departure, and treat any article, including this one, as orientation rather than gospel.",
+        },
+      ],
+      closing:
+        "Junto tracks each traveller's passport and entry requirements alongside the itinerary, so the border admin is a shared checklist instead of one person's problem. Start a trip and get it handled early.",
+    },
+  },
 ];
 
 export const guideUrl = (slug: string) => `/guides/${slug}`;
