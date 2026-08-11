@@ -609,7 +609,100 @@ export const GUIDES: Guide[] = [
         "Junto tracks each traveller's passport and entry requirements alongside the itinerary, so the border admin is a shared checklist instead of one person's problem. Start a trip and get it handled early.",
     },
   },
+
+  // -------------------------------------------------------------------------
+  // 007 — Is it safe to go?
+  // -------------------------------------------------------------------------
+  {
+    slug: "is-it-safe-to-travel-group-decision-2026",
+    number: "007",
+    category: "planning",
+    tag: "Risk",
+    title: "Is it safe to go? How groups decide when the news looks bad",
+    heroTitle: "One headline, six opinions, a non-refundable villa.",
+    heroAccent: "six",
+    longTitle: "Is It Safe to Travel There? How a Group Decides When the News Looks Bad (2026)",
+    description:
+      "Protests, strikes, wildfires, unrest, advisory levels. How to read what governments actually say, tell a real risk from a scary headline, and get a group of friends to a decision without one person vetoing the trip.",
+    readTime: "8 min read",
+    status: "live",
+    image:
+      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1600&q=75&auto=format&fit=crop&fm=webp",
+    imageAlt: "A departures board and travellers moving through a busy terminal",
+    publishedAt: "August 2026",
+    article: {
+      standfirst:
+        "Every group has the friend who sends the link. A protest in the capital, a strike at the airport, a fire on the other side of the island, and suddenly a trip four people already paid for is up for debate at eleven at night. The problem is rarely the risk itself. It is that nobody in the group has agreed on how to judge one.",
+      pullQuote:
+        "A country is not a single place, and a headline is not an advisory. Most cancelled trips were never actually dangerous, just badly discussed.",
+      chapters: [
+        {
+          title: "Read the advisory, not the article",
+          body:
+            "Governments publish travel advice for their own citizens, and it is far more specific than any news story. The UK FCDO, the US State Department, Germany's Auswärtiges Amt, Australia's Smartraveller and Canada's travel.gc.ca all cover roughly the same ground with different tone. They are free, they are updated fast, and they are the only source your insurer will care about.\n\nTwo things matter more than the headline level. First, geography: advice is usually drawn to regions, provinces or a distance from a border, and the scary part of a country is often a thousand kilometres from where you are going. Second, the reason: 'crime in specific neighbourhoods after dark' and 'armed conflict' both raise a level, and they are not the same trip.\n\nAlso read your own country's advice, not the loudest one. Advisories reflect the issuing government's politics and its consular capacity, not a universal safety score. Two allied countries will rate the same destination differently in the same week.",
+          list: {
+            kind: "bullet",
+            items: [
+              "Check the date the page was last updated, and what specifically changed",
+              "Check the region, down to the province or city, not the country headline",
+              "Check whether the wording is 'reconsider travel' or 'do not travel'. That gap is the whole decision",
+              "Check the insurance line. Some policies void cover when you travel against your own government's advice",
+              "Register with your embassy's traveller scheme if one exists. It costs two minutes",
+            ],
+          },
+        },
+        {
+          title: "The five risks people actually meet",
+          body:
+            "In practice, the things that disrupt a normal group holiday are boring and predictable, and almost none of them are the thing on the news.\n\nStrikes and transport disruption. Air traffic control, rail and ferry strikes are announced in advance in most of Europe, and they wreck a tightly-booked itinerary far more often than any political event. Check the national rail operator and the airline's own disruption page before you build a day around a train.\n\nHeat, fire and storms. Summer in the Mediterranean now regularly means heat warnings and localised fire closures, and hurricane season is a real planning input in the Caribbean and parts of Mexico. Fires close roads and trails, not usually whole islands.\n\nProtests and civil unrest. Almost always concentrated in specific squares, government districts and dates. They are genuinely worth avoiding in person and almost never a reason to skip a country. Know where the flashpoint is and stay away from it.\n\nPetty crime. The single most likely thing to actually happen to your group, and the one nobody plans for. Phones and bags, in tourist crowds, at stations.\n\nHealth and access. Pharmacy rules, hospital access, and whether your insurance actually covers the activity someone booked. The scooter is the risk, not the region.",
+        },
+        {
+          title: "How to have the conversation without a stalemate",
+          body:
+            "The group dynamic is the hard part. One person is anxious, one is dismissive, and the rest go quiet because it feels rude to argue about someone else's fear. That is how a trip dies by silence, or worse, how someone gets guilted into going somewhere they are not comfortable with.\n\nThe fix is to separate two questions that always get merged: is this dangerous, and is this still going to be fun? A place can be perfectly safe and still be a bad trip because half the itinerary is closed. Answer them one at a time.\n\nThen use an actual decision rule instead of vibes.",
+          list: {
+            kind: "ordered",
+            items: [
+              "One person, named, reads the official advisory and reports back with the region and the wording. Not a link dump, a summary",
+              "Ask what would change our mind. Write the trigger down: an advisory level change, a specific airport closing, a named event being cancelled",
+              "Set a decision date tied to money. The day before free cancellation ends is the deadline, not 'let's see'",
+              "Anyone can opt out without a debate, and without losing their share of the group booking if it is still recoverable. Make that explicit early and people stop arguing defensively",
+              "If the group is split, poll it once and take the result. A second poll on the same question is just the loudest person relitigating",
+            ],
+          },
+        },
+        {
+          title: "Book so that a change of plan is cheap",
+          body:
+            "Most of the pain of a wobbly destination is financial, not physical. If cancelling costs nothing, the conversation is calm. If it costs four thousand euros, everyone argues about safety when they are really arguing about money.\n\nSo buy flexibility deliberately, and only where it matters. Refundable accommodation is usually worth the premium on the big shared booking. Refundable flights rarely are. Insurance bought at the time of booking, before an event becomes 'known', is the single highest-leverage thing most groups skip.\n\nWatch the known-event trap: once a storm is named or an advisory is raised, insurers treat it as foreseeable and cover for it disappears. Buying cover the week the news breaks is buying nothing.\n\nAnd keep one plan B destination alive on the shortlist rather than starting over. If you already voted between three options, the runner-up is still there, still costed, still agreed on.",
+          list: {
+            kind: "bullet",
+            items: [
+              "Pay the premium for free cancellation on the villa or the biggest booking, not on every coffee-sized line item",
+              "Buy travel insurance the day you book, not the month you fly",
+              "Keep the group's money in one shared, visible place so nobody is chasing reimbursements after a cancellation",
+              "Screenshot every cancellation policy at the moment of booking. Terms pages change",
+              "Note the free-cancellation cutoff date in the itinerary itself, as a dated item everyone sees",
+            ],
+          },
+        },
+        {
+          title: "If you go, the small things that matter",
+          body:
+            "Deciding to go is not the end of it. Groups get into trouble by splitting up badly, not by being in the wrong country.\n\nAgree a meeting point for each day that does not depend on phones working, because in a crowd or a protest the network goes first. Share the accommodation address in writing with everyone, in the local language, not just as a pin one person has. Make sure at least two people have working local data. Keep a photo of everyone's passport page and insurance number in the shared trip, not in one person's camera roll.\n\nAvoid the flashpoint rather than the city. Demonstrations have addresses and dates, and local news lists them. Walk around the square, not through it.\n\nAnd know one number: the local emergency line, which is 112 across the EU and much of the world, plus your embassy's after-hours line if you are somewhere genuinely unsettled.",
+        },
+        {
+          title: "Keep the decision in the trip, not the group chat",
+          body:
+            "Every point above dies the same death: it gets said once at midnight in a chat, and by morning it is fifty messages down. The advisory link, the cancellation deadline, the plan B, the meeting point, all of it needs to live somewhere that is still findable in three weeks.\n\nThat is the whole reason Junto exists. Destination options get voted on once, with the result recorded. Deadlines sit on the itinerary as dated items instead of in someone's memory. Passport and entry details live on the trip for every traveller. Shared costs stay visible, so if plans do change, everyone can see what was actually spent and what comes back.\n\nNone of that makes a destination safer. It makes the decision honest, quick, and something the group made together rather than something one anxious message decided for them.\n\nOne last thing: advice moves. Check your own government's page close to departure and treat this guide as a way to think, not a source of facts about any specific place.",
+        },
+      ],
+      closing:
+        "Junto keeps the vote, the deadlines, the entry requirements and the money in one shared place, so a wobbly week of news does not turn into a lost trip. Start a trip and decide it properly.",
+    },
+  },
 ];
+
 
 export const guideUrl = (slug: string) => `/guides/${slug}`;
 
