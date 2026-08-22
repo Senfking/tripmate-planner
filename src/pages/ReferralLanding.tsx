@@ -484,8 +484,12 @@ export default function ReferralLanding() {
             </div>
           )}
 
-          {/* Headline overlay removed — the rotating problem/solution
-              panel below is the single source of value-prop copy. */}
+          {/* Page heading — kept compact so the rotating panel below stays
+              the main value-prop copy. */}
+          <h1 className="text-[22px] sm:text-[26px] font-bold leading-tight tracking-tight text-white drop-shadow-md">
+            Junto, the AI group trip planner
+          </h1>
+
 
           {/* Rotating statement panel */}
           <div
