@@ -1,3 +1,4 @@
+import { RouteRobots } from "@/components/seo/RouteRobots";
 import { useEffect, lazy, Suspense } from "react";
 import { QueryClient, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -198,6 +199,7 @@ function AppInner() {
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <RouteRobots />
         <AuthProvider>
           <ActivityTracker />
           <ExchangeRatePrefetch />
