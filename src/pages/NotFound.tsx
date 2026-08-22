@@ -1,5 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 const NotFound = () => {
   const location = useLocation();
@@ -9,6 +10,13 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
+    <>
+      <PageSeo
+        title="Page not found | Junto"
+        description="This page does not exist on Junto. Head back to the group trip planner to build itineraries, vote on destinations, and split expenses with friends."
+        path={location.pathname}
+        noindex
+      />
     <div className="flex min-h-screen items-center justify-center bg-muted">
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">404</h1>
@@ -18,6 +26,7 @@ const NotFound = () => {
         </a>
       </div>
     </div>
+    </>
   );
 };
 
