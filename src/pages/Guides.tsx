@@ -6,9 +6,9 @@ import { GUIDES, CATEGORIES, guideUrl, type GuideCategory } from "@/data/guides"
 
 const SITE = "https://junto.pro";
 const URL = `${SITE}/guides`;
-const TITLE = "The Junto Field Guide: Honest writing about group travel";
+const TITLE = "The Junto Field Guide: Group Travel, Honestly";
 const DESCRIPTION =
-  "A growing library of plain-spoken guides for planning trips with friends. Splitting money, picking destinations, packing, and the apps that survive contact with a real group.";
+  "Plain-spoken guides for planning trips with friends: splitting money, picking a destination, packing, border rules, and the apps worth using.";
 
 const ORDER: GuideCategory[] = ["planning", "money", "on-the-road"];
 

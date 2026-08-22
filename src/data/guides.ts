@@ -38,6 +38,28 @@ export interface Guide {
   };
 }
 
+/**
+ * Search snippets get cut around 160 characters and Ahrefs flags anything
+ * longer. Guide `description` doubles as on-page teaser copy, so clamp a
+ * copy of it for the head instead of shortening the teaser itself.
+ */
+export function seoDescription(text: string, max = 155): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(", "), cut.lastIndexOf(" "));
+  return cut.slice(0, stop > max * 0.6 ? stop : max).replace(/[,.\s]+$/, "") + ".";
+}
+
+/** Titles over ~60 characters get truncated in the SERP. */
+export function seoTitle(guide: Pick<Guide, "longTitle" | "title">): string {
+  const suffix = " | Junto";
+  const long = guide.longTitle + suffix;
+  if (long.length <= 60) return long;
+  const short = guide.title + suffix;
+  if (short.length <= 60) return short;
+  return guide.title;
+}
+
 export const CATEGORIES: Record<GuideCategory, { label: string; blurb: string }> = {
   planning: {
     label: "Planning",
