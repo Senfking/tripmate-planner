@@ -125,7 +125,7 @@ export function AllUsersModule() {
                   onMouseEnter={(e) => e.currentTarget.style.background = C.elevated}
                   onMouseLeave={(e) => e.currentTarget.style.background = selectedUser === u.id ? C.elevated : "transparent"}>
                   <td style={{ padding: 8, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
-                    {u.avatar_url ? <img src={u.avatar_url} style={{ width: 24, height: 24, borderRadius: 12 }} /> : <div style={{ width: 24, height: 24, borderRadius: 12, background: C.teal }} />}
+                    {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: 12 }} /> : <div style={{ width: 24, height: 24, borderRadius: 12, background: C.teal }} />}
                     {u.display_name || "-"}
                   </td>
                   <td style={{ padding: 8, color: C.muted, fontFamily: mono, fontSize: 11 }}>{u.created_at?.slice(0, 10)}</td>
@@ -199,7 +199,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
 
       {/* User header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        {p.avatar_url ? <img src={p.avatar_url} style={{ width: 40, height: 40, borderRadius: 20 }} /> : <div style={{ width: 40, height: 40, borderRadius: 20, background: C.teal }} />}
+        {p.avatar_url ? <img src={p.avatar_url} alt="" style={{ width: 40, height: 40, borderRadius: 20 }} /> : <div style={{ width: 40, height: 40, borderRadius: 20, background: C.teal }} />}
         <div>
           <div style={{ fontFamily: sans, fontSize: 15, color: C.text, fontWeight: 600 }}>{p.display_name || "-"}</div>
           <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, cursor: "copy", wordBreak: "break-all" }} onClick={() => navigator.clipboard.writeText(p.id)}>{p.id}</div>

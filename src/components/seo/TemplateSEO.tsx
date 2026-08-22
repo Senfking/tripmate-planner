@@ -32,11 +32,17 @@ export function TemplateSEO({
   chips,
 }: TemplateSEOProps) {
   const url = `${SITE_URL}/templates/${slug}`;
-  const title = `${durationDays} Days in ${destination} — Itinerary & Trip Plan | Junto`;
+  const title = `${durationDays}-Day ${destination} Itinerary | Junto`;
   const rawDesc =
     description ||
     `A ${durationDays}-day ${destination} itinerary with daily plans, top sights, food, and tips. Plan, customize, and share your trip with friends on Junto.`;
-  const desc = trim(rawDesc, 158);
+  // Ahrefs flags descriptions under ~110 chars as "too short" and over ~160
+  // as "too long", so pad short template blurbs with a route-specific line.
+  const padded =
+    rawDesc.length < 120
+      ? `${rawDesc.replace(/\s*$/, "")} A ${durationDays}-day ${destination} itinerary you can copy, customize with AI, and plan together with friends on Junto.`
+      : rawDesc;
+  const desc = trim(padded, 158);
   const image = heroImage || DEFAULT_OG;
 
   const keywords = [

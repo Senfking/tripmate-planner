@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ArrowLeft, ArrowUpRight, Check } from "lucide-react";
-import { CATEGORIES, getGuide, getRelatedGuides, guideUrl } from "@/data/guides";
+import { CATEGORIES, getGuide, getRelatedGuides, guideUrl, seoDescription, seoTitle } from "@/data/guides";
 
 const SITE = "https://junto.pro";
 const GRADIENT = "linear-gradient(135deg, #0D9488 0%, #14b8a6 50%, #0891b2 100%)";
@@ -31,23 +31,25 @@ export default function GuidePlaceholder() {
   const URL = `${SITE}${guideUrl(guide.slug)}`;
   const related = getRelatedGuides(guide.slug, 3);
   const { article } = guide;
+  const metaTitle = seoTitle(guide);
+  const metaDesc = seoDescription(guide.description);
   const accent = guide.heroAccent;
   const parts = guide.heroTitle.split(new RegExp(`\\b(${accent})\\b`));
 
   return (
     <div className="relative min-h-dvh bg-white text-[#0B2E2C] antialiased selection:bg-[#0D9488]/20">
       <Helmet>
-        <title>{guide.longTitle} | Junto</title>
-        <meta name="description" content={guide.description} />
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDesc} />
         <link rel="canonical" href={URL} />
         <meta property="og:type" content="article" />
         <meta property="og:title" content={guide.longTitle} />
-        <meta property="og:description" content={guide.description} />
+        <meta property="og:description" content={metaDesc} />
         <meta property="og:url" content={URL} />
         <meta property="og:image" content={guide.image} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={guide.longTitle} />
-        <meta name="twitter:description" content={guide.description} />
+        <meta name="twitter:description" content={metaDesc} />
         <meta name="twitter:image" content={guide.image} />
         <script type="application/ld+json">
           {JSON.stringify({

@@ -7,9 +7,9 @@ import { CATEGORIES, getRelatedGuides, guideUrl } from "@/data/guides";
 
 const SITE = "https://junto.pro";
 const URL = `${SITE}/guides/how-to-plan-a-group-trip`;
-const TITLE = "How to Plan a Group Trip (Without the 200-Message Group Chat)";
+const TITLE = "How to Plan a Group Trip That Actually Happens";
 const DESCRIPTION =
-  "The honest playbook for planning a group trip with friends. 8 rules that actually work, the 5 reasons most group trips collapse, and the exact tools to skip the spreadsheet hell.";
+  "The honest playbook for planning a group trip with friends: 8 rules that work, the 5 reasons trips collapse, and the tools that skip spreadsheet hell.";
 
 // Curated atmospheric photography — not flat-lay stock.
 const HERO_IMG =
