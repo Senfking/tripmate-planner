@@ -40,7 +40,7 @@ type Props = {
 
 // Atmospheric full-bleed background photo (public variant only).
 const HERO_BG =
-  "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=2400&q=80&auto=format&fit=crop";
+  "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=2400&q=80&auto=format&fit=crop";
 
 function useAutoSize(value: string) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -467,12 +467,12 @@ export function Hero({
       {/* Responsive hero image — smaller on mobile cuts ~70% of bytes.
           decoding="async" + fetchpriority="high" keep LCP healthy. */}
       <img
-        src="https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1200&q=45&auto=format&fit=crop&fm=webp"
+        src="https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=1200&q=45&auto=format&fit=crop&fm=webp"
         srcSet={[
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=640&q=45&auto=format&fit=crop&fm=webp 640w",
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=960&q=42&auto=format&fit=crop&fm=webp 960w",
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1280&q=40&auto=format&fit=crop&fm=webp 1280w",
-          "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?w=1600&q=38&auto=format&fit=crop&fm=webp 1600w",
+          "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=640&q=45&auto=format&fit=crop&fm=webp 640w",
+          "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=960&q=42&auto=format&fit=crop&fm=webp 960w",
+          "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=1280&q=40&auto=format&fit=crop&fm=webp 1280w",
+          "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=1600&q=38&auto=format&fit=crop&fm=webp 1600w",
         ].join(", ")}
         sizes="100vw"
         width={1600}
@@ -508,7 +508,7 @@ export function Hero({
         </div>
 
         <h1 className="mt-5 text-[2.6rem] leading-[1.05] sm:text-7xl font-bold tracking-tight text-white drop-shadow-md">
-          Plan, split, decide. Together.
+          Test 1
           <span className="mt-3 block text-[15px] sm:text-xl font-semibold tracking-normal text-white/85">
             The AI group trip planner for friends
           </span>
