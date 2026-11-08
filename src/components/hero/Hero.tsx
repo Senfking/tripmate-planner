@@ -508,7 +508,7 @@ export function Hero({
         </div>
 
         <h1 className="mt-5 text-[2.6rem] leading-[1.05] sm:text-7xl font-bold tracking-tight text-white drop-shadow-md">
-          Test 1
+          Plan, split, decide. Together.
           <span className="mt-3 block text-[15px] sm:text-xl font-semibold tracking-normal text-white/85">
             The AI group trip planner for friends
           </span>
