@@ -500,7 +500,7 @@ export function Hero({
 
       <div
         className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center justify-end px-6 sm:px-8 pt-32 sm:pt-40 pb-14 sm:pb-20 text-center"
-        style={{ minHeight: "min(78vh, 720px)" }}
+        style={{ minHeight: "min(92vh, 900px)" }}
       >
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1.5 text-xs font-medium text-white shadow-sm">
           <Sparkles className="h-3 w-3" aria-hidden />
