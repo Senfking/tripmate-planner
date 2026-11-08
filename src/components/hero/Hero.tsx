@@ -533,7 +533,7 @@ export function Hero({
         <button
           type="button"
           onClick={scrollToTemplates}
-          className="mt-10 sm:mt-12 inline-flex items-center gap-2 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-md border border-white/25 px-5 py-2.5 text-[13px] font-medium text-white transition-colors shadow-sm"
+          className="mt-auto inline-flex items-center gap-2 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-md border border-white/25 px-5 py-2.5 text-[13px] font-medium text-white transition-colors shadow-sm"
         >
           Or browse trip ideas
           <ChevronDown className="h-4 w-4 animate-bounce" aria-hidden />
