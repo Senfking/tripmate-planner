@@ -115,7 +115,7 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
         setTimeout(() => { el.style.transition = "none"; }, 200);
       }
     }
-  }, [queryClient]);
+  }, [queryClient, location.pathname]);
 
   return (
     <div
